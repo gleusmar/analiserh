@@ -49,6 +49,191 @@ export async function createShiftFunction(payload) {
   return data
 }
 
+// Payroll: entry types (lançamentos)
+export async function listPayrollEntryTypes() {
+  const { data, error } = await supabase
+    .from('payroll_entry_types')
+    .select('id, name, kind, created_at')
+    .order('name', { ascending: true })
+  if (error) throw error
+  return data || []
+}
+
+export async function createPayrollEntryType(payload) {
+  const { data, error } = await supabase
+    .from('payroll_entry_types')
+    .insert({ name: payload.name, kind: payload.kind })
+    .select('id, name, kind, created_at')
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function updatePayrollEntryType(id, payload) {
+  const { data, error } = await supabase
+    .from('payroll_entry_types')
+    .update({ name: payload.name, kind: payload.kind })
+    .eq('id', id)
+    .select('id, name, kind, created_at')
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function deletePayrollEntryType(id) {
+  const { error } = await supabase.from('payroll_entry_types').delete().eq('id', id)
+  if (error) throw error
+  return true
+}
+
+// Payroll: sheets & items & entries
+export async function listPayrollSheets(yearMonth) {
+  let q = supabase.from('payroll_sheets').select('id, name, year_month, created_at, closed_at').order('created_at', { ascending: false })
+  if (yearMonth) q = q.eq('year_month', yearMonth)
+  const { data, error } = await q
+  if (error) throw error
+  return data || []
+}
+
+export async function createPayrollSheet(name, yearMonth, collaboratorIds = []) {
+  const { data: sheet, error } = await supabase
+    .from('payroll_sheets')
+    .insert({ name, year_month: yearMonth })
+    .select('id, name, year_month, closed_at')
+    .single()
+  if (error) throw error
+  if (collaboratorIds.length) {
+    const items = collaboratorIds.map(cid => ({ sheet_id: sheet.id, collaborator_id: cid }))
+    const { error: e2 } = await supabase.from('payroll_sheet_items').insert(items)
+    if (e2) throw e2
+  }
+  return sheet
+}
+
+export async function listPayrollSheetItems(sheetId) {
+  const { data, error } = await supabase
+    .from('payroll_sheet_items')
+    .select('id, sheet_id, collaborator_id, collaborators(name, concent_id)')
+    .eq('sheet_id', sheetId)
+    .order('id', { ascending: true })
+  if (error) throw error
+  return data || []
+}
+
+export async function listPayrollEntriesForSheet(sheetId) {
+  const { data, error } = await supabase
+    .from('payroll_entries')
+    .select('id, sheet_item_id, entry_type_id, amount, note, payroll_entry_types(name, kind), payroll_sheet_items!inner(sheet_id)')
+    .eq('payroll_sheet_items.sheet_id', sheetId)
+  if (error) throw error
+  return data || []
+}
+
+export async function listPayrollEntriesForItem(sheetItemId) {
+  const { data, error } = await supabase
+    .from('payroll_entries')
+    .select('id, sheet_item_id, entry_type_id, amount, note, payroll_entry_types(name, kind)')
+    .eq('sheet_item_id', sheetItemId)
+    .order('id', { ascending: true })
+  if (error) throw error
+  return data || []
+}
+
+export async function createPayrollEntry(sheetItemId, entryTypeId, amount, note) {
+  const { data, error } = await supabase
+    .from('payroll_entries')
+    .insert({ sheet_item_id: sheetItemId, entry_type_id: entryTypeId, amount, note })
+    .select('id, sheet_item_id, entry_type_id, amount, note, payroll_entry_types(name, kind)')
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function updatePayrollEntry(id, patch) {
+  const { data, error } = await supabase
+    .from('payroll_entries')
+    .update(patch)
+    .eq('id', id)
+    .select('id, sheet_item_id, entry_type_id, amount, note')
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function deletePayrollEntry(id) {
+  const { error } = await supabase.from('payroll_entries').delete().eq('id', id)
+  if (error) throw error
+  return true
+}
+
+// Payroll: manage sheets and consolidated 'Plantões' entries
+export async function updatePayrollSheet(id, patch) {
+  const { data, error } = await supabase
+    .from('payroll_sheets')
+    .update(patch)
+    .eq('id', id)
+    .select('id, name, year_month, created_at, closed_at')
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function deletePayrollSheet(id) {
+  const { error } = await supabase.from('payroll_sheets').delete().eq('id', id)
+  if (error) throw error
+  return true
+}
+
+export async function getOrCreateEntryType(name, kind = 'in') {
+  // Try fetch by unique name
+  const { data: existing, error: selErr } = await supabase
+    .from('payroll_entry_types')
+    .select('id, name, kind')
+    .eq('name', name)
+    .maybeSingle()
+  if (selErr) throw selErr
+  if (existing) {
+    if (existing.kind !== kind) {
+      const { data, error } = await supabase
+        .from('payroll_entry_types')
+        .update({ kind })
+        .eq('id', existing.id)
+        .select('id, name, kind')
+        .single()
+      if (error) throw error
+      return data
+    }
+    return existing
+  }
+  const { data, error } = await supabase
+    .from('payroll_entry_types')
+    .insert({ name, kind })
+    .select('id, name, kind')
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function upsertPlantaoEntry(sheet_item_id, amount) {
+  // Ensure the consolidated entry type exists as 'in'
+  const t = await getOrCreateEntryType('Plantões', 'in')
+  // Remove previous consolidated entries for this item
+  const { error: delErr } = await supabase
+    .from('payroll_entries')
+    .delete()
+    .eq('sheet_item_id', sheet_item_id)
+    .eq('entry_type_id', t.id)
+  if (delErr) throw delErr
+  // Insert the new consolidated value
+  const { data, error } = await supabase
+    .from('payroll_entries')
+    .insert({ sheet_item_id, entry_type_id: t.id, amount, note: 'Plantões' })
+    .select('id, sheet_item_id, entry_type_id, amount, note, payroll_entry_types(name, kind)')
+    .single()
+  if (error) throw error
+  return data
+}
+
 export async function updateShiftFunction(id, payload) {
   const { data, error } = await supabase
     .from('shift_functions')
@@ -146,7 +331,7 @@ export async function upsertShiftRateOverride(yearMonth, shift_function_id, valu
 export async function listCollaboratorsSimple() {
   const { data, error } = await supabase
     .from('collaborators')
-    .select('id, name, status')
+    .select('id, name, status, concent_id')
     .order('name', { ascending: true })
   if (error) throw error
   return data || []

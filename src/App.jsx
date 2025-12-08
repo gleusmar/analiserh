@@ -17,6 +17,8 @@ import Functions from './pages/Functions.jsx'
 import Shifts from './pages/Shifts.jsx'
 import ShiftFunctions from './pages/ShiftFunctions.jsx'
 import ShiftsDashboard from './pages/ShiftsDashboard.jsx'
+import Payroll from './pages/Payroll.jsx'
+import PayrollEntries from './pages/PayrollEntries.jsx'
 
 function App() {
   return (
@@ -110,6 +112,32 @@ function App() {
             <RoleRoute allow={["admin", "super"]}>
               <DashboardLayout>
                 <ShiftsDashboard />
+              </DashboardLayout>
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/payroll"
+        element={
+          <ProtectedRoute>
+            <RoleRoute allow={["admin", "super"]}>
+              <DashboardLayout>
+                <Payroll />
+              </DashboardLayout>
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/settings/payroll-entries"
+        element={
+          <ProtectedRoute>
+            <RoleRoute allow={["admin", "super"]}>
+              <DashboardLayout>
+                <PayrollEntries />
               </DashboardLayout>
             </RoleRoute>
           </ProtectedRoute>

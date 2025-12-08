@@ -109,7 +109,7 @@ export default function ShiftFunctions() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Funções e Valores</h1>
+        <h1 className="text-2xl font-semibold">Valores de Plantões</h1>
         <div className="flex items-center gap-2">
           <label className="text-sm flex items-center gap-2">
             <span className="text-neutral-500">Mês</span>

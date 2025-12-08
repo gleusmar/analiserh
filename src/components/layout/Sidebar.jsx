@@ -17,7 +17,12 @@ export default function Sidebar() {
       items: [
         { to: '/shifts', label: 'Calendário', icon: Calendar, show: canAdmin },
         { to: '/shifts/dashboard', label: 'Dashboard', icon: BarChart, show: canAdmin },
-        { to: '/shift-functions', label: 'Funções e Valores', icon: Settings, show: canAdmin },
+      ],
+    },
+    {
+      title: 'Folha de Pagamento',
+      items: [
+        { to: '/payroll', label: 'Folha Mensal', icon: BarChart, show: canAdmin },
       ],
     },
     {
@@ -26,6 +31,8 @@ export default function Sidebar() {
         { to: '/users', label: 'Usuários', icon: Users, show: canAdmin },
         { to: '/collaborators', label: 'Colaboradores', icon: Users, show: canAdmin },
         { to: '/functions', label: 'Funções', icon: Settings, show: canAdmin },
+        { to: '/shift-functions', label: 'Valores de Plantões', icon: Settings, show: canAdmin },
+        { to: '/settings/payroll-entries', label: 'Lançamentos', icon: Settings, show: canAdmin },
       ],
     },
   ]
