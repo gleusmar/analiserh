@@ -29,6 +29,114 @@ export async function listCollaboratorsPaged({ q = '', page = 1, pageSize = 10, 
   return { data, count }
 }
 
+// Shift (Plantões) helpers
+export async function listShiftFunctions() {
+  const { data, error } = await supabase
+    .from('shift_functions')
+    .select('id, name, base_value, created_at')
+    .order('name', { ascending: true })
+  if (error) throw error
+  return data || []
+}
+
+export async function createShiftFunction(payload) {
+  const { data, error } = await supabase
+    .from('shift_functions')
+    .insert({ name: payload.name, base_value: payload.base_value || 0 })
+    .select('id, name, base_value, created_at')
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function updateShiftFunction(id, payload) {
+  const { data, error } = await supabase
+    .from('shift_functions')
+    .update({ name: payload.name, base_value: payload.base_value })
+    .eq('id', id)
+    .select('id, name, base_value, created_at')
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteShiftFunction(id) {
+  const { error } = await supabase.from('shift_functions').delete().eq('id', id)
+  if (error) throw error
+  return true
+}
+
+export async function listShiftAssignments(fromISO, toISO) {
+  const { data, error } = await supabase
+    .from('shift_assignments')
+    .select('id, date, shift_function_id, collaborator_id, remunerated')
+    .gte('date', fromISO)
+    .lte('date', toISO)
+  if (error) throw error
+  return data || []
+}
+
+export async function createShiftAssignment(payload) {
+  const { data, error } = await supabase
+    .from('shift_assignments')
+    .insert({
+      date: payload.date,
+      shift_function_id: payload.shift_function_id,
+      collaborator_id: payload.collaborator_id,
+      remunerated: payload.remunerated !== false,
+    })
+    .select('id, date, shift_function_id, collaborator_id, remunerated')
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function updateShiftAssignment(id, patch) {
+  const { data, error } = await supabase
+    .from('shift_assignments')
+    .update(patch)
+    .eq('id', id)
+    .select('id, date, shift_function_id, collaborator_id, remunerated')
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteShiftAssignment(id) {
+  const { error } = await supabase.from('shift_assignments').delete().eq('id', id)
+  if (error) throw error
+  return true
+}
+
+// Monthly overrides for shift function values
+export async function listShiftRateOverrides(yearMonth) {
+  const { data, error } = await supabase
+    .from('shift_rate_overrides')
+    .select('id, year_month, shift_function_id, value')
+    .eq('year_month', yearMonth)
+  if (error) throw error
+  return data || []
+}
+
+export async function upsertShiftRateOverride(yearMonth, shift_function_id, value) {
+  const { data, error } = await supabase
+    .from('shift_rate_overrides')
+    .upsert({ year_month: yearMonth, shift_function_id, value }, { onConflict: 'year_month,shift_function_id' })
+    .select('id, year_month, shift_function_id, value')
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function listCollaboratorsSimple() {
+  const { data, error } = await supabase
+    .from('collaborators')
+    .select('id, name, status')
+    .order('name', { ascending: true })
+  if (error) throw error
+  return data || []
+}
+
 export async function listAuditLogsForTarget(targetId, limit = 50) {
   const { data, error } = await supabase
     .from('audit_logs')

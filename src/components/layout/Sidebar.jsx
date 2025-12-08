@@ -7,6 +7,8 @@ export default function Sidebar() {
   const canAdmin = role === 'admin' || role === 'super'
   const items = [
     { to: '/', label: 'Início', icon: Home, show: true },
+    { to: '/shifts', label: 'Plantões', icon: Settings, show: canAdmin },
+    { to: '/shift-functions', label: 'Funções de Plantão', icon: Settings, show: canAdmin },
     { to: '/collaborators', label: 'Colaboradores', icon: Users, show: canAdmin },
     { to: '/functions', label: 'Funções', icon: Settings, show: canAdmin },
     { to: '/users', label: 'Usuários', icon: Users, show: canAdmin },

@@ -14,6 +14,8 @@ import Users from './pages/Users.jsx'
 import Settings from './pages/Settings.jsx'
 import Collaborators from './pages/Collaborators.jsx'
 import Functions from './pages/Functions.jsx'
+import Shifts from './pages/Shifts.jsx'
+import ShiftFunctions from './pages/ShiftFunctions.jsx'
 
 function App() {
   return (
@@ -81,6 +83,32 @@ function App() {
             <RoleRoute allow={["admin", "super"]}>
               <DashboardLayout>
                 <Functions />
+              </DashboardLayout>
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/shifts"
+        element={
+          <ProtectedRoute>
+            <RoleRoute allow={["admin", "super"]}>
+              <DashboardLayout>
+                <Shifts />
+              </DashboardLayout>
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/shift-functions"
+        element={
+          <ProtectedRoute>
+            <RoleRoute allow={["admin", "super"]}>
+              <DashboardLayout>
+                <ShiftFunctions />
               </DashboardLayout>
             </RoleRoute>
           </ProtectedRoute>
