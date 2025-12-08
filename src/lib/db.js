@@ -66,12 +66,26 @@ export async function deleteShiftFunction(id) {
   return true
 }
 
+export async function updateShiftPositions(dateISO, orderedIds) {
+  if (!Array.isArray(orderedIds)) return true
+  const updates = orderedIds.map((id, idx) =>
+    supabase.from('shift_assignments').update({ position: idx }).eq('id', id)
+  )
+  const results = await Promise.all(updates)
+  const err = results.find(r => r.error)
+  if (err && err.error) throw err.error
+  return true
+}
+
 export async function listShiftAssignments(fromISO, toISO) {
   const { data, error } = await supabase
     .from('shift_assignments')
-    .select('id, date, shift_function_id, collaborator_id, remunerated')
+    .select('id, date, shift_function_id, collaborator_id, remunerated, position')
     .gte('date', fromISO)
     .lte('date', toISO)
+    .order('date', { ascending: true })
+    .order('position', { ascending: true, nullsFirst: false })
+    .order('id', { ascending: true })
   if (error) throw error
   return data || []
 }
@@ -84,6 +98,7 @@ export async function createShiftAssignment(payload) {
       shift_function_id: payload.shift_function_id,
       collaborator_id: payload.collaborator_id,
       remunerated: payload.remunerated !== false,
+      position: null,
     })
     .select('id, date, shift_function_id, collaborator_id, remunerated')
     .single()

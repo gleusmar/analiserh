@@ -8,6 +8,7 @@ function formatISO(d) {
 function startOfMonth(date) { return new Date(date.getFullYear(), date.getMonth(), 1) }
 function endOfMonth(date) { return new Date(date.getFullYear(), date.getMonth()+1, 0) }
 function ymOf(date) { return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}` }
+function formatBRfromYMD(ymd) { if (!ymd) return ''; const parts = String(ymd).split('-'); if (parts.length !== 3) return ymd; const [y,m,d] = parts; return `${d}/${m}/${y}` }
 
 export default function ShiftsDashboard() {
   const [current, setCurrent] = useState(() => new Date())
@@ -152,7 +153,7 @@ export default function ShiftsDashboard() {
           <tbody>
             {filtered.map(r => (
               <tr key={r.id} className="border-t border-neutral-200 dark:border-neutral-800">
-                <td className="py-2">{new Date(r.date).toLocaleDateString('pt-BR')}</td>
+                <td className="py-2">{formatBRfromYMD(r.date)}</td>
                 <td className="py-2">{r.function_name}</td>
                 <td className="py-2">{r.collaborator_name}</td>
                 <td className="py-2">{r.remunerated ? '✓' : ''}</td>

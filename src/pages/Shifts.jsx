@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { listShiftFunctions, listCollaboratorsSimple, listShiftAssignments, createShiftAssignment, updateShiftAssignment, deleteShiftAssignment, listShiftRateOverrides } from '../lib/db'
+import { listShiftFunctions, listCollaboratorsSimple, listShiftAssignments, createShiftAssignment, updateShiftAssignment, deleteShiftAssignment, listShiftRateOverrides, updateShiftPositions } from '../lib/db'
 
 function classNames(...xs) { return xs.filter(Boolean).join(' ') }
 
@@ -30,6 +30,7 @@ export default function Shifts() {
   const [overrides, setOverrides] = useState({}) // { shift_function_id: value }
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [orderMap, setOrderMap] = useState({}) // { [dateISO]: [assignmentId, ...] }
 
   const activeCollaborators = useMemo(() => (collaborators || []).filter(c => c.status !== 'inactive'), [collaborators])
 
@@ -80,13 +81,6 @@ export default function Shifts() {
 
   async function addAssignment(dateISO, shift_function_id, collaborator_id, remunerated = true) {
     try {
-      // limite de 12 por função no dia
-      const dayList = byDate[dateISO] || []
-      const countForFunc = dayList.filter(a => a.shift_function_id === shift_function_id).length
-      if (countForFunc >= 12) {
-        alert('Limite de 12 colaboradores para esta função neste dia.');
-        return
-      }
       const created = await createShiftAssignment({ date: dateISO, shift_function_id, collaborator_id, remunerated })
       setAssignments(a => [...a, created])
     } catch (e) {
@@ -126,16 +120,116 @@ export default function Shifts() {
     const [selFn, setSelFn] = useState('')
     const [selCol, setSelCol] = useState('')
     const [rem, setRem] = useState(true)
+    const orderedItems = useMemo(() => {
+      const ids = orderMap[dateISO]
+      if (Array.isArray(ids) && ids.length) {
+        const byId = Object.fromEntries(items.map(i => [i.id, i]))
+        const sorted = ids.map(id => byId[id]).filter(Boolean)
+        const rest = items.filter(i => !ids.includes(i.id))
+        return [...sorted, ...rest]
+      }
+      return items
+    }, [items, orderMap, dateISO])
+
+    function onDragStartItem(e, id) {
+      e.dataTransfer.setData('text/plain', id)
+      e.dataTransfer.setData('application/x-shift-date', dateISO)
+      e.dataTransfer.effectAllowed = 'copyMove'
+    }
+    async function onDropOnItem(e, targetId) {
+      e.preventDefault()
+      e.stopPropagation()
+      const srcId = e.dataTransfer.getData('text/plain')
+      const srcDate = e.dataTransfer.getData('application/x-shift-date')
+      if (!srcId) return
+      // cross-day: copy behavior (same as container drop)
+      if (srcDate !== dateISO) {
+        const src = (assignments || []).find(x => x.id === srcId)
+        if (!src) return
+        try {
+          const created = await createShiftAssignment({
+            date: dateISO,
+            shift_function_id: src.shift_function_id,
+            collaborator_id: src.collaborator_id,
+            remunerated: src.remunerated,
+          })
+          setAssignments(list => [...list, created])
+          const ids = [...orderedItems.map(x => x.id), created.id]
+          setOrderMap(prev => ({ ...prev, [dateISO]: ids }))
+          try { await updateShiftPositions(dateISO, ids) } catch (_) {}
+        } catch (err) {
+          alert(err?.message || 'Falha ao copiar plantão para o dia')
+        }
+        return
+      }
+      const ids = orderedItems.map(x => x.id)
+      const from = ids.indexOf(srcId)
+      const to = ids.indexOf(targetId)
+      if (from < 0 || to < 0 || from === to) return
+      const reordered = [...ids]
+      const [moved] = reordered.splice(from, 1)
+      reordered.splice(to, 0, moved)
+      setOrderMap(prev => ({ ...prev, [dateISO]: reordered }))
+      try {
+        await updateShiftPositions(dateISO, reordered)
+      } catch (_) {
+        // manter ordem local mesmo se persistência falhar; recarregar pode corrigir
+      }
+    }
+
+    async function onDropOnContainer(e) {
+      e.preventDefault()
+      const srcId = e.dataTransfer.getData('text/plain')
+      const srcDate = e.dataTransfer.getData('application/x-shift-date')
+      if (!srcId) return
+      // mesmo dia: mover para o final
+      if (srcDate === dateISO) {
+        const ids = orderedItems.map(x => x.id)
+        const from = ids.indexOf(srcId)
+        if (from < 0) return
+        const reordered = [...ids]
+        const [moved] = reordered.splice(from, 1)
+        reordered.push(moved)
+        setOrderMap(prev => ({ ...prev, [dateISO]: reordered }))
+        try { await updateShiftPositions(dateISO, reordered) } catch (_) {}
+        return
+      }
+      // dia diferente: copiar (criar novo assignment no destino) e anexar ao final
+      const src = (assignments || []).find(x => x.id === srcId)
+      if (!src) return
+      try {
+        const created = await createShiftAssignment({
+          date: dateISO,
+          shift_function_id: src.shift_function_id,
+          collaborator_id: src.collaborator_id,
+          remunerated: src.remunerated,
+        })
+        setAssignments(list => [...list, created])
+        const ids = [...orderedItems.map(x => x.id), created.id]
+        setOrderMap(prev => ({ ...prev, [dateISO]: ids }))
+        try { await updateShiftPositions(dateISO, ids) } catch (_) {}
+      } catch (err) {
+        alert(err?.message || 'Falha ao copiar plantão para o dia')
+      }
+    }
     return (
-      <div className="h-130 flex flex-col rounded-xl border border-neutral-200 dark:border-neutral-800 p-2 gap-2 text-[11px]">
+      <div
+        className="h-130 flex flex-col rounded-xl border border-neutral-200 dark:border-neutral-800 p-2 gap-2 text-[11px]"
+        onDragOver={(e)=>e.preventDefault()}
+        onDrop={onDropOnContainer}
+      >
         <div className="text-base font-bold text-center text-emerald-800">{String(day)}</div>
         <div className="flex-1 overflow-y-auto space-y-1">
-          {items.map(a => {
+          {orderedItems.map(a => {
             const fnName = (functions.find(f => f.id === a.shift_function_id)?.name) || 'Função'
             const colName = (collaborators.find(c => c.id === a.collaborator_id)?.name) || 'Colaborador'
             return (
               <div
                 key={a.id}
+                draggable
+                onDragStart={(e)=>onDragStartItem(e, a.id)}
+                onDragOver={(e)=>{ e.preventDefault(); e.stopPropagation(); }}
+                onDrop={(e)=>onDropOnItem(e, a.id)}
                 className={
                   "flex items-center justify-between gap-2 rounded-lg border border-neutral-200 dark:border-neutral-800 px-2 py-0.5 " +
                   (fnName.includes('Bio LAB') ? ' bg-blue-50' :
@@ -150,7 +244,7 @@ export default function Shifts() {
                 </div>
                 <div className="flex items-center gap-2">
                   <input type="checkbox" checked={!!a.remunerated} onChange={()=>toggleRemunerated(a)} title="Remunerado" />
-                  <button className="p-1 text-red-600 font-bold hover:text-red-700" aria-label="Remover" onClick={()=>removeAssignment(a)}>X</button>
+                  <button className="p-1 text-red-600 font-bold hover:text-red-700 cursor-pointer" aria-label="Remover" onClick={()=>removeAssignment(a)}>X</button>
                 </div>
               </div>
             )
