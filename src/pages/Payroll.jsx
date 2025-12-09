@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { listCollaboratorsSimple, listPayrollEntryTypes, listPayrollSheets, createPayrollSheet, listPayrollSheetItems, listPayrollEntriesForSheet, createPayrollEntry, deletePayrollEntry, updatePayrollSheet, deletePayrollSheet, upsertPlantaoEntry, listShiftFunctions, listShiftAssignments, listShiftRateOverrides } from '../lib/db'
+import { listCollaboratorsSimple, listPayrollEntryTypes, listPayrollSheets, createPayrollSheet, listPayrollSheetItems, listPayrollEntriesForSheet, createPayrollEntry, deletePayrollEntry, updatePayrollSheet, deletePayrollSheet, upsertPlantaoEntry, listShiftFunctions, listShiftAssignments, listShiftRateOverrides, addPayrollSheetItems } from '../lib/db'
 
 function ymOf(date) { return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}` }
 function parseYM(ym) { const [y,m] = String(ym||'').split('-').map(Number); return { y, m } }
@@ -37,6 +37,17 @@ export default function Payroll() {
   const [importLoading, setImportLoading] = useState(false)
   const [importYearMonth, setImportYearMonth] = useState(ymOf(new Date()))
 
+  // Holerites import
+  const [openSlip, setOpenSlip] = useState(false)
+  const [slipPages, setSlipPages] = useState([]) // [{ idx, blob, collaborator_id, selected }]
+  const [slipLoading, setSlipLoading] = useState(false)
+
+  // Add collaborators to existing sheet
+  const [openAddCols, setOpenAddCols] = useState(false)
+  const [addCandidates, setAddCandidates] = useState([]) // [{ id, name, status, concent_id }]
+  const [addSel, setAddSel] = useState({}) // { collaborator_id: bool }
+  const [addLoading, setAddLoading] = useState(false)
+
   async function loadBase() {
     setLoading(true); setError(null)
     try {
@@ -49,6 +60,126 @@ export default function Payroll() {
       const first = (sh||[])[0]?.id || ''
       setSelectedSheetId(prev => prev || first)
     } catch (e) { setError(e.message || 'Erro ao carregar folhas') } finally { setLoading(false) }
+  }
+
+  async function openAddCollaborators() {
+    setOpenAddCols(true)
+    try {
+      setAddLoading(true)
+      const all = await listCollaboratorsSimple()
+      const currentIds = new Set((items||[]).map(it => it.collaborator_id))
+      const cands = (all||[]).filter(c => c.status !== 'inactive' && !currentIds.has(c.id))
+      setAddCandidates(cands)
+      const init = {}
+      cands.forEach(c => { init[c.id] = false })
+      setAddSel(init)
+    } catch (e) { alert(e.message || 'Falha ao carregar colaboradores') }
+    finally { setAddLoading(false) }
+  }
+
+  async function onConfirmAddCollaborators() {
+    if (!selectedSheetId) return
+    const ids = Object.entries(addSel).filter(([,v])=>!!v).map(([k])=>k)
+    if (!ids.length) { alert('Selecione ao menos um colaborador'); return }
+    try {
+      setAddLoading(true)
+      await addPayrollSheetItems(selectedSheetId, ids)
+      setOpenAddCols(false)
+      setAddCandidates([])
+      setAddSel({})
+      await loadSheet(selectedSheetId)
+    } catch (e) { alert(e.message || 'Falha ao adicionar colaboradores') }
+    finally { setAddLoading(false) }
+  }
+
+  async function onChooseHolerites(file) {
+    if (!file) return
+    try {
+      setSlipLoading(true)
+      const { PDFDocument } = await import('pdf-lib')
+      const buf = await file.arrayBuffer()
+      const src = await PDFDocument.load(buf)
+      const pageCount = src.getPageCount()
+      const out = []
+      const toBase64 = (blob) => new Promise((resolve, reject) => { const fr = new FileReader(); fr.onload = () => resolve(fr.result); fr.onerror = reject; fr.readAsDataURL(blob) })
+      for (let i=0;i<pageCount;i++) {
+        const dst = await PDFDocument.create()
+        const [copied] = await dst.copyPages(src, [i])
+        dst.addPage(copied)
+        const bytes = await dst.save()
+        const blob = new Blob([bytes], { type: 'application/pdf' })
+        out.push({ idx: i+1, blob, collaborator_id: '', selected: true })
+      }
+      // Auto-map no servidor usando nomes do PDF
+      try {
+        const pagesPayload = []
+        for (const p of out) { pagesPayload.push({ data: await toBase64(p.blob) }) }
+        const resp = await fetch('/api/holerites/auto-map', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sheetId: selectedSheetId, pages: pagesPayload }) })
+        if (resp.ok) {
+          const { mappings } = await resp.json()
+          const mapped = out.map((p, idx) => ({ ...p, collaborator_id: mappings?.[idx]?.collaborator_id || '' }))
+          setSlipPages(mapped)
+        } else {
+          setSlipPages(out)
+        }
+      } catch (_) {
+        setSlipPages(out)
+      }
+    } catch (e) {
+      alert(e.message || 'Falha ao processar PDF')
+    } finally {
+      setSlipLoading(false)
+    }
+  }
+
+  async function onConfirmSlips() {
+    if (!selectedSheetId) { alert('Selecione uma folha'); return }
+    const picks = slipPages.filter(p => p.selected && p.collaborator_id)
+    if (!picks.length) { alert('Selecione ao menos uma página e um colaborador'); return }
+    try {
+      setSlipLoading(true)
+      // Convert to base64 and send to server to create entries
+      const toBase64 = (blob) => new Promise((resolve, reject) => {
+        const fr = new FileReader()
+        fr.onload = () => resolve(fr.result)
+        fr.onerror = reject
+        fr.readAsDataURL(blob)
+      })
+      const payloadPages = []
+      for (const p of picks) {
+        const dataUrl = await toBase64(p.blob)
+        payloadPages.push({ collaborator_id: p.collaborator_id, data: dataUrl })
+      }
+      await fetch('/api/holerites/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sheetId: selectedSheetId, pages: payloadPages, overwrite: true }),
+      }).then(async r => { if (!r.ok) { const t = await r.text(); throw new Error(t || 'Falha ao importar lançamentos do holerite') }})
+      await loadSheet(selectedSheetId)
+      setOpenSlip(false)
+      setSlipPages([])
+      alert('Holerites enviados')
+    } catch (e) { alert(e.message || 'Falha ao enviar holerites') } finally { setSlipLoading(false) }
+  }
+
+  async function onDownloadHolerite(collaboratorId) {
+    try {
+      const r = await fetch('/api/holerites/url', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sheetId: selectedSheetId, collaborator_id: collaboratorId }) })
+      if (!r.ok) { const t = await r.text(); throw new Error(t || 'Holerite não encontrado') }
+      const { url } = await r.json()
+      if (!url) { alert('Holerite não encontrado'); return }
+      window.open(url, '_blank')
+    } catch (e) { alert(e.message || 'Falha ao baixar holerite') }
+  }
+
+  async function onRemoveHolerite(collaboratorId) {
+    if (!selectedSheetId) return
+    if (!confirm('Remover o holerite deste colaborador?')) return
+    try {
+      const r = await fetch('/api/holerites/remove', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sheetId: selectedSheetId, collaborator_id: collaboratorId }) })
+      if (!r.ok) throw new Error(await r.text())
+      alert('Holerite removido')
+    } catch (e) { alert(e.message || 'Falha ao remover holerite') }
   }
 
   async function loadSheet(sheetId) {
@@ -83,6 +214,14 @@ export default function Payroll() {
     })
     return res
   }, [items, entriesByItem])
+
+  const itemsSortedByName = useMemo(() => {
+    return (items || []).slice().sort((a, b) => {
+      const an = a.collaborators?.name || ''
+      const bn = b.collaborators?.name || ''
+      return an.localeCompare(bn, 'pt', { sensitivity: 'base' })
+    })
+  }, [items])
 
   async function openCreateSheet() {
     setOpenCreate(true); setSheetName(`Folha ${ymOf(new Date())}`); setSheetYearMonth(ymOf(new Date()))
@@ -138,6 +277,7 @@ export default function Payroll() {
     const filt = ql ? base.filter(it => (it.collaborators?.name||'').toLowerCase().includes(ql)) : base
     return sortByKey(filt)
   }, [items, q, orderBy, orderDir, totalsByItem])
+  const grandTotal = useMemo(() => (items||[]).reduce((s, it) => s + (totalsByItem[it.id]?.total || 0), 0), [items, totalsByItem])
 
   function toggleOrder(key) {
     if (orderBy === key) setOrderDir(d => d==='asc'?'desc':'asc')
@@ -180,8 +320,10 @@ export default function Payroll() {
   async function onDeleteSheet() {
     const s = selectedSheet
     if (!s) return
-    if (!confirm('Excluir esta folha e todos os seus lançamentos?')) return
+    if (!confirm('Excluir esta folha e todos os seus lançamentos e holerites associados?')) return
     try {
+      // cleanup holerites for this sheet
+      try { await fetch('/api/holerites/cleanup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sheetId: s.id }) }) } catch (_) {}
       await deletePayrollSheet(s.id)
       await loadBase()
       setSelectedSheetId('')
@@ -269,6 +411,7 @@ export default function Payroll() {
         <div className="inline-flex items-center gap-2">
           <button onClick={openCreateSheet} className="text-xs rounded-lg bg-green-600 hover:bg-green-700 text-white px-3 py-2">Criar Folha</button>
           <button onClick={openImportSheet} disabled={!selectedSheetId} className="text-xs rounded-lg bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 disabled:opacity-50">Importar Plantões</button>
+          <button onClick={()=>setOpenSlip(true)} disabled={!selectedSheetId} className="text-xs rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 disabled:opacity-50">Importar Holerites</button>
         </div>
       </div>
 
@@ -284,11 +427,18 @@ export default function Payroll() {
             <button onClick={onRenameSheet} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Editar nome</button>
             <button onClick={onCloseSheet} disabled={isClosed} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800 disabled:opacity-50">Encerrar folha</button>
             <button onClick={onDeleteSheet} className="px-3 py-2 text-xs rounded-lg border border-red-200 text-red-600 dark:border-red-900">Excluir</button>
+            <button onClick={openAddCollaborators} disabled={!selectedSheetId || isClosed} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800 disabled:opacity-50">Adicionar colaboradores</button>
             {isClosed && <span className="text-xs px-2 py-1 rounded bg-neutral-200/60 dark:bg-neutral-800">Encerrada</span>}
           </>
         )}
-        <input placeholder="Filtrar por nome" value={q} onChange={(e)=>setQ(e.target.value)} className="ml-auto rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
       </div>
+
+      {selectedSheetId && (
+        <div className="flex items-center gap-3">
+          <div className="text-sm text-neutral-700 dark:text-neutral-300 font-medium">Total geral: {formatBRL(grandTotal)}</div>
+          <input placeholder="Filtrar por nome" value={q} onChange={(e)=>setQ(e.target.value)} className="mx-auto rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
+        </div>
+      )}
 
       {selectedSheetId && (
         <div className="overflow-x-auto">
@@ -300,24 +450,33 @@ export default function Payroll() {
                 <th className="py-2 cursor-pointer" onClick={()=>toggleOrder('inc')}>Recebimentos</th>
                 <th className="py-2 cursor-pointer" onClick={()=>toggleOrder('out')}>Descontos</th>
                 <th className="py-2 cursor-pointer" onClick={()=>toggleOrder('total')}>Total</th>
+                <th className="py-2">Holerite</th>
               </tr>
             </thead>
             <tbody>
               {filteredItems.map(it => {
                 const col = it.collaborators
                 const totals = totalsByItem[it.id] || { inc:0, out:0, total:0 }
+                const isBB = (col?.bank_code || '').trim() === '001'
+                const rowColor = isBB ? 'bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50' : 'bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50'
                 return (
                   <>
-                    <tr key={it.id} className="border-t border-neutral-200 dark:border-neutral-800 cursor-pointer" onClick={()=>toggleExpanded(it.id)}>
+                    <tr key={it.id} onClick={()=>toggleExpanded(it.id)} className={`border-t border-neutral-200 dark:border-neutral-800 cursor-pointer ${rowColor}`}>
                       <td className="py-2">{col?.concent_id || '-'}</td>
                       <td className="py-2 font-medium">{col?.name || '-'}</td>
                       <td className="py-2">{formatBRL(totals.inc)}</td>
                       <td className="py-2">{formatBRL(totals.out)}</td>
                       <td className="py-2 font-semibold">{formatBRL(totals.total)}</td>
+                      <td className="py-2">
+                        <div className="inline-flex items-center gap-2">
+                          <button onClick={(e)=>{ e.stopPropagation(); onDownloadHolerite(it.collaborator_id) }} className="px-2 py-1 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Baixar</button>
+                          <button onClick={(e)=>{ e.stopPropagation(); onRemoveHolerite(it.collaborator_id) }} className="px-2 py-1 text-xs rounded-lg border border-red-200 text-red-600 dark:border-red-900">Remover</button>
+                        </div>
+                      </td>
                     </tr>
                     {expanded[it.id] && (
                       <tr>
-                        <td colSpan={5} className="bg-neutral-50 dark:bg-neutral-900 p-3">
+                        <td colSpan={6} className="bg-neutral-50 dark:bg-neutral-900 p-3">
                           <div className="space-y-3">
                             <div className="text-sm text-neutral-500">Lançamentos</div>
                             <div className="space-y-1" style={{ paddingLeft: '40%' }}>
@@ -426,6 +585,80 @@ export default function Payroll() {
               <div className="flex justify-end gap-2">
                 <button onClick={()=>setOpenImport(false)} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Cancelar</button>
                 <button onClick={onConfirmImport} disabled={importLoading || !importSheetId} className="px-3 py-2 text-xs rounded-lg bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50">Importar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {openSlip && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4">
+          <div className="w-full max-w-5xl rounded-2xl p-6 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
+            <h2 className="text-lg font-semibold mb-4">Importar Holerites (PDF único)</h2>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <input type="file" accept="application/pdf" onChange={(e)=>onChooseHolerites(e.target.files?.[0])} />
+                <button type="button" onClick={async ()=>{ try { const r = await fetch('/holerites.pdf'); if (!r.ok) throw new Error('Arquivo de exemplo não encontrado em /holerites.pdf'); const b = await r.blob(); await onChooseHolerites(b) } catch(e){ alert(e.message || 'Falha ao carregar exemplo') } }} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Carregar exemplo</button>
+              </div>
+              {slipPages.length>0 && (
+                <div className="max-h-[60vh] overflow-y-auto rounded-xl border border-neutral-200 dark:border-neutral-800">
+                  <table className="w-full text-sm">
+                    <thead className="text-left text-neutral-500">
+                      <tr>
+                        <th className="py-2 w-10"></th>
+                        <th className="py-2 w-16">Página</th>
+                        <th className="py-2">Colaborador</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {slipPages.map((p,idx)=>(
+                        <tr key={idx} className="border-t border-neutral-200 dark:border-neutral-800">
+                          <td className="py-2 text-center"><input type="checkbox" checked={p.selected} onChange={(e)=>setSlipPages(arr=>arr.map((x,i)=>i===idx?{...x,selected:e.target.checked}:x))}/></td>
+                          <td className="py-2">{p.idx}</td>
+                          <td className="py-2">
+                            <select value={p.collaborator_id} onChange={(e)=>setSlipPages(arr=>arr.map((x,i)=>i===idx?{...x,collaborator_id:e.target.value}:x))} className={`rounded-xl border border-neutral-200 dark:border-neutral-800 px-2 py-1 min-w-64 ${p.collaborator_id ? 'bg-green-100 dark:bg-green-900/50' : ''}`}>
+                              <option value="">Selecione</option>
+                              {itemsSortedByName.map(it => (
+                                <option key={it.collaborator_id} value={it.collaborator_id}>{it.collaborators?.name} — {it.collaborators?.concent_id}</option>
+                              ))}
+                            </select>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <div className="flex justify-end gap-2">
+                <button onClick={()=>{setOpenSlip(false); setSlipPages([])}} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Cancelar</button>
+                <button onClick={onConfirmSlips} disabled={slipLoading || !slipPages.length} className="px-3 py-2 text-xs rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50">Enviar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {openAddCols && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4">
+          <div className="w-full max-w-3xl rounded-2xl p-6 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
+            <h2 className="text-lg font-semibold mb-4">Adicionar colaboradores à folha</h2>
+            <div className="space-y-3">
+              <div className="text-sm text-neutral-500">Selecione os colaboradores que deseja incluir</div>
+              <div className="max-h-80 overflow-y-auto rounded-xl border border-neutral-200 dark:border-neutral-800 p-3">
+                {addLoading && <div className="text-sm text-neutral-500">Carregando...</div>}
+                {!addLoading && addCandidates.length === 0 && (
+                  <div className="text-sm text-neutral-500">Nenhum colaborador disponível</div>
+                )}
+                {!addLoading && addCandidates.map(c => (
+                  <label key={c.id} className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={!!addSel[c.id]} onChange={(e)=>setAddSel(s=>({ ...s, [c.id]: e.target.checked }))} />
+                    <span>{c.name} — {c.concent_id}</span>
+                  </label>
+                ))}
+              </div>
+              <div className="flex justify-end gap-2">
+                <button onClick={()=>{ setOpenAddCols(false); setAddCandidates([]); setAddSel({}) }} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Cancelar</button>
+                <button onClick={onConfirmAddCollaborators} disabled={addLoading || !addCandidates.length} className="px-3 py-2 text-xs rounded-lg bg-green-600 hover:bg-green-700 text-white disabled:opacity-50">Adicionar</button>
               </div>
             </div>
           </div>

@@ -29,6 +29,23 @@ export async function listCollaboratorsPaged({ q = '', page = 1, pageSize = 10, 
   return { data, count }
 }
 
+// Storage: Holerites (PDFs)
+export async function uploadHolerite(sheetId, collaboratorId, file) {
+  const bucket = supabase.storage.from('holerites')
+  const path = `${sheetId}/${collaboratorId}.pdf`
+  const { error } = await bucket.upload(path, file, { contentType: 'application/pdf', upsert: true })
+  if (error) throw error
+  return true
+}
+
+export async function getHoleriteUrl(sheetId, collaboratorId, expiresInSeconds = 3600) {
+  const bucket = supabase.storage.from('holerites')
+  const path = `${sheetId}/${collaboratorId}.pdf`
+  const { data, error } = await bucket.createSignedUrl(path, expiresInSeconds)
+  if (error) return null
+  return data?.signedUrl || null
+}
+
 // Shift (Plantões) helpers
 export async function listShiftFunctions() {
   const { data, error } = await supabase
@@ -113,9 +130,20 @@ export async function createPayrollSheet(name, yearMonth, collaboratorIds = []) 
 export async function listPayrollSheetItems(sheetId) {
   const { data, error } = await supabase
     .from('payroll_sheet_items')
-    .select('id, sheet_id, collaborator_id, collaborators(name, concent_id)')
+    .select('id, sheet_id, collaborator_id, collaborators(name, concent_id, bank_code)')
     .eq('sheet_id', sheetId)
     .order('id', { ascending: true })
+  if (error) throw error
+  return data || []
+}
+
+export async function addPayrollSheetItems(sheetId, collaboratorIds = []) {
+  if (!sheetId || !Array.isArray(collaboratorIds) || collaboratorIds.length === 0) return []
+  const items = collaboratorIds.map(cid => ({ sheet_id: sheetId, collaborator_id: cid }))
+  const { data, error } = await supabase
+    .from('payroll_sheet_items')
+    .insert(items)
+    .select('id, sheet_id, collaborator_id')
   if (error) throw error
   return data || []
 }

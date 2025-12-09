@@ -614,6 +614,14 @@ export default function Collaborators() {
                 <input placeholder="ID Concent" value={form.concent_id} onChange={(e)=>setForm(f=>({...f,concent_id:e.target.value}))} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
                 <label className="text-sm flex flex-col">
                   <span className="text-neutral-500 mb-1">Banco</span>
+                  <select value={form.bank_code || ''} onChange={(e)=>setForm(f=>({...f,bank_code:e.target.value}))} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5">
+                    <option value="">Selecione</option>
+                    {BANKS.map(b => (
+                      <option key={b.code} value={b.code}>{b.code} - {b.name}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-sm flex flex-col">
                   <span className="text-neutral-500 mb-1">Função</span>
                   <select value={form.function_id || ''} onChange={(e)=>setForm(f=>({...f,function_id:e.target.value||null}))} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5">
                     <option value="">Selecione</option>
@@ -622,9 +630,27 @@ export default function Collaborators() {
                     ))}
                   </select>
                 </label>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-3">
+                <label className="text-sm flex flex-col">
+                  <span className="text-neutral-500 mb-1">Agência</span>
+                  <input placeholder="Agência" value={form.agency || ''} onChange={(e)=>setForm(f=>({...f,agency:e.target.value}))} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
+                </label>
+                <label className="text-sm flex flex-col">
+                  <span className="text-neutral-500 mb-1">Conta</span>
+                  <input placeholder="Conta" value={form.account || ''} onChange={(e)=>setForm(f=>({...f,account:e.target.value}))} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
+                </label>
                 <label className="text-sm flex flex-col">
                   <span className="text-neutral-500 mb-1">Salário (BRL)</span>
                   <input ref={salaryInputRef} placeholder="0,00" value={form.salary || ''} onChange={(e)=>setForm(f=>({...f,salary:e.target.value}))} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
+                </label>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-3">
+                <label className="text-sm flex flex-col md:col-span-1">
+                  <span className="text-neutral-500 mb-1">Chave PIX</span>
+                  <input placeholder="PIX" value={form.pix_key || ''} onChange={(e)=>setForm(f=>({...f,pix_key:e.target.value}))} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
                 </label>
               </div>
 
