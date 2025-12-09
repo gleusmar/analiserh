@@ -18,3 +18,21 @@ export async function createUser({ email, password, role = 'user' }, actor) {
     throw e
   }
 }
+
+export async function linkProfileCollaborator(profileId, collaboratorId, actor) {
+  const body = { profile_id: profileId, collaborator_id: collaboratorId || null }
+  const res = await fetch('/api/admin/profiles/link-collaborator', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(actor?.id ? { 'x-actor-id': actor.id } : {}),
+      ...(actor?.email ? { 'x-actor-email': actor.email } : {}),
+    },
+    body: JSON.stringify(body),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    throw new Error(data?.error || data?.message || 'Falha ao vincular colaborador')
+  }
+  return data
+}

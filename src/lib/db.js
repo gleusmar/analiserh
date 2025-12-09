@@ -124,6 +124,7 @@ export async function createPayrollSheet(name, yearMonth, collaboratorIds = []) 
     const { error: e2 } = await supabase.from('payroll_sheet_items').insert(items)
     if (e2) throw e2
   }
+  try { await logAudit('sheet:create', { target_id: sheet.id, details: { name, year_month: yearMonth, collaborator_ids: collaboratorIds } }) } catch (_) {}
   return sheet
 }
 
@@ -145,6 +146,7 @@ export async function addPayrollSheetItems(sheetId, collaboratorIds = []) {
     .insert(items)
     .select('id, sheet_id, collaborator_id')
   if (error) throw error
+  try { await logAudit('sheet:items:add', { target_id: sheetId, details: { collaborator_ids: collaboratorIds } }) } catch (_) {}
   return data || []
 }
 
@@ -174,6 +176,7 @@ export async function createPayrollEntry(sheetItemId, entryTypeId, amount, note)
     .select('id, sheet_item_id, entry_type_id, amount, note, payroll_entry_types(name, kind)')
     .single()
   if (error) throw error
+  try { await logAudit('entry:create', { target_id: data.id, details: { sheet_item_id: sheetItemId, entry_type_id: entryTypeId, amount, note } }) } catch (_) {}
   return data
 }
 
@@ -185,12 +188,14 @@ export async function updatePayrollEntry(id, patch) {
     .select('id, sheet_item_id, entry_type_id, amount, note')
     .single()
   if (error) throw error
+  try { await logAudit('entry:update', { target_id: id, details: { patch } }) } catch (_) {}
   return data
 }
 
 export async function deletePayrollEntry(id) {
   const { error } = await supabase.from('payroll_entries').delete().eq('id', id)
   if (error) throw error
+  try { await logAudit('entry:delete', { target_id: id }) } catch (_) {}
   return true
 }
 
@@ -203,12 +208,14 @@ export async function updatePayrollSheet(id, patch) {
     .select('id, name, year_month, created_at, closed_at')
     .single()
   if (error) throw error
+  try { await logAudit('sheet:update', { target_id: id, details: { patch } }) } catch (_) {}
   return data
 }
 
 export async function deletePayrollSheet(id) {
   const { error } = await supabase.from('payroll_sheets').delete().eq('id', id)
   if (error) throw error
+  try { await logAudit('sheet:delete', { target_id: id }) } catch (_) {}
   return true
 }
 
@@ -259,6 +266,7 @@ export async function upsertPlantaoEntry(sheet_item_id, amount) {
     .select('id, sheet_item_id, entry_type_id, amount, note, payroll_entry_types(name, kind)')
     .single()
   if (error) throw error
+  try { await logAudit('plantao:upsert', { target_id: data.id, details: { sheet_item_id, amount } }) } catch (_) {}
   return data
 }
 
@@ -287,6 +295,7 @@ export async function updateShiftPositions(dateISO, orderedIds) {
   const results = await Promise.all(updates)
   const err = results.find(r => r.error)
   if (err && err.error) throw err.error
+  try { await logAudit('shift:reorder', { details: { date: dateISO, orderedIds } }) } catch (_) {}
   return true
 }
 
@@ -316,6 +325,7 @@ export async function createShiftAssignment(payload) {
     .select('id, date, shift_function_id, collaborator_id, remunerated')
     .single()
   if (error) throw error
+  try { await logAudit('shift:create', { target_id: data.id, details: { ...payload } }) } catch (_) {}
   return data
 }
 
@@ -327,12 +337,14 @@ export async function updateShiftAssignment(id, patch) {
     .select('id, date, shift_function_id, collaborator_id, remunerated')
     .single()
   if (error) throw error
+  try { await logAudit('shift:update', { target_id: id, details: { patch } }) } catch (_) {}
   return data
 }
 
 export async function deleteShiftAssignment(id) {
   const { error } = await supabase.from('shift_assignments').delete().eq('id', id)
   if (error) throw error
+  try { await logAudit('shift:delete', { target_id: id }) } catch (_) {}
   return true
 }
 
@@ -353,6 +365,7 @@ export async function upsertShiftRateOverride(yearMonth, shift_function_id, valu
     .select('id, year_month, shift_function_id, value')
     .single()
   if (error) throw error
+  try { await logAudit('shift:rate:upsert', { target_id: data.id, details: { year_month: yearMonth, shift_function_id, value } }) } catch (_) {}
   return data
 }
 
@@ -470,7 +483,7 @@ export async function fetchMyProfile() {
   if (!user) return null
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, email, role, status, created_at')
+    .select('id, email, role, status, created_at, collaborator_id')
     .eq('id', user.id)
     .maybeSingle()
   if (error) throw error
@@ -480,7 +493,7 @@ export async function fetchMyProfile() {
 export async function listProfiles() {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, email, role, status, created_at')
+    .select('id, email, role, status, created_at, collaborator_id')
     .order('created_at', { ascending: true })
   if (error) throw error
   return data
@@ -489,7 +502,7 @@ export async function listProfiles() {
 export async function listProfilesPaged({ q = '', role, status, page = 1, pageSize = 10, orderBy = 'created_at', direction = 'asc' } = {}) {
   let query = supabase
     .from('profiles')
-    .select('id, email, role, status, created_at', { count: 'exact' })
+    .select('id, email, role, status, created_at, collaborator_id', { count: 'exact' })
 
   if (q) query = query.ilike('email', `%${q}%`)
   if (role && role !== 'all') query = query.eq('role', role)

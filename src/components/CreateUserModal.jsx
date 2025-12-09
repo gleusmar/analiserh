@@ -10,6 +10,7 @@ export function CreateUserModal({ open, onClose, data, setData, onSubmit, busy, 
           <select value={data.role} onChange={(e)=>setData(d=>({...d,role:e.target.value}))} className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white/60 dark:bg-neutral-900/60 px-3 py-2.5">
             <option value="user">user</option>
             <option value="admin">admin</option>
+            <option value="gestor-plantoes">gestor-plantoes</option>
           </select>
           {error && <div className="text-sm text-red-600 dark:text-red-400">{error}</div>}
           <div className="flex justify-end gap-2">

@@ -5,6 +5,8 @@ import { useAuth } from '../../contexts/AuthContext.jsx'
 export default function Sidebar() {
   const { role } = useAuth()
   const canAdmin = role === 'admin' || role === 'super'
+  const canGestor = role === 'gestor-plantoes'
+  const isUser = role === 'user'
   const sections = [
     {
       title: null,
@@ -15,14 +17,14 @@ export default function Sidebar() {
     {
       title: 'Plantões',
       items: [
-        { to: '/shifts', label: 'Calendário', icon: Calendar, show: canAdmin },
-        { to: '/shifts/dashboard', label: 'Dashboard', icon: BarChart, show: canAdmin },
+        { to: '/shifts', label: 'Calendário', icon: Calendar, show: canAdmin || canGestor || isUser },
+        { to: '/shifts/dashboard', label: 'Dashboard', icon: BarChart, show: canAdmin || canGestor },
       ],
     },
     {
       title: 'Folha de Pagamento',
       items: [
-        { to: '/payroll', label: 'Folha Mensal', icon: BarChart, show: canAdmin },
+        { to: '/payroll', label: 'Folha Mensal', icon: BarChart, show: canAdmin || canGestor || isUser },
       ],
     },
     {
@@ -33,6 +35,7 @@ export default function Sidebar() {
         { to: '/functions', label: 'Funções', icon: Settings, show: canAdmin },
         { to: '/shift-functions', label: 'Valores de Plantões', icon: Settings, show: canAdmin },
         { to: '/settings/payroll-entries', label: 'Lançamentos', icon: Settings, show: canAdmin },
+        { to: '/logs', label: 'Logs', icon: BarChart, show: canAdmin },
       ],
     },
   ]

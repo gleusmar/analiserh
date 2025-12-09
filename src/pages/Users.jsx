@@ -10,14 +10,15 @@ import {
   listAuditLogs,
   listProfilesPaged,
   listAuditLogsPaged,
+  listCollaboratorsSimple,
 } from '../lib/db'
-import { createUser } from '../lib/adminApi'
+import { createUser, linkProfileCollaborator } from '../lib/adminApi'
 import { CreateUserModal } from '../components/CreateUserModal.jsx'
 
 function classNames(...xs) { return xs.filter(Boolean).join(' ') }
 
 export default function Users() {
-  const { user } = useAuth()
+  const { user, role } = useAuth()
   const superEmail = import.meta.env.VITE_SUPER_EMAIL
   const [tab, setTab] = useState('users')
   const [loading, setLoading] = useState(true)
@@ -28,8 +29,12 @@ export default function Users() {
   const [form, setForm] = useState({ email: '', role: 'user' })
   const [creating, setCreating] = useState(false)
   const [justCreatedInvite, setJustCreatedInvite] = useState(null)
+  const [collaborators, setCollaborators] = useState([])
+  const [pendingLinks, setPendingLinks] = useState({})
+  const [linking, setLinking] = useState({})
 
-  const isSuper = useMemo(() => user?.email && user.email === superEmail, [user, superEmail])
+  const isSuper = useMemo(() => (user?.email && user.email === superEmail) || role === 'super', [user, superEmail, role])
+  const canAdmin = useMemo(() => isSuper || role === 'admin', [isSuper, role])
 
   // Filtros e paginação - Usuários
   const [q, setQ] = useState('')
@@ -74,6 +79,41 @@ export default function Users() {
   }
 
   useEffect(() => { load() }, [q, roleFilter, statusFilter, usersPage, usersPageSize, auditQ, auditAction, auditPage, auditPageSize])
+
+  useEffect(() => {
+    let active = true
+    async function loadCollabs() {
+      try {
+        const xs = await listCollaboratorsSimple()
+        if (active) setCollaborators(xs || [])
+      } catch (_) {}
+    }
+    loadCollabs()
+    return () => { active = false }
+  }, [])
+
+  function collabNameById(id) {
+    const c = (collaborators||[]).find(x => x.id === id)
+    return c ? `${c.name}${c.concent_id ? ` (${c.concent_id})` : ''}` : '-'
+  }
+
+  function onChangeUserCollaborator(u, cid) {
+    const val = cid === null || cid === '' ? null : (isNaN(Number(cid)) ? cid : Number(cid))
+    setPendingLinks((m) => ({ ...m, [u.id]: val }))
+  }
+
+  async function onSaveUserCollaborator(u) {
+    const cid = pendingLinks[u.id] ?? null
+    setLinking((m) => ({ ...m, [u.id]: true }))
+    try {
+      await linkProfileCollaborator(u.id, cid, { id: user?.id, email: user?.email })
+      setUsersList((xs) => xs.map((x) => (x.id === u.id ? { ...x, collaborator_id: cid || null } : x)))
+    } catch (e) {
+      alert(e.message || 'Erro ao vincular colaborador')
+    } finally {
+      setLinking((m) => ({ ...m, [u.id]: false }))
+    }
+  }
 
   function roleLabel(item) {
     if (item.email === superEmail) return 'super'
@@ -189,6 +229,7 @@ export default function Users() {
                     <option value="all">papel: todos</option>
                     <option value="user">user</option>
                     <option value="admin">admin</option>
+                    <option value="gestor-plantoes">gestor-plantoes</option>
                   </select>
                   <select value={statusFilter} onChange={(e)=>{setUsersPage(1);setStatusFilter(e.target.value)}} className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white/60 dark:bg-neutral-900/60 px-3 py-2.5">
                     <option value="all">status: todos</option>
@@ -196,9 +237,11 @@ export default function Users() {
                     <option value="inactive">inactive</option>
                   </select>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button onClick={()=>setOpenCreate(true)} className="rounded-xl bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 px-3 py-2.5">Criar usuário</button>
-                </div>
+                {isSuper && (
+                  <div className="flex items-center gap-2">
+                    <button onClick={()=>setOpenCreate(true)} className="rounded-xl bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 px-3 py-2.5">Criar usuário</button>
+                  </div>
+                )}
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -207,6 +250,7 @@ export default function Users() {
                       <th className="py-2">E-mail</th>
                       <th className="py-2">Papel</th>
                       <th className="py-2">Status</th>
+                      <th className="py-2">Colaborador</th>
                       <th className="py-2">Ações</th>
                     </tr>
                   </thead>
@@ -220,12 +264,40 @@ export default function Users() {
                           <td className="py-2 capitalize">{currentRole}</td>
                           <td className="py-2 capitalize">{u.status || 'active'}</td>
                           <td className="py-2">
-                            <div className="inline-flex gap-2">
-                              <button disabled={lock || currentRole==='admin'} onClick={()=>onChangeRole(u,'admin')} className="px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-800 disabled:opacity-50">Tornar admin</button>
-                              <button disabled={lock || currentRole==='user'} onClick={()=>onChangeRole(u,'user')} className="px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-800 disabled:opacity-50">Tornar user</button>
-                              <button disabled={lock || (u.status==='inactive')} onClick={()=>onChangeStatus(u,'inactive')} className="px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-800 disabled:opacity-50">Desativar</button>
-                              <button disabled={lock || (u.status==='active' || !u.status)} onClick={()=>onChangeStatus(u,'active')} className="px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-800 disabled:opacity-50">Ativar</button>
-                            </div>
+                            {canAdmin ? (
+                              <div className="flex items-center gap-2">
+                                <select
+                                  value={(pendingLinks[u.id] ?? u.collaborator_id ?? '').toString()}
+                                  onChange={(e)=>onChangeUserCollaborator(u, e.target.value || null)}
+                                  className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white/60 dark:bg-neutral-900/60 px-2 py-1.5 min-w-[220px]"
+                                >
+                                  <option value="">— não vinculado —</option>
+                                  {collaborators.map((c) => (
+                                    <option key={c.id} value={c.id.toString()}>{c.name}{c.concent_id ? ` (${c.concent_id})` : ''}</option>
+                                  ))}
+                                </select>
+                                <button
+                                  disabled={linking[u.id] || ((pendingLinks[u.id] ?? u.collaborator_id ?? null) === (u.collaborator_id ?? null))}
+                                  onClick={()=>onSaveUserCollaborator(u)}
+                                  className="px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-800 disabled:opacity-50"
+                                >{linking[u.id] ? 'Salvando...' : 'Salvar'}</button>
+                              </div>
+                            ) : (
+                              <span className="text-sm text-neutral-700 dark:text-neutral-300">{u.collaborator_id ? collabNameById(u.collaborator_id) : '-'}</span>
+                            )}
+                          </td>
+                          <td className="py-2">
+                            {isSuper ? (
+                              <div className="inline-flex gap-2">
+                                <button disabled={lock || currentRole==='admin'} onClick={()=>onChangeRole(u,'admin')} className="px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-800 disabled:opacity-50">Tornar admin</button>
+                                <button disabled={lock || currentRole==='user'} onClick={()=>onChangeRole(u,'user')} className="px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-800 disabled:opacity-50">Tornar user</button>
+                                <button disabled={lock || currentRole==='gestor-plantoes'} onClick={()=>onChangeRole(u,'gestor-plantoes')} className="px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-800 disabled:opacity-50">Tornar gestor</button>
+                                <button disabled={lock || (u.status==='inactive')} onClick={()=>onChangeStatus(u,'inactive')} className="px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-800 disabled:opacity-50">Desativar</button>
+                                <button disabled={lock || (u.status==='active' || !u.status)} onClick={()=>onChangeStatus(u,'active')} className="px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-800 disabled:opacity-50">Ativar</button>
+                              </div>
+                            ) : (
+                              <div className="text-xs text-neutral-500">Somente visualização</div>
+                            )}
                           </td>
                         </tr>
                       )
@@ -261,12 +333,14 @@ export default function Users() {
 
           {tab === 'invites' && (
             <div className="space-y-6">
+              {isSuper && (
               <form onSubmit={onInvite} className="glass rounded-xl p-4 space-y-3">
                 <div className="grid sm:grid-cols-3 gap-2">
                   <input type="email" required value={form.email} onChange={(e)=>setForm((f)=>({...f,email:e.target.value}))} placeholder="E-mail para convite" className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white/60 dark:bg-neutral-900/60 px-3 py-2.5 outline-none focus:ring-4 ring-sky-100 dark:ring-sky-900/30"/>
                   <select value={form.role} onChange={(e)=>setForm((f)=>({...f,role:e.target.value}))} className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white/60 dark:bg-neutral-900/60 px-3 py-2.5">
                     <option value="user">user</option>
                     <option value="admin">admin</option>
+                    <option value="gestor-plantoes">gestor-plantoes</option>
                   </select>
                   <button disabled={creating} className="rounded-xl bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 px-3 py-2.5">{creating? 'Enviando...' : 'Gerar convite'}</button>
                 </div>
@@ -277,6 +351,7 @@ export default function Users() {
                   </div>
                 )}
               </form>
+              )}
 
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -330,6 +405,7 @@ export default function Users() {
                   <option value="all">todas ações</option>
                   <option value="profile:role:update">profile:role:update</option>
                   <option value="profile:status:update">profile:status:update</option>
+                  <option value="profile:collaborator:link">profile:collaborator:link</option>
                   <option value="invite:create">invite:create</option>
                   <option value="invite:revoke">invite:revoke</option>
                   <option value="invite:accept">invite:accept</option>

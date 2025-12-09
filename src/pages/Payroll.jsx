@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
+import { useAuth } from '../contexts/AuthContext.jsx'
 import { listCollaboratorsSimple, listPayrollEntryTypes, listPayrollSheets, createPayrollSheet, listPayrollSheetItems, listPayrollEntriesForSheet, createPayrollEntry, deletePayrollEntry, updatePayrollSheet, deletePayrollSheet, upsertPlantaoEntry, listShiftFunctions, listShiftAssignments, listShiftRateOverrides, addPayrollSheetItems } from '../lib/db'
 
 function ymOf(date) { return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}` }
@@ -6,6 +7,8 @@ function parseYM(ym) { const [y,m] = String(ym||'').split('-').map(Number); retu
 function firstLastOfYM(ym) { const { y, m } = parseYM(ym); if (!y || !m) return { from: null, to: null }; const from = new Date(y, m-1, 1); const to = new Date(y, m, 0); const pad = (n)=>String(n).padStart(2,'0'); return { from: `${y}-${pad(m)}-01`, to: `${y}-${pad(m)}-${pad(to.getDate())}` } }
 
 export default function Payroll() {
+  const { role, profile, user } = useAuth()
+  const canAdmin = role === 'admin' || role === 'super'
   const [sheets, setSheets] = useState([])
   const [selectedSheetId, setSelectedSheetId] = useState('')
 
@@ -152,7 +155,7 @@ export default function Payroll() {
       }
       await fetch('/api/holerites/import', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(user?.id ? { 'x-actor-id': user.id } : {}), ...(user?.email ? { 'x-actor-email': user.email } : {}) },
         body: JSON.stringify({ sheetId: selectedSheetId, pages: payloadPages, overwrite: true }),
       }).then(async r => { if (!r.ok) { const t = await r.text(); throw new Error(t || 'Falha ao importar lançamentos do holerite') }})
       await loadSheet(selectedSheetId)
@@ -164,7 +167,7 @@ export default function Payroll() {
 
   async function onDownloadHolerite(collaboratorId) {
     try {
-      const r = await fetch('/api/holerites/url', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sheetId: selectedSheetId, collaborator_id: collaboratorId }) })
+      const r = await fetch('/api/holerites/url', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(user?.id ? { 'x-actor-id': user.id } : {}), ...(user?.email ? { 'x-actor-email': user.email } : {}) }, body: JSON.stringify({ sheetId: selectedSheetId, collaborator_id: collaboratorId }) })
       if (!r.ok) { const t = await r.text(); throw new Error(t || 'Holerite não encontrado') }
       const { url } = await r.json()
       if (!url) { alert('Holerite não encontrado'); return }
@@ -176,7 +179,7 @@ export default function Payroll() {
     if (!selectedSheetId) return
     if (!confirm('Remover o holerite deste colaborador?')) return
     try {
-      const r = await fetch('/api/holerites/remove', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sheetId: selectedSheetId, collaborator_id: collaboratorId }) })
+      const r = await fetch('/api/holerites/remove', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(user?.id ? { 'x-actor-id': user.id } : {}), ...(user?.email ? { 'x-actor-email': user.email } : {}) }, body: JSON.stringify({ sheetId: selectedSheetId, collaborator_id: collaboratorId }) })
       if (!r.ok) throw new Error(await r.text())
       alert('Holerite removido')
     } catch (e) { alert(e.message || 'Falha ao remover holerite') }
@@ -272,11 +275,13 @@ export default function Payroll() {
   const selectedSheet = useMemo(() => sheets.find(s=>s.id===selectedSheetId) || null, [sheets, selectedSheetId])
   const isClosed = !!selectedSheet?.closed_at
   const filteredItems = useMemo(() => {
-    const base = items || []
+    const baseAll = items || []
+    const myColId = profile?.collaborator_id || null
+    const base = canAdmin ? baseAll : baseAll.filter(it => it.collaborator_id === myColId)
     const ql = q.trim().toLowerCase()
     const filt = ql ? base.filter(it => (it.collaborators?.name||'').toLowerCase().includes(ql)) : base
     return sortByKey(filt)
-  }, [items, q, orderBy, orderDir, totalsByItem])
+  }, [items, q, orderBy, orderDir, totalsByItem, canAdmin, profile])
   const grandTotal = useMemo(() => (items||[]).reduce((s, it) => s + (totalsByItem[it.id]?.total || 0), 0), [items, totalsByItem])
 
   function toggleOrder(key) {
@@ -408,11 +413,13 @@ export default function Payroll() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Folha Mensal</h1>
-        <div className="inline-flex items-center gap-2">
-          <button onClick={openCreateSheet} className="text-xs rounded-lg bg-green-600 hover:bg-green-700 text-white px-3 py-2">Criar Folha</button>
-          <button onClick={openImportSheet} disabled={!selectedSheetId} className="text-xs rounded-lg bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 disabled:opacity-50">Importar Plantões</button>
-          <button onClick={()=>setOpenSlip(true)} disabled={!selectedSheetId} className="text-xs rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 disabled:opacity-50">Importar Holerites</button>
-        </div>
+        {canAdmin && (
+          <div className="inline-flex items-center gap-2">
+            <button onClick={openCreateSheet} className="text-xs rounded-lg bg-green-600 hover:bg-green-700 text-white px-3 py-2">Criar Folha</button>
+            <button onClick={openImportSheet} disabled={!selectedSheetId} className="text-xs rounded-lg bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 disabled:opacity-50">Importar Plantões</button>
+            <button onClick={()=>setOpenSlip(true)} disabled={!selectedSheetId} className="text-xs rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 disabled:opacity-50">Importar Holerites</button>
+          </div>
+        )}
       </div>
 
       {error && <div className="text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-950/30 rounded-xl px-3 py-2 text-sm">{error}</div>}
@@ -422,7 +429,7 @@ export default function Payroll() {
           <option value="">Selecione uma folha</option>
           {sheets.map(s => (<option key={s.id} value={s.id}>{s.name} ({s.year_month})</option>))}
         </select>
-        {selectedSheetId && (
+        {selectedSheetId && canAdmin && (
           <>
             <button onClick={onRenameSheet} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Editar nome</button>
             <button onClick={onCloseSheet} disabled={isClosed} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800 disabled:opacity-50">Encerrar folha</button>
@@ -435,9 +442,14 @@ export default function Payroll() {
 
       {selectedSheetId && (
         <div className="flex items-center gap-3">
-          <div className="text-sm text-neutral-700 dark:text-neutral-300 font-medium">Total geral: {formatBRL(grandTotal)}</div>
+          {canAdmin && (
+            <div className="text-sm text-neutral-700 dark:text-neutral-300 font-medium">Total geral: {formatBRL(grandTotal)}</div>
+          )}
           <input placeholder="Filtrar por nome" value={q} onChange={(e)=>setQ(e.target.value)} className="mx-auto rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
         </div>
+      )}
+      {!canAdmin && !profile?.collaborator_id && (
+        <div className="text-xs text-amber-700 bg-amber-50 dark:text-amber-300 dark:bg-amber-900/30 rounded-xl px-3 py-2">Seu usuário não está vinculado a um colaborador. Solicite ao administrador para associar seu perfil.</div>
       )}
 
       {selectedSheetId && (
@@ -460,8 +472,8 @@ export default function Payroll() {
                 const isBB = (col?.bank_code || '').trim() === '001'
                 const rowColor = isBB ? 'bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50' : 'bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50'
                 return (
-                  <>
-                    <tr key={it.id} onClick={()=>toggleExpanded(it.id)} className={`border-t border-neutral-200 dark:border-neutral-800 cursor-pointer ${rowColor}`}>
+                  <Fragment key={it.id}>
+                    <tr onClick={()=>toggleExpanded(it.id)} className={`border-t border-neutral-200 dark:border-neutral-800 cursor-pointer ${rowColor}`}>
                       <td className="py-2">{col?.concent_id || '-'}</td>
                       <td className="py-2 font-medium">{col?.name || '-'}</td>
                       <td className="py-2">{formatBRL(totals.inc)}</td>
@@ -470,7 +482,9 @@ export default function Payroll() {
                       <td className="py-2">
                         <div className="inline-flex items-center gap-2">
                           <button onClick={(e)=>{ e.stopPropagation(); onDownloadHolerite(it.collaborator_id) }} className="px-2 py-1 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Baixar</button>
-                          <button onClick={(e)=>{ e.stopPropagation(); onRemoveHolerite(it.collaborator_id) }} className="px-2 py-1 text-xs rounded-lg border border-red-200 text-red-600 dark:border-red-900">Remover</button>
+                          {canAdmin && (
+                            <button onClick={(e)=>{ e.stopPropagation(); onRemoveHolerite(it.collaborator_id) }} className="px-2 py-1 text-xs rounded-lg border border-red-200 text-red-600 dark:border-red-900">Remover</button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -494,19 +508,19 @@ export default function Payroll() {
                                     <div className={"text-xs " + (en.payroll_entry_types?.kind==='out' ? 'text-red-600' : 'text-green-600')}>
                                       {en.payroll_entry_types?.kind==='out' ? '-' : '+'} {formatBRL(en.amount)}
                                     </div>
-                                    {!isClosed && (
+                                    {canAdmin && !isClosed && (
                                       <button onClick={()=>removeEntry(it.id, en.id)} className="px-2 py-1 text-xs rounded-lg border border-red-200 text-red-600 dark:border-red-900">X</button>
                                     )}
                                   </div>
                                 </div>
                               ))}
                             </div>
-                            {!isClosed && <AddEntryForm types={types} onSubmit={(f)=>addEntry(it.id, f.form, f.setForm)} />}
+                            {canAdmin && !isClosed && <AddEntryForm types={types} onSubmit={(f)=>addEntry(it.id, f.form, f.setForm)} />}
                           </div>
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 )
               })}
             </tbody>

@@ -19,6 +19,7 @@ import ShiftFunctions from './pages/ShiftFunctions.jsx'
 import ShiftsDashboard from './pages/ShiftsDashboard.jsx'
 import Payroll from './pages/Payroll.jsx'
 import PayrollEntries from './pages/PayrollEntries.jsx'
+import Logs from './pages/Logs.jsx'
 
 function App() {
   return (
@@ -96,7 +97,7 @@ function App() {
         path="/shifts"
         element={
           <ProtectedRoute>
-            <RoleRoute allow={["admin", "super"]}>
+            <RoleRoute allow={["admin", "super", "gestor-plantoes", "user"]}>
               <DashboardLayout>
                 <Shifts />
               </DashboardLayout>
@@ -109,7 +110,7 @@ function App() {
         path="/shifts/dashboard"
         element={
           <ProtectedRoute>
-            <RoleRoute allow={["admin", "super"]}>
+            <RoleRoute allow={["admin", "super", "gestor-plantoes"]}>
               <DashboardLayout>
                 <ShiftsDashboard />
               </DashboardLayout>
@@ -122,7 +123,7 @@ function App() {
         path="/payroll"
         element={
           <ProtectedRoute>
-            <RoleRoute allow={["admin", "super"]}>
+            <RoleRoute allow={["admin", "super", "gestor-plantoes", "user"]}>
               <DashboardLayout>
                 <Payroll />
               </DashboardLayout>
@@ -138,6 +139,19 @@ function App() {
             <RoleRoute allow={["admin", "super"]}>
               <DashboardLayout>
                 <PayrollEntries />
+              </DashboardLayout>
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/logs"
+        element={
+          <ProtectedRoute>
+            <RoleRoute allow={["admin", "super"]}>
+              <DashboardLayout>
+                <Logs />
               </DashboardLayout>
             </RoleRoute>
           </ProtectedRoute>

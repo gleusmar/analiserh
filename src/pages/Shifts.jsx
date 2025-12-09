@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useAuth } from '../contexts/AuthContext.jsx'
 import { listShiftFunctions, listCollaboratorsSimple, listShiftAssignments, createShiftAssignment, updateShiftAssignment, deleteShiftAssignment, listShiftRateOverrides, updateShiftPositions } from '../lib/db'
 
 function classNames(...xs) { return xs.filter(Boolean).join(' ') }
@@ -23,6 +24,8 @@ function ptMonthYear(date) {
 }
 
 export default function Shifts() {
+  const { role } = useAuth()
+  const canManage = role === 'admin' || role === 'super' || role === 'gestor-plantoes'
   const [current, setCurrent] = useState(() => new Date())
   const [functions, setFunctions] = useState([])
   const [collaborators, setCollaborators] = useState([])
@@ -132,11 +135,13 @@ export default function Shifts() {
     }, [items, orderMap, dateISO])
 
     function onDragStartItem(e, id) {
+      if (!canManage) return
       e.dataTransfer.setData('text/plain', id)
       e.dataTransfer.setData('application/x-shift-date', dateISO)
       e.dataTransfer.effectAllowed = 'copyMove'
     }
     async function onDropOnItem(e, targetId) {
+      if (!canManage) return
       e.preventDefault()
       e.stopPropagation()
       const srcId = e.dataTransfer.getData('text/plain')
@@ -178,6 +183,7 @@ export default function Shifts() {
     }
 
     async function onDropOnContainer(e) {
+      if (!canManage) return
       e.preventDefault()
       const srcId = e.dataTransfer.getData('text/plain')
       const srcDate = e.dataTransfer.getData('application/x-shift-date')
@@ -215,7 +221,7 @@ export default function Shifts() {
     return (
       <div
         className="h-130 flex flex-col rounded-xl border border-neutral-200 dark:border-neutral-800 p-2 gap-2 text-[11px]"
-        onDragOver={(e)=>e.preventDefault()}
+        onDragOver={(e)=>{ if (canManage) e.preventDefault() }}
         onDrop={onDropOnContainer}
       >
         <div className="text-base font-bold text-center text-emerald-800">{String(day)}</div>
@@ -226,9 +232,9 @@ export default function Shifts() {
             return (
               <div
                 key={a.id}
-                draggable
+                draggable={canManage}
                 onDragStart={(e)=>onDragStartItem(e, a.id)}
-                onDragOver={(e)=>{ e.preventDefault(); e.stopPropagation(); }}
+                onDragOver={(e)=>{ if (canManage) { e.preventDefault(); e.stopPropagation(); } }}
                 onDrop={(e)=>onDropOnItem(e, a.id)}
                 className={
                   "flex items-center justify-between gap-2 rounded-lg border border-neutral-200 dark:border-neutral-800 px-2 py-0.5 " +
@@ -243,33 +249,37 @@ export default function Shifts() {
                   <div className="truncate text-xs text-black dark:text-white font-semibold">{colName}</div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <input type="checkbox" checked={!!a.remunerated} onChange={()=>toggleRemunerated(a)} title="Remunerado" />
-                  <button className="p-1 text-red-600 font-bold hover:text-red-700 cursor-pointer" aria-label="Remover" onClick={()=>removeAssignment(a)}>X</button>
+                  <input type="checkbox" checked={!!a.remunerated} onChange={()=>canManage && toggleRemunerated(a)} title="Remunerado" disabled={!canManage} />
+                  {canManage && (
+                    <button className="p-1 text-red-600 font-bold hover:text-red-700 cursor-pointer" aria-label="Remover" onClick={()=>removeAssignment(a)}>X</button>
+                  )}
                 </div>
               </div>
             )
           })}
         </div>
-        <div className="mt-auto pt-1 border-t border-dashed border-neutral-200 dark:border-neutral-800">
-          <div className="flex flex-col gap-2">
-            <select value={selFn} onChange={(e)=>setSelFn(e.target.value)} className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 px-2 py-1 text-xs">
-              <option value="">Função</option>
-              {functions.map(f => (
-                <option key={f.id} value={f.id}>{f.name}</option>
-              ))}
-            </select>
-            <select value={selCol} onChange={(e)=>setSelCol(e.target.value)} className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 px-2 py-1 text-xs">
-              <option value="">Colaborador</option>
-              {activeCollaborators.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
+        {canManage && (
+          <div className="mt-auto pt-1 border-t border-dashed border-neutral-200 dark:border-neutral-800">
+            <div className="flex flex-col gap-2">
+              <select value={selFn} onChange={(e)=>setSelFn(e.target.value)} className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 px-2 py-1 text-xs">
+                <option value="">Função</option>
+                {functions.map(f => (
+                  <option key={f.id} value={f.id}>{f.name}</option>
+                ))}
+              </select>
+              <select value={selCol} onChange={(e)=>setSelCol(e.target.value)} className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 px-2 py-1 text-xs">
+                <option value="">Colaborador</option>
+                {activeCollaborators.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="mt-2 flex items-center justify-between">
+              <input type="checkbox" checked={rem} onChange={(e)=>setRem(e.target.checked)} title="Remunerado" />
+              <button disabled={!selFn || !selCol} onClick={()=>addAssignment(dateISO, selFn, selCol, rem)} className="px-2 py-1 text-xs rounded-lg bg-green-600 hover:bg-green-700 text-white disabled:opacity-50">Adicionar</button>
+            </div>
           </div>
-          <div className="mt-2 flex items-center justify-between">
-            <input type="checkbox" checked={rem} onChange={(e)=>setRem(e.target.checked)} title="Remunerado" />
-            <button disabled={!selFn || !selCol} onClick={()=>addAssignment(dateISO, selFn, selCol, rem)} className="px-2 py-1 text-xs rounded-lg bg-green-600 hover:bg-green-700 text-white disabled:opacity-50">Adicionar</button>
-          </div>
-        </div>
+        )}
       </div>
     )
   }

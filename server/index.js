@@ -72,6 +72,18 @@ app.post('/api/holerites/remove', async (req, res) => {
     const path = `${sheetId}/${collaborator_id}.pdf`
     const { error } = await bucket.remove([path])
     if (error) throw error
+    // audit
+    try {
+      const actorId = req.header('x-actor-id') || null
+      const actorEmail = req.header('x-actor-email') || null
+      await admin.from('audit_logs').insert({
+        action: 'holerite:remove',
+        actor_id: actorId,
+        actor_email: actorEmail,
+        target_id: collaborator_id,
+        details: { sheet_id: sheetId, collaborator_id },
+      })
+    } catch (logErr) { console.warn('audit log failed', logErr) }
     res.json({ ok: true })
   } catch (e) {
     console.error(e)
@@ -101,6 +113,17 @@ app.post('/api/holerites/cleanup', async (req, res) => {
       const { error: remErr } = await bucket.remove(paths)
       if (remErr) throw remErr
     }
+    // audit
+    try {
+      const actorId = req.header('x-actor-id') || null
+      const actorEmail = req.header('x-actor-email') || null
+      await admin.from('audit_logs').insert({
+        action: 'holerite:cleanup',
+        actor_id: actorId,
+        actor_email: actorEmail,
+        details: { sheet_id: sheetId, removed: paths.length },
+      })
+    } catch (logErr) { console.warn('audit log failed', logErr) }
     res.json({ ok: true, removed: paths.length })
   } catch (e) {
     console.error(e)
@@ -129,6 +152,50 @@ app.post('/api/holerites/url', async (req, res) => {
   }
 })
 
+// Link a profile to a collaborator (service role). Body: { profile_id, collaborator_id|null }
+app.post('/api/admin/profiles/link-collaborator', async (req, res) => {
+  try {
+    const { profile_id, collaborator_id = null } = req.body || {}
+    if (!profile_id) return res.status(400).json({ error: 'profile_id é obrigatório' })
+
+    const { data: before, error: selErr } = await admin
+      .from('profiles')
+      .select('id, email, collaborator_id')
+      .eq('id', profile_id)
+      .maybeSingle()
+    if (selErr) throw selErr
+    if (!before) return res.status(404).json({ error: 'perfil não encontrado' })
+
+    const { data, error } = await admin
+      .from('profiles')
+      .update({ collaborator_id: collaborator_id || null })
+      .eq('id', profile_id)
+      .select('id, email, collaborator_id')
+      .single()
+    if (error) throw error
+
+    try {
+      const actorId = req.header('x-actor-id') || null
+      const actorEmail = req.header('x-actor-email') || null
+      await admin.from('audit_logs').insert({
+        action: 'profile:collaborator:link',
+        actor_id: actorId,
+        actor_email: actorEmail,
+        target_id: data.id,
+        target_email: data.email,
+        details: { from: before?.collaborator_id || null, to: data?.collaborator_id || null },
+      })
+    } catch (logErr) {
+      console.warn('audit log failed', logErr)
+    }
+
+    res.json({ ok: true, id: data.id, collaborator_id: data.collaborator_id })
+  } catch (e) {
+    console.error(e)
+    res.status(500).json({ error: e.message || 'falha ao vincular colaborador ao perfil' })
+  }
+})
+
 // Create user (admin only; for now we trust local dev). In production, add auth/checks.
 app.post('/api/admin/users', async (req, res) => {
   try {
@@ -136,7 +203,7 @@ app.post('/api/admin/users', async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({ error: 'email and password are required' })
     }
-    if (!['user', 'admin'].includes(role)) {
+    if (!['user', 'admin', 'gestor-plantoes'].includes(role)) {
       return res.status(400).json({ error: 'invalid role' })
     }
 
@@ -351,6 +418,18 @@ app.post('/api/holerites/import', async (req, res) => {
           .insert({ sheet_item_id: item.id, entry_type_id: op.type.id, amount: op.amount, note: op.note })
       }
       results.push({ collaborator_id, counts: ops.length })
+      // audit per collaborator imported
+      try {
+        const actorId = req.header('x-actor-id') || null
+        const actorEmail = req.header('x-actor-email') || null
+        await admin.from('audit_logs').insert({
+          action: 'holerite:import',
+          actor_id: actorId,
+          actor_email: actorEmail,
+          target_id: item.id,
+          details: { sheet_id: sheetId, collaborator_id, entries: ops.map(o => ({ entry_type_id: o.type.id, amount: o.amount })) },
+        })
+      } catch (logErr) { console.warn('audit log failed', logErr) }
     }
     res.json({ ok: true, results })
   } catch (e) {
