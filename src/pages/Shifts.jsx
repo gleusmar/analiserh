@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext.jsx'
-import { listShiftFunctions, listCollaboratorsSimple, listShiftAssignments, createShiftAssignment, updateShiftAssignment, deleteShiftAssignment, listShiftRateOverrides, updateShiftPositions } from '../lib/db'
+import { listShiftFunctions, listCollaboratorsSimple, listShiftAssignments, createShiftAssignment, updateShiftAssignment, deleteShiftAssignment, listShiftRateOverrides } from '../lib/db'
 
 function classNames(...xs) { return xs.filter(Boolean).join(' ') }
 
@@ -33,7 +33,11 @@ export default function Shifts() {
   const [overrides, setOverrides] = useState({}) // { shift_function_id: value }
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [orderMap, setOrderMap] = useState({}) // { [dateISO]: [assignmentId, ...] }
+  const [bulkOpen, setBulkOpen] = useState(false)
+  const [bulkFn, setBulkFn] = useState('')
+  const [bulkCol, setBulkCol] = useState('')
+  const [bulkRem, setBulkRem] = useState(true)
+  const [bulkDays, setBulkDays] = useState(new Set())
 
   const activeCollaborators = useMemo(() => (collaborators || []).filter(c => c.status !== 'inactive'), [collaborators])
 
@@ -101,7 +105,6 @@ export default function Shifts() {
   }
 
   async function removeAssignment(a) {
-    if (!confirm('Remover este plantão?')) return
     try {
       await deleteShiftAssignment(a.id)
       setAssignments(list => list.filter(x => x.id !== a.id))
@@ -117,6 +120,26 @@ export default function Shifts() {
     setCurrent(d => new Date(d.getFullYear(), d.getMonth()+1, 1))
   }
 
+  async function bulkSave() {
+    if (!canManage) return
+    if (!bulkFn || !bulkCol || bulkDays.size === 0) return
+    try {
+      const ops = []
+      for (const d of Array.from(bulkDays)) {
+        const dateISO = formatISO(new Date(current.getFullYear(), current.getMonth(), d))
+        ops.push(createShiftAssignment({ date: dateISO, shift_function_id: bulkFn, collaborator_id: bulkCol, remunerated: bulkRem }))
+      }
+      const res = await Promise.allSettled(ops)
+      const created = res.filter(r => r.status === 'fulfilled').map(r => r.value)
+      if (created.length) setAssignments(list => [...list, ...created])
+      setBulkOpen(false)
+      setBulkDays(new Set())
+      setBulkFn(''); setBulkCol(''); setBulkRem(true)
+    } catch (e) {
+      alert(e.message || 'Falha ao inserir em múltiplos dias')
+    }
+  }
+
   function DayCell({ day }) {
     const dateISO = useMemo(() => formatISO(new Date(current.getFullYear(), current.getMonth(), day)), [current, day])
     const items = byDate[dateISO] || []
@@ -124,15 +147,15 @@ export default function Shifts() {
     const [selCol, setSelCol] = useState('')
     const [rem, setRem] = useState(true)
     const orderedItems = useMemo(() => {
-      const ids = orderMap[dateISO]
-      if (Array.isArray(ids) && ids.length) {
-        const byId = Object.fromEntries(items.map(i => [i.id, i]))
-        const sorted = ids.map(id => byId[id]).filter(Boolean)
-        const rest = items.filter(i => !ids.includes(i.id))
-        return [...sorted, ...rest]
-      }
-      return items
-    }, [items, orderMap, dateISO])
+      const arr = [...items]
+      arr.sort((a, b) => {
+        const av = overrideMap[a.shift_function_id] ?? 999999
+        const bv = overrideMap[b.shift_function_id] ?? 999999
+        if (av !== bv) return av - bv
+        return String(a.id).localeCompare(String(b.id))
+      })
+      return arr
+    }, [items, overrideMap])
 
     function onDragStartItem(e, id) {
       if (!canManage) return
@@ -147,7 +170,6 @@ export default function Shifts() {
       const srcId = e.dataTransfer.getData('text/plain')
       const srcDate = e.dataTransfer.getData('application/x-shift-date')
       if (!srcId) return
-      // cross-day: copy behavior (same as container drop)
       if (srcDate !== dateISO) {
         const src = (assignments || []).find(x => x.id === srcId)
         if (!src) return
@@ -159,27 +181,12 @@ export default function Shifts() {
             remunerated: src.remunerated,
           })
           setAssignments(list => [...list, created])
-          const ids = [...orderedItems.map(x => x.id), created.id]
-          setOrderMap(prev => ({ ...prev, [dateISO]: ids }))
-          try { await updateShiftPositions(dateISO, ids) } catch (_) {}
         } catch (err) {
           alert(err?.message || 'Falha ao copiar plantão para o dia')
         }
         return
       }
-      const ids = orderedItems.map(x => x.id)
-      const from = ids.indexOf(srcId)
-      const to = ids.indexOf(targetId)
-      if (from < 0 || to < 0 || from === to) return
-      const reordered = [...ids]
-      const [moved] = reordered.splice(from, 1)
-      reordered.splice(to, 0, moved)
-      setOrderMap(prev => ({ ...prev, [dateISO]: reordered }))
-      try {
-        await updateShiftPositions(dateISO, reordered)
-      } catch (_) {
-        // manter ordem local mesmo se persistência falhar; recarregar pode corrigir
-      }
+      return
     }
 
     async function onDropOnContainer(e) {
@@ -188,19 +195,7 @@ export default function Shifts() {
       const srcId = e.dataTransfer.getData('text/plain')
       const srcDate = e.dataTransfer.getData('application/x-shift-date')
       if (!srcId) return
-      // mesmo dia: mover para o final
-      if (srcDate === dateISO) {
-        const ids = orderedItems.map(x => x.id)
-        const from = ids.indexOf(srcId)
-        if (from < 0) return
-        const reordered = [...ids]
-        const [moved] = reordered.splice(from, 1)
-        reordered.push(moved)
-        setOrderMap(prev => ({ ...prev, [dateISO]: reordered }))
-        try { await updateShiftPositions(dateISO, reordered) } catch (_) {}
-        return
-      }
-      // dia diferente: copiar (criar novo assignment no destino) e anexar ao final
+      if (srcDate === dateISO) return
       const src = (assignments || []).find(x => x.id === srcId)
       if (!src) return
       try {
@@ -211,20 +206,34 @@ export default function Shifts() {
           remunerated: src.remunerated,
         })
         setAssignments(list => [...list, created])
-        const ids = [...orderedItems.map(x => x.id), created.id]
-        setOrderMap(prev => ({ ...prev, [dateISO]: ids }))
-        try { await updateShiftPositions(dateISO, ids) } catch (_) {}
       } catch (err) {
         alert(err?.message || 'Falha ao copiar plantão para o dia')
       }
     }
+
+    async function clearDay() {
+      if (!canManage) return
+      if (!confirm('Remover todos os plantões deste dia?')) return
+      try {
+        const ids = (byDate[dateISO] || []).map(x => x.id)
+        await Promise.allSettled(ids.map(id => deleteShiftAssignment(id)))
+        setAssignments(list => list.filter(x => x.date !== dateISO))
+      } catch (e) {
+        alert(e.message || 'Falha ao limpar o dia')
+      }
+    }
     return (
       <div
-        className="h-130 flex flex-col rounded-xl border border-neutral-200 dark:border-neutral-800 p-2 gap-2 text-[11px]"
+        className="h-145 flex flex-col rounded-xl border border-neutral-200 dark:border-neutral-800 p-2 gap-2 text-[11px]"
         onDragOver={(e)=>{ if (canManage) e.preventDefault() }}
         onDrop={onDropOnContainer}
       >
-        <div className="text-base font-bold text-center text-emerald-800">{String(day)}</div>
+        <div className="flex items-center justify-between">
+          <div className="text-base font-bold text-emerald-800">{String(day)}</div>
+          {canManage && (
+            <button className="text-red-600 hover:text-red-700 text-xs font-bold px-1" title="Remover todos do dia" onClick={clearDay}>x</button>
+          )}
+        </div>
         <div className="flex-1 overflow-y-auto space-y-1">
           {orderedItems.map(a => {
             const fnName = (functions.find(f => f.id === a.shift_function_id)?.name) || 'Função'
@@ -297,6 +306,9 @@ export default function Shifts() {
           <button onClick={prevMonth} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Anterior</button>
           <div className="text-sm font-medium w-40 text-center">{ptMonthYear(current)}</div>
           <button onClick={nextMonth} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Próximo</button>
+          {canManage && (
+            <button onClick={()=>setBulkOpen(true)} className="px-3 py-2 text-xs rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white">Inserção múltipla</button>
+          )}
         </div>
       </div>
 
@@ -310,12 +322,65 @@ export default function Shifts() {
         ))}
         {cells.map((c, idx) => (
           c === null ? (
-            <div key={`b-${idx}`} className="h-130 rounded-xl border border-dashed border-neutral-200 dark:border-neutral-800" />
+            <div key={`b-${idx}`} className="h-145 rounded-xl border border-dashed border-neutral-200 dark:border-neutral-800" />
           ) : (
             <DayCell key={`d-${c}`} day={c} />
           )
         ))}
       </div>
+
+      {bulkOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-lg rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-4 space-y-3">
+            <div className="text-sm font-semibold">Inserir em múltiplos dias</div>
+            <div className="grid grid-cols-2 gap-2">
+              <select value={bulkFn} onChange={(e)=>setBulkFn(e.target.value)} className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 px-2 py-1 text-xs">
+                <option value="">Função</option>
+                {functions.map(f => (
+                  <option key={f.id} value={f.id}>{f.name}</option>
+                ))}
+              </select>
+              <select value={bulkCol} onChange={(e)=>setBulkCol(e.target.value)} className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 px-2 py-1 text-xs">
+                <option value="">Colaborador</option>
+                {activeCollaborators.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center justify-between">
+              <label className="text-xs inline-flex items-center gap-2">
+                <input type="checkbox" checked={bulkRem} onChange={(e)=>setBulkRem(e.target.checked)} /> Remunerado
+              </label>
+              <div className="text-[11px] text-neutral-500">Clique nos dias para selecionar</div>
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+              {weekLabels.map((w) => (
+                <div key={`w-${w}`} className="text-[11px] text-emerald-700 text-center py-0.5">{w}</div>
+              ))}
+              {Array.from({ length: beforeBlanks }, (_, i) => (
+                <div key={`mb-${i}`} className="h-8" />
+              ))}
+              {Array.from({ length: totalDays }, (_, i) => i + 1).map(d => {
+                const sel = bulkDays.has(d)
+                return (
+                  <button
+                    key={`md-${d}`}
+                    onClick={()=>setBulkDays(prev=>{ const ns = new Set(prev); if (ns.has(d)) ns.delete(d); else ns.add(d); return ns })}
+                    className={
+                      "h-8 rounded-lg text-xs font-semibold " +
+                      (sel ? "bg-emerald-600 text-white" : "bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200")
+                    }
+                  >{d}</button>
+                )
+              })}
+            </div>
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button onClick={()=>{ setBulkOpen(false); }} className="px-3 py-1.5 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Cancelar</button>
+              <button disabled={!bulkFn || !bulkCol || bulkDays.size===0} onClick={bulkSave} className="px-3 py-1.5 text-xs rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50">Salvar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
