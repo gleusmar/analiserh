@@ -50,7 +50,8 @@ export async function getHoleriteUrl(sheetId, collaboratorId, expiresInSeconds =
 export async function listShiftFunctions() {
   const { data, error } = await supabase
     .from('shift_functions')
-    .select('id, name, base_value, created_at')
+    .select('id, name, base_value, sort_order, created_at')
+    .order('sort_order', { ascending: true, nullsFirst: false })
     .order('name', { ascending: true })
   if (error) throw error
   return data || []
@@ -59,8 +60,8 @@ export async function listShiftFunctions() {
 export async function createShiftFunction(payload) {
   const { data, error } = await supabase
     .from('shift_functions')
-    .insert({ name: payload.name, base_value: payload.base_value || 0 })
-    .select('id, name, base_value, created_at')
+    .insert({ name: payload.name, base_value: payload.base_value || 0, sort_order: payload.sort_order ?? null })
+    .select('id, name, base_value, sort_order, created_at')
     .single()
   if (error) throw error
   return data
@@ -273,9 +274,20 @@ export async function upsertPlantaoEntry(sheet_item_id, amount) {
 export async function updateShiftFunction(id, payload) {
   const { data, error } = await supabase
     .from('shift_functions')
-    .update({ name: payload.name, base_value: payload.base_value })
+    .update({ name: payload.name, base_value: payload.base_value, sort_order: payload.sort_order })
     .eq('id', id)
-    .select('id, name, base_value, created_at')
+    .select('id, name, base_value, sort_order, created_at')
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function updateShiftFunctionOrder(id, sort_order) {
+  const { data, error } = await supabase
+    .from('shift_functions')
+    .update({ sort_order })
+    .eq('id', id)
+    .select('id, name, base_value, sort_order, created_at')
     .single()
   if (error) throw error
   return data

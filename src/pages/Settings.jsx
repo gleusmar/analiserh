@@ -1,44 +1,39 @@
-import { useEffect, useMemo, useState } from 'react'
-import { listShiftFunctions, listShiftRateOverrides, upsertShiftRateOverride } from '../lib/db'
-
-function ymOf(date) { return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}` }
+import { useEffect, useState } from 'react'
+import { listShiftFunctions, updateShiftFunctionOrder } from '../lib/db'
 
 export default function Settings() {
   const [functions, setFunctions] = useState([])
-  const [values, setValues] = useState({}) // { shift_function_id: value }
+  const [values, setValues] = useState({}) // { shift_function_id: sort_order }
   const [saving, setSaving] = useState({}) // { id: boolean }
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const monthKey = useMemo(() => ymOf(new Date()), [])
 
   useEffect(() => {
     async function load() {
       setLoading(true)
       setError(null)
       try {
-        const [fn, ov] = await Promise.all([
-          listShiftFunctions(),
-          listShiftRateOverrides(monthKey),
-        ])
+        const fn = await listShiftFunctions()
         setFunctions(fn || [])
         const map = {}
-        ;(ov || []).forEach(o => { map[o.shift_function_id] = o.value })
+        ;(fn || []).forEach(f => { map[f.id] = (f.sort_order ?? '') })
         setValues(map)
       } catch (e) {
-        setError(e.message || 'Falha ao carregar valores de plantão')
+        setError(e.message || 'Falha ao carregar funções')
       } finally {
         setLoading(false)
       }
     }
     load()
-  }, [monthKey])
+  }, [])
 
   async function saveOne(id) {
     setSaving(s => ({ ...s, [id]: true }))
     try {
-      const v = Number(values[id] ?? '')
-      if (!Number.isFinite(v)) return
-      await upsertShiftRateOverride(monthKey, id, v)
+      const raw = values[id]
+      const v = raw === '' || raw === null || typeof raw === 'undefined' ? null : Number(raw)
+      if (v !== null && !Number.isFinite(v)) return
+      await updateShiftFunctionOrder(id, v)
     } catch (e) {
       alert(e.message || 'Falha ao salvar')
     } finally {
@@ -50,7 +45,7 @@ export default function Settings() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Configurações</h1>
-        <div className="text-sm text-neutral-500">Defina a ordem (número) de cada Valor de Plantão para o mês {monthKey}. Números menores aparecem primeiro no calendário.</div>
+        <div className="text-sm text-neutral-500">Defina a ordem fixa (número) de cada Valor de Plantão. Números menores aparecem primeiro no calendário.</div>
       </div>
 
       {error && (
@@ -60,7 +55,7 @@ export default function Settings() {
       <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
         <div className="grid grid-cols-6 bg-neutral-50 dark:bg-neutral-900/50 px-3 py-2 text-xs font-semibold">
           <div className="col-span-4">Função</div>
-          <div className="col-span-1">Ordem</div>
+          <div className="col-span-1">Ordem fixa</div>
           <div className="col-span-1 text-right">Ação</div>
         </div>
         <div className="divide-y divide-neutral-200 dark:divide-neutral-800">

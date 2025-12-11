@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext.jsx'
-import { listShiftFunctions, listCollaboratorsSimple, listShiftAssignments, createShiftAssignment, updateShiftAssignment, deleteShiftAssignment, listShiftRateOverrides } from '../lib/db'
+import { listShiftFunctions, listCollaboratorsSimple, listShiftAssignments, createShiftAssignment, updateShiftAssignment, deleteShiftAssignment } from '../lib/db'
 
 function classNames(...xs) { return xs.filter(Boolean).join(' ') }
 
@@ -30,7 +30,6 @@ export default function Shifts() {
   const [functions, setFunctions] = useState([])
   const [collaborators, setCollaborators] = useState([])
   const [assignments, setAssignments] = useState([])
-  const [overrides, setOverrides] = useState({}) // { shift_function_id: value }
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [bulkOpen, setBulkOpen] = useState(false)
@@ -41,7 +40,6 @@ export default function Shifts() {
 
   const activeCollaborators = useMemo(() => (collaborators || []).filter(c => c.status !== 'inactive'), [collaborators])
 
-  const monthKey = ymOf(current)
   const first = startOfMonth(current)
   const totalDays = daysInMonth(current)
   const beforeBlanks = (first.getDay() + 6) % 7 // Monday=0 ... Sunday=6
@@ -56,8 +54,6 @@ export default function Shifts() {
     return map
   }, [assignments])
 
-  const overrideMap = useMemo(() => overrides || {}, [overrides])
-
   async function load() {
     setLoading(true)
     setError(null)
@@ -65,18 +61,14 @@ export default function Shifts() {
       const y = current.getFullYear(); const m = current.getMonth()
       const from = new Date(y, m, 1)
       const to = new Date(y, m, totalDays)
-      const [fn, cols, asg, ov] = await Promise.all([
+      const [fn, cols, asg] = await Promise.all([
         listShiftFunctions(),
         listCollaboratorsSimple(),
         listShiftAssignments(formatISO(from), formatISO(to)),
-        listShiftRateOverrides(monthKey),
       ])
       setFunctions(fn || [])
       setCollaborators(cols || [])
       setAssignments(asg || [])
-      const oMap = {}
-      ;(ov || []).forEach(o => { oMap[o.shift_function_id] = o.value })
-      setOverrides(oMap)
     } catch (e) {
       setError(e.message || 'Erro ao carregar plantões')
     } finally {
@@ -146,16 +138,21 @@ export default function Shifts() {
     const [selFn, setSelFn] = useState('')
     const [selCol, setSelCol] = useState('')
     const [rem, setRem] = useState(true)
+    const fnOrderMap = useMemo(() => {
+      const m = {}
+      ;(functions || []).forEach(f => { m[f.id] = (f.sort_order ?? 999999) })
+      return m
+    }, [functions])
     const orderedItems = useMemo(() => {
       const arr = [...items]
       arr.sort((a, b) => {
-        const av = overrideMap[a.shift_function_id] ?? 999999
-        const bv = overrideMap[b.shift_function_id] ?? 999999
+        const av = fnOrderMap[a.shift_function_id] ?? 999999
+        const bv = fnOrderMap[b.shift_function_id] ?? 999999
         if (av !== bv) return av - bv
         return String(a.id).localeCompare(String(b.id))
       })
       return arr
-    }, [items, overrideMap])
+    }, [items, fnOrderMap])
 
     function onDragStartItem(e, id) {
       if (!canManage) return
