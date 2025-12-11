@@ -164,6 +164,14 @@ export default function Shifts() {
       if (!canManage) return
       e.preventDefault()
       e.stopPropagation()
+      // Dia inteiro sendo arrastado?
+      const srcDay = e.dataTransfer.getData('application/x-shift-day')
+      if (srcDay) {
+        if (srcDay !== dateISO) {
+          await copyDayFromTo(srcDay, dateISO)
+        }
+        return
+      }
       const srcId = e.dataTransfer.getData('text/plain')
       const srcDate = e.dataTransfer.getData('application/x-shift-date')
       if (!srcId) return
@@ -189,6 +197,14 @@ export default function Shifts() {
     async function onDropOnContainer(e) {
       if (!canManage) return
       e.preventDefault()
+      // Copiar dia inteiro se for o caso
+      const srcDay = e.dataTransfer.getData('application/x-shift-day')
+      if (srcDay) {
+        if (srcDay !== dateISO) {
+          await copyDayFromTo(srcDay, dateISO)
+        }
+        return
+      }
       const srcId = e.dataTransfer.getData('text/plain')
       const srcDate = e.dataTransfer.getData('application/x-shift-date')
       if (!srcId) return
@@ -208,6 +224,40 @@ export default function Shifts() {
       }
     }
 
+    async function copyDayFromTo(srcISO, destISO) {
+      try {
+        const srcItems = byDate[srcISO] || []
+        const destItems = byDate[destISO] || []
+        // Limpar destino
+        if (destItems.length) {
+          await Promise.allSettled(destItems.map(x => deleteShiftAssignment(x.id)))
+        }
+        // Criar cópias no destino
+        const creates = srcItems.map(s => (
+          createShiftAssignment({
+            date: destISO,
+            shift_function_id: s.shift_function_id,
+            collaborator_id: s.collaborator_id,
+            remunerated: s.remunerated,
+          })
+        ))
+        const res = await Promise.allSettled(creates)
+        const created = res.filter(r => r.status === 'fulfilled').map(r => r.value)
+        setAssignments(list => {
+          const filtered = list.filter(x => x.date !== destISO)
+          return [...filtered, ...created]
+        })
+      } catch (err) {
+        alert(err?.message || 'Falha ao copiar dia')
+      }
+    }
+
+    function onDragStartDay(e) {
+      if (!canManage) return
+      e.dataTransfer.setData('application/x-shift-day', dateISO)
+      e.dataTransfer.effectAllowed = 'copy'
+    }
+
     async function clearDay() {
       if (!canManage) return
       if (!confirm('Remover todos os plantões deste dia?')) return
@@ -225,7 +275,7 @@ export default function Shifts() {
         onDragOver={(e)=>{ if (canManage) e.preventDefault() }}
         onDrop={onDropOnContainer}
       >
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between" draggable={canManage} onDragStart={onDragStartDay} title="Arraste para copiar este dia">
           <div className="text-base font-bold text-emerald-800">{String(day)}</div>
           {canManage && (
             <button className="text-red-600 hover:text-red-700 text-xs font-bold px-1" title="Remover todos do dia" onClick={clearDay}>x</button>
