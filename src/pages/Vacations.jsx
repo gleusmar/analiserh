@@ -2,6 +2,23 @@ import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext.jsx'
 import { listVacations, createVacation, updateVacation, deleteVacation, listCollaboratorsSimple } from '../lib/db'
 
+function formatBRL(n) {
+  if (n === null || n === undefined) return '-'
+  const v = Number(n)
+  if (isNaN(v)) return '-'
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
+}
+
+function parseBRLToNumber(text) {
+  if (text === null || text === undefined) return null
+  const s = String(text).trim().replace(/\s+/g, '')
+  if (!s) return null
+  // Accept both comma and dot as decimal separator
+  const normalized = s.replace(/\./g, '').replace(',', '.')
+  const v = parseFloat(normalized)
+  return isNaN(v) ? null : v
+}
+
 function groupByYear(vs) {
   const out = {}
   ;(vs||[]).forEach(v => {
@@ -95,11 +112,13 @@ export default function Vacations() {
       return
     }
     try {
+      const remNumber = parseBRLToNumber(form.remuneration)
+      const payload = { ...form, remuneration: remNumber }
       let rec
       if (editing) {
-        rec = await updateVacation(editing.id, form)
+        rec = await updateVacation(editing.id, payload)
       } else {
-        rec = await createVacation(form)
+        rec = await createVacation(payload)
       }
       if (file) {
         const b64 = await readAsBase64(file)
@@ -130,7 +149,7 @@ export default function Vacations() {
     }
   }
 
-  function collaboratorById(id) { return (collabs || []).find(c => c.id === Number(id)) || null }
+  function collaboratorById(id) { return (collabs || []).find(c => String(c.id) === String(id)) || null }
   const selectedCollab = collaboratorById(form.collaborator_id)
 
   async function downloadReceipt(vacationId) {
@@ -169,7 +188,7 @@ export default function Vacations() {
             <div key={v.id} className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-3 flex items-center justify-between">
               <div className="space-y-1">
                 <div className="text-sm font-semibold">{new Date(v.start_date).toLocaleDateString()} → {new Date(v.end_date).toLocaleDateString()} ({v.days} dias)</div>
-                <div className="text-xs text-neutral-500">Período: {v.period || '-'} | Remuneração: {v.remuneration ?? '-'}</div>
+                <div className="text-xs text-neutral-500">Período: {v.period || '-'} | Remuneração: {formatBRL(v.remuneration)}</div>
               </div>
               <div className="flex items-center gap-2">
                 <button className="px-2 py-1 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800" onClick={()=>downloadReceipt(v.id)}>Recibo</button>
@@ -188,7 +207,8 @@ export default function Vacations() {
                     <div className="col-span-2 text-sm font-semibold">{v.collaborators?.concent_id || '-'}</div>
                     <div className="col-span-3 text-sm">{v.collaborators?.name || '-'}</div>
                     <div className="col-span-3 text-sm">{new Date(v.start_date).toLocaleDateString()} → {new Date(v.end_date).toLocaleDateString()} ({v.days} dias)</div>
-                    <div className="col-span-2 text-xs text-neutral-500">{v.period || '-'}</div>
+                    <div className="col-span-1 text-xs text-neutral-500">{v.period || '-'}</div>
+                    <div className="col-span-1 text-xs text-neutral-700 dark:text-neutral-300">{formatBRL(v.remuneration)}</div>
                     <div className="col-span-2 flex items-center gap-2 justify-end">
                       <button className="px-2 py-1 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800" onClick={()=>downloadReceipt(v.id)}>Recibo</button>
                       {canAdmin && (
@@ -242,7 +262,14 @@ export default function Vacations() {
               </div>
               <div>
                 <label className="block text-xs mb-1">Remuneração</label>
-                <input type="number" step="0.01" value={form.remuneration} onChange={(e)=>setForm(f=>({ ...f, remuneration: e.target.value }))} className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 px-2 py-1 text-sm" />
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0,00"
+                  value={form.remuneration}
+                  onChange={(e)=>setForm(f=>({ ...f, remuneration: e.target.value }))}
+                  className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 px-2 py-1 text-sm"
+                />
               </div>
               <div className="col-span-2">
                 <label className="block text-xs mb-1">Recibo (PDF)</label>

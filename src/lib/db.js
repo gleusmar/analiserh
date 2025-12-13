@@ -28,6 +28,9 @@ export async function listVacations({ q = '', onlyMine = false, myCollaboratorId
 
 export async function createVacation(payload) {
   const days = Math.max(1, Math.round((new Date(payload.end_date) - new Date(payload.start_date)) / 86400000) + 1)
+  const remuneration = (payload.remuneration === '' || payload.remuneration === undefined || payload.remuneration === null)
+    ? null
+    : Number(payload.remuneration)
   const { data, error } = await supabase
     .from('vacations')
     .insert({
@@ -36,7 +39,7 @@ export async function createVacation(payload) {
       end_date: payload.end_date,
       days,
       period: payload.period || null,
-      remuneration: payload.remuneration ?? null,
+      remuneration,
     })
     .select('id, collaborator_id, start_date, end_date, days, period, remuneration, created_at')
     .single()
@@ -48,6 +51,11 @@ export async function updateVacation(id, payload) {
   let patch = { ...payload }
   if (payload.start_date && payload.end_date) {
     patch.days = Math.max(1, Math.round((new Date(payload.end_date) - new Date(payload.start_date)) / 86400000) + 1)
+  }
+  if ('remuneration' in patch) {
+    patch.remuneration = (patch.remuneration === '' || patch.remuneration === undefined || patch.remuneration === null)
+      ? null
+      : Number(patch.remuneration)
   }
   const { data, error } = await supabase
     .from('vacations')
