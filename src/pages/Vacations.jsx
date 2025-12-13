@@ -2,6 +2,23 @@ import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext.jsx'
 import { listVacations, createVacation, updateVacation, deleteVacation, listCollaboratorsSimple } from '../lib/db'
 
+function ymdParts(s) {
+  if (!s) return null
+  const [y, m, d] = String(s).split('-').map(Number)
+  if (!y || !m || !d) return null
+  return { y, m, d }
+}
+function dateFromYMD(s) {
+  const p = ymdParts(s)
+  if (!p) return null
+  return new Date(p.y, p.m - 1, p.d)
+}
+function formatDateBR(s) {
+  const p = ymdParts(s)
+  if (!p) return ''
+  return String(p.d).padStart(2, '0') + '/' + String(p.m).padStart(2, '0') + '/' + p.y
+}
+
 function formatBRL(n) {
   if (n === null || n === undefined) return '-'
   const v = Number(n)
@@ -22,7 +39,8 @@ function parseBRLToNumber(text) {
 function groupByYear(vs) {
   const out = {}
   ;(vs||[]).forEach(v => {
-    const y = new Date(v.start_date).getFullYear()
+    const p = ymdParts(v.start_date)
+    const y = p ? p.y : new Date(v.start_date).getFullYear()
     if (!out[y]) out[y] = []
     out[y].push(v)
   })
@@ -100,8 +118,9 @@ export default function Vacations() {
 
   const days = useMemo(() => {
     if (!form.start_date || !form.end_date) return ''
-    const s = new Date(form.start_date)
-    const e = new Date(form.end_date)
+    const s = dateFromYMD(form.start_date)
+    const e = dateFromYMD(form.end_date)
+    if (!s || !e) return ''
     const d = Math.max(1, Math.round((e - s)/86400000) + 1)
     return d
   }, [form.start_date, form.end_date])
@@ -185,9 +204,9 @@ export default function Vacations() {
       {onlyMine ? (
         <div className="space-y-2">
           {filtered.map(v => (
-            <div key={v.id} className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-3 flex items-center justify-between">
+            <div key={v.id} className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-3 flex items-center justify-between hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
               <div className="space-y-1">
-                <div className="text-sm font-semibold">{new Date(v.start_date).toLocaleDateString()} → {new Date(v.end_date).toLocaleDateString()} ({v.days} dias)</div>
+                <div className="text-sm font-semibold">{formatDateBR(v.start_date)} → {formatDateBR(v.end_date)} ({v.days} dias)</div>
                 <div className="text-xs text-neutral-500">Período: {v.period || '-'} | Remuneração: {formatBRL(v.remuneration)}</div>
               </div>
               <div className="flex items-center gap-2">
@@ -203,10 +222,10 @@ export default function Vacations() {
               <div className="text-sm font-semibold text-neutral-600 dark:text-neutral-300">{y}</div>
               <div className="space-y-2">
                 {(groupByYear(filtered).byYear[y]||[]).map(v => (
-                  <div key={v.id} className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-3 grid grid-cols-12 gap-2 items-center">
+                  <div key={v.id} className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-3 grid grid-cols-12 gap-2 items-center hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
                     <div className="col-span-2 text-sm font-semibold">{v.collaborators?.concent_id || '-'}</div>
                     <div className="col-span-3 text-sm">{v.collaborators?.name || '-'}</div>
-                    <div className="col-span-3 text-sm">{new Date(v.start_date).toLocaleDateString()} → {new Date(v.end_date).toLocaleDateString()} ({v.days} dias)</div>
+                    <div className="col-span-3 text-sm">{formatDateBR(v.start_date)} → {formatDateBR(v.end_date)} ({v.days} dias)</div>
                     <div className="col-span-1 text-xs text-neutral-500">{v.period || '-'}</div>
                     <div className="col-span-1 text-xs text-neutral-700 dark:text-neutral-300">{formatBRL(v.remuneration)}</div>
                     <div className="col-span-2 flex items-center gap-2 justify-end">
