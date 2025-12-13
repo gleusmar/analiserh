@@ -25,6 +25,7 @@ export default function Sidebar() {
       title: 'Folha de Pagamento',
       items: [
         { to: '/payroll', label: 'Folha Mensal', icon: BarChart, show: canAdmin || canGestor || isUser },
+        { to: '/payroll/vacations', label: 'Férias', icon: BarChart, show: canAdmin || canGestor || isUser },
       ],
     },
     {

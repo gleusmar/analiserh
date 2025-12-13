@@ -8,6 +8,79 @@ export async function ensureProfile(user) {
   await supabase.from('profiles').insert(payload)
 }
 
+// Vacations (Férias)
+export async function listVacations({ q = '', onlyMine = false, myCollaboratorId = null } = {}) {
+  let query = supabase
+    .from('vacations')
+    .select('id, collaborator_id, start_date, end_date, days, period, remuneration, created_at, collaborators:collaborator_id(id, name, concent_id)')
+    .order('start_date', { ascending: false })
+  if (onlyMine && myCollaboratorId) query = query.eq('collaborator_id', myCollaboratorId)
+  if (q) {
+    // search by collaborator name, concent_id, or period text
+    query = query.or(
+      `collaborators.name.ilike.%${q}%,collaborators.concent_id.ilike.%${q}%,period.ilike.%${q}%`
+    )
+  }
+  const { data, error } = await query
+  if (error) throw error
+  return data || []
+}
+
+export async function createVacation(payload) {
+  const days = Math.max(1, Math.round((new Date(payload.end_date) - new Date(payload.start_date)) / 86400000) + 1)
+  const { data, error } = await supabase
+    .from('vacations')
+    .insert({
+      collaborator_id: payload.collaborator_id,
+      start_date: payload.start_date,
+      end_date: payload.end_date,
+      days,
+      period: payload.period || null,
+      remuneration: payload.remuneration ?? null,
+    })
+    .select('id, collaborator_id, start_date, end_date, days, period, remuneration, created_at')
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function updateVacation(id, payload) {
+  let patch = { ...payload }
+  if (payload.start_date && payload.end_date) {
+    patch.days = Math.max(1, Math.round((new Date(payload.end_date) - new Date(payload.start_date)) / 86400000) + 1)
+  }
+  const { data, error } = await supabase
+    .from('vacations')
+    .update(patch)
+    .eq('id', id)
+    .select('id, collaborator_id, start_date, end_date, days, period, remuneration, created_at')
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteVacation(id) {
+  const { error } = await supabase.from('vacations').delete().eq('id', id)
+  if (error) throw error
+  return true
+}
+
+export async function uploadVacationReceipt(vacationId, file) {
+  const bucket = supabase.storage.from('ferias')
+  const path = `${vacationId}.pdf`
+  const { error } = await bucket.upload(path, file, { contentType: 'application/pdf', upsert: true })
+  if (error) throw error
+  return true
+}
+
+export async function getVacationReceiptUrl(vacationId, expiresInSeconds = 3600) {
+  const bucket = supabase.storage.from('ferias')
+  const path = `${vacationId}.pdf`
+  const { data, error } = await bucket.createSignedUrl(path, expiresInSeconds)
+  if (error) return null
+  return data?.signedUrl || null
+}
+
 export async function clearMustChangePassword() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Não autenticado')

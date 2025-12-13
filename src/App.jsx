@@ -18,6 +18,7 @@ import Shifts from './pages/Shifts.jsx'
 import ShiftFunctions from './pages/ShiftFunctions.jsx'
 import ShiftsDashboard from './pages/ShiftsDashboard.jsx'
 import Payroll from './pages/Payroll.jsx'
+import Vacations from './pages/Vacations.jsx'
 import PayrollEntries from './pages/PayrollEntries.jsx'
 import Logs from './pages/Logs.jsx'
 
@@ -126,6 +127,19 @@ function App() {
             <RoleRoute allow={["admin", "super", "gestor-plantoes", "user"]}>
               <DashboardLayout>
                 <Payroll />
+              </DashboardLayout>
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/payroll/vacations"
+        element={
+          <ProtectedRoute>
+            <RoleRoute allow={["admin", "super", "gestor-plantoes", "user"]}>
+              <DashboardLayout>
+                <Vacations />
               </DashboardLayout>
             </RoleRoute>
           </ProtectedRoute>

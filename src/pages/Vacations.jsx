@@ -1,0 +1,270 @@
+import { useEffect, useMemo, useState } from 'react'
+import { useAuth } from '../contexts/AuthContext.jsx'
+import { listVacations, createVacation, updateVacation, deleteVacation, listCollaboratorsSimple } from '../lib/db'
+
+function groupByYear(vs) {
+  const out = {}
+  ;(vs||[]).forEach(v => {
+    const y = new Date(v.start_date).getFullYear()
+    if (!out[y]) out[y] = []
+    out[y].push(v)
+  })
+  const years = Object.keys(out).map(Number).sort((a,b)=>b-a)
+  return { years, byYear: out }
+}
+
+export default function Vacations() {
+  const { role, profile } = useAuth()
+  const canAdmin = role === 'admin' || role === 'super' || role === 'gestor-plantoes'
+
+  const [q, setQ] = useState('')
+  const [vacations, setVacations] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editing, setEditing] = useState(null)
+  const [collabs, setCollabs] = useState([])
+
+  const [form, setForm] = useState({ collaborator_id: '', start_date: '', end_date: '', period: '', remuneration: '' })
+  const [file, setFile] = useState(null)
+
+  const onlyMine = role === 'user'
+  const myColId = profile?.collaborator_id || null
+
+  async function load() {
+    setLoading(true)
+    setError(null)
+    try {
+      const [vs, cs] = await Promise.all([
+        listVacations({ onlyMine, myCollaboratorId: myColId }),
+        canAdmin ? listCollaboratorsSimple() : Promise.resolve([]),
+      ])
+      setVacations(vs || [])
+      setCollabs((cs||[]).filter(c => c.status !== 'inactive'))
+    } catch (e) {
+      setError(e.message || 'Erro ao carregar férias')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { load() }, [role, profile])
+
+  const filtered = useMemo(() => {
+    const text = (q || '').trim().toLowerCase()
+    if (!text) return vacations
+    return (vacations||[]).filter(v => {
+      const name = (v.collaborators?.name || '').toLowerCase()
+      const conc = (v.collaborators?.concent_id || '').toLowerCase()
+      const per = (v.period || '').toLowerCase()
+      return name.includes(text) || conc.includes(text) || per.includes(text)
+    })
+  }, [q, vacations])
+
+  function openCreate() {
+    setEditing(null)
+    setForm({ collaborator_id: '', start_date: '', end_date: '', period: '', remuneration: '' })
+    setFile(null)
+    setModalOpen(true)
+  }
+  function openEdit(v) {
+    setEditing(v)
+    setForm({
+      collaborator_id: v.collaborator_id,
+      start_date: v.start_date,
+      end_date: v.end_date,
+      period: v.period || '',
+      remuneration: v.remuneration ?? '',
+    })
+    setFile(null)
+    setModalOpen(true)
+  }
+
+  const days = useMemo(() => {
+    if (!form.start_date || !form.end_date) return ''
+    const s = new Date(form.start_date)
+    const e = new Date(form.end_date)
+    const d = Math.max(1, Math.round((e - s)/86400000) + 1)
+    return d
+  }, [form.start_date, form.end_date])
+
+  async function save() {
+    if (!form.collaborator_id || !form.start_date || !form.end_date) {
+      alert('Selecione colaborador, data de saída e data de retorno')
+      return
+    }
+    try {
+      let rec
+      if (editing) {
+        rec = await updateVacation(editing.id, form)
+      } else {
+        rec = await createVacation(form)
+      }
+      if (file) {
+        const b64 = await readAsBase64(file)
+        const r = await fetch('/api/vacations/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ vacationId: rec.id, fileData: b64, contentType: file.type || 'application/pdf' }),
+        })
+        if (!r.ok) throw new Error(await r.text())
+      }
+      setModalOpen(false)
+      setEditing(null)
+      setForm({ collaborator_id: '', start_date: '', end_date: '', period: '', remuneration: '' })
+      setFile(null)
+      await load()
+    } catch (e) {
+      alert(e.message || 'Falha ao salvar')
+    }
+  }
+
+  async function remove(v) {
+    if (!confirm('Remover este registro de férias?')) return
+    try {
+      await deleteVacation(v.id)
+      await load()
+    } catch (e) {
+      alert(e.message || 'Falha ao remover')
+    }
+  }
+
+  function collaboratorById(id) { return (collabs || []).find(c => c.id === Number(id)) || null }
+  const selectedCollab = collaboratorById(form.collaborator_id)
+
+  async function downloadReceipt(vacationId) {
+    try {
+      const r = await fetch(`/api/vacations/url?vacationId=${vacationId}`)
+      if (!r.ok) throw new Error('Falha ao gerar link')
+      const j = await r.json()
+      if (j?.url) window.open(j.url, '_blank')
+      else alert('Recibo não disponível')
+    } catch (e) {
+      alert(e.message || 'Falha ao baixar recibo')
+    }
+  }
+
+  const { years, byYear } = useMemo(() => groupByYear(vacations), [vacations])
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold">Férias</h1>
+        <div className="flex items-center gap-2">
+          <input value={q} onChange={(e)=>setQ(e.target.value)} placeholder="Buscar por nome, ID Concent ou período" className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2 text-sm w-72" />
+          {canAdmin && (
+            <button onClick={openCreate} className="px-3 py-2 text-sm rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white">Nova Férias</button>
+          )}
+        </div>
+      </div>
+
+      {error && (
+        <div className="text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-950/30 rounded-xl px-3 py-2 text-sm">{error}</div>
+      )}
+
+      {onlyMine ? (
+        <div className="space-y-2">
+          {filtered.map(v => (
+            <div key={v.id} className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-3 flex items-center justify-between">
+              <div className="space-y-1">
+                <div className="text-sm font-semibold">{new Date(v.start_date).toLocaleDateString()} → {new Date(v.end_date).toLocaleDateString()} ({v.days} dias)</div>
+                <div className="text-xs text-neutral-500">Período: {v.period || '-'} | Remuneração: {v.remuneration ?? '-'}</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button className="px-2 py-1 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800" onClick={()=>downloadReceipt(v.id)}>Recibo</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {groupByYear(filtered).years.map(y => (
+            <div key={y} className="space-y-2">
+              <div className="text-sm font-semibold text-neutral-600 dark:text-neutral-300">{y}</div>
+              <div className="space-y-2">
+                {(groupByYear(filtered).byYear[y]||[]).map(v => (
+                  <div key={v.id} className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-3 grid grid-cols-12 gap-2 items-center">
+                    <div className="col-span-2 text-sm font-semibold">{v.collaborators?.concent_id || '-'}</div>
+                    <div className="col-span-3 text-sm">{v.collaborators?.name || '-'}</div>
+                    <div className="col-span-3 text-sm">{new Date(v.start_date).toLocaleDateString()} → {new Date(v.end_date).toLocaleDateString()} ({v.days} dias)</div>
+                    <div className="col-span-2 text-xs text-neutral-500">{v.period || '-'}</div>
+                    <div className="col-span-2 flex items-center gap-2 justify-end">
+                      <button className="px-2 py-1 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800" onClick={()=>downloadReceipt(v.id)}>Recibo</button>
+                      {canAdmin && (
+                        <>
+                          <button className="px-2 py-1 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800" onClick={()=>openEdit(v)}>Editar</button>
+                          <button className="px-2 py-1 text-xs rounded-lg border border-red-200 text-red-600 dark:border-red-900" onClick={()=>remove(v)}>Remover</button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {modalOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-lg rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-4 space-y-3">
+            <div className="text-sm font-semibold">{editing ? 'Editar Férias' : 'Nova Férias'}</div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2">
+                <label className="block text-xs mb-1">Colaborador</label>
+                <select disabled={!canAdmin} value={form.collaborator_id} onChange={(e)=>setForm(f=>({ ...f, collaborator_id: e.target.value }))} className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 px-2 py-1 text-sm">
+                  <option value="">Selecione</option>
+                  {collabs.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs mb-1">ID Concent</label>
+                <input value={selectedCollab?.concent_id || ''} readOnly className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 px-2 py-1 text-sm bg-neutral-50 dark:bg-neutral-800" />
+              </div>
+              <div>
+                <label className="block text-xs mb-1">Período Aquisitivo</label>
+                <input value={form.period} onChange={(e)=>setForm(f=>({ ...f, period: e.target.value }))} className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 px-2 py-1 text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs mb-1">Data de Saída</label>
+                <input type="date" required value={form.start_date} onChange={(e)=>setForm(f=>({ ...f, start_date: e.target.value }))} className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 px-2 py-1 text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs mb-1">Data de Retorno</label>
+                <input type="date" required value={form.end_date} onChange={(e)=>setForm(f=>({ ...f, end_date: e.target.value }))} className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 px-2 py-1 text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs mb-1">Qtde de dias</label>
+                <input value={days} readOnly className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 px-2 py-1 text-sm bg-neutral-50 dark:bg-neutral-800" />
+              </div>
+              <div>
+                <label className="block text-xs mb-1">Remuneração</label>
+                <input type="number" step="0.01" value={form.remuneration} onChange={(e)=>setForm(f=>({ ...f, remuneration: e.target.value }))} className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 px-2 py-1 text-sm" />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs mb-1">Recibo (PDF)</label>
+                <input type="file" accept="application/pdf" onChange={(e)=>setFile(e.target.files?.[0] || null)} className="w-full text-sm" />
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button onClick={()=>{ setModalOpen(false); setEditing(null); }} className="px-3 py-1.5 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Cancelar</button>
+              <button onClick={save} className="px-3 py-1.5 text-xs rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white">Salvar</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function readAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}

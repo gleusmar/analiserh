@@ -375,7 +375,7 @@ export default function Shifts() {
         ))}
         {cells.map((c, idx) => (
           c === null ? (
-            <div key={`b-${idx}`} className="h-145 rounded-xl border border-dashed border-neutral-200 dark:border-neutral-800" />
+            <div key={`b-${idx}`} className={(role === 'user' ? 'h-35' : 'h-145') + " rounded-xl border border-dashed border-neutral-200 dark:border-neutral-800"} />
           ) : (
             <DayCell key={`d-${c}`} day={c} />
           )
