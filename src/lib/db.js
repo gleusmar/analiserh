@@ -8,6 +8,19 @@ export async function ensureProfile(user) {
   await supabase.from('profiles').insert(payload)
 }
 
+export async function clearMustChangePassword() {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Não autenticado')
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ must_change_password: false })
+    .eq('id', user.id)
+    .select('id, must_change_password')
+    .single()
+  if (error) throw error
+  return data
+}
+
 // Collaborators CRUD
 export async function listCollaboratorsPaged({ q = '', page = 1, pageSize = 10, orderBy = 'name', direction = 'asc' } = {}) {
   let query = supabase
@@ -495,7 +508,7 @@ export async function fetchMyProfile() {
   if (!user) return null
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, email, role, status, created_at, collaborator_id')
+    .select('id, email, role, status, created_at, collaborator_id, must_change_password')
     .eq('id', user.id)
     .maybeSingle()
   if (error) throw error
@@ -505,7 +518,7 @@ export async function fetchMyProfile() {
 export async function listProfiles() {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, email, role, status, created_at, collaborator_id')
+    .select('id, email, role, status, created_at, collaborator_id, must_change_password')
     .order('created_at', { ascending: true })
   if (error) throw error
   return data

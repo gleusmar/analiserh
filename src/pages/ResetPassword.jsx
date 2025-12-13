@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext.jsx'
+import { clearMustChangePassword } from '../lib/db'
 import { useNavigate } from 'react-router-dom'
 
 export default function ResetPassword() {
@@ -25,6 +26,7 @@ export default function ResetPassword() {
     try {
       const { error } = await updatePassword(password)
       if (error) throw error
+      try { await clearMustChangePassword() } catch (_) {}
       setMessage({ type: 'success', text: 'Senha atualizada com sucesso. Redirecionando...' })
       setTimeout(()=>navigate('/login'), 1200)
     } catch (err) {

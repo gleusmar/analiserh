@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, LogIn, Moon, Sun } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext.jsx'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
+import { useTheme } from '../contexts/ThemeContext.jsx'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -10,7 +11,8 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState(null)
-  const { signIn, signUp, user } = useAuth()
+  const { signIn, user } = useAuth()
+  const { theme, toggleTheme } = useTheme()
   const navigate = useNavigate()
   const location = useLocation()
   const from = location.state?.from?.pathname || '/'
@@ -34,19 +36,6 @@ export default function Login() {
     }
   }
 
-  async function handleSignUp() {
-    setLoading(true)
-    setMessage(null)
-    try {
-      const { error } = await signUp(email, password)
-      if (error) throw error
-      setMessage({ type: 'success', text: 'Conta criada! Verifique seu e-mail para confirmar.' })
-    } catch (err) {
-      setMessage({ type: 'error', text: err.message || 'Erro ao criar conta.' })
-    } finally {
-      setLoading(false)
-    }
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-violet-50 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950 flex items-center justify-center p-6">
@@ -56,7 +45,12 @@ export default function Login() {
             <div className="size-10 rounded-xl bg-gradient-to-tr from-sky-500 to-violet-500 grid place-items-center text-white font-bold">RH</div>
             <span className="text-2xl font-semibold tracking-tight">Análise RH</span>
           </div>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-2">Acesse sua conta para continuar</p>
+          <div className="mt-3 flex items-center justify-center gap-3">
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">Acesse sua conta para continuar</p>
+            <button onClick={toggleTheme} className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800" aria-label="Alternar tema">
+              {theme === 'dark' ? <Sun className="size-4" /> : <Moon className="size-4" />}
+            </button>
+          </div>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-4">
@@ -112,8 +106,7 @@ export default function Login() {
           </button>
         </form>
 
-        <div className="mt-6 text-center text-sm text-neutral-600 dark:text-neutral-400 space-x-3">
-          <button onClick={handleSignUp} disabled={loading} className="font-medium text-sky-600 hover:underline dark:text-sky-400">Criar conta</button>
+        <div className="mt-6 text-center text-sm text-neutral-600 dark:text-neutral-400">
           <Link to="/forgot-password" className="font-medium text-sky-600 hover:underline dark:text-sky-400">Esqueci a senha</Link>
         </div>
       </div>

@@ -65,6 +65,37 @@ export default function Payroll() {
     } catch (e) { setError(e.message || 'Erro ao carregar folhas') } finally { setLoading(false) }
   }
 
+  async function onRemoveItemFromSheet(collaboratorId) {
+    if (!selectedSheetId) return
+    if (!confirm('Retirar este colaborador da folha? Esta ação também removerá o holerite dele, se existir.')) return
+    try {
+      const r = await fetch('/api/sheets/remove-item', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(user?.id ? { 'x-actor-id': user.id } : {}),
+          ...(user?.email ? { 'x-actor-email': user.email } : {}),
+        },
+        body: JSON.stringify({ sheetId: selectedSheetId, collaborator_id: collaboratorId }),
+      })
+      if (!r.ok) throw new Error(await r.text())
+      // Update UI: remove sheet item and its entries
+      setItems(list => list.filter(it => it.collaborator_id !== collaboratorId))
+      setEntriesByItem(map => {
+        const next = { ...map }
+        for (const [k, v] of Object.entries(next)) {
+          const itemId = Number(k)
+          const it = (items || []).find(x => x.id === itemId)
+          if (it && it.collaborator_id === collaboratorId) delete next[k]
+        }
+        return next
+      })
+      alert('Colaborador removido da folha')
+    } catch (e) {
+      alert(e.message || 'Falha ao retirar colaborador da folha')
+    }
+  }
+
   async function openAddCollaborators() {
     setOpenAddCols(true)
     try {
@@ -462,7 +493,7 @@ export default function Payroll() {
                 <th className="py-2 cursor-pointer" onClick={()=>toggleOrder('inc')}>Recebimentos</th>
                 <th className="py-2 cursor-pointer" onClick={()=>toggleOrder('out')}>Descontos</th>
                 <th className="py-2 cursor-pointer" onClick={()=>toggleOrder('total')}>Total</th>
-                <th className="py-2">Holerite</th>
+                <th className="py-2">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -481,9 +512,12 @@ export default function Payroll() {
                       <td className="py-2 font-semibold">{formatBRL(totals.total)}</td>
                       <td className="py-2">
                         <div className="inline-flex items-center gap-2">
-                          <button onClick={(e)=>{ e.stopPropagation(); onDownloadHolerite(it.collaborator_id) }} className="px-2 py-1 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Baixar</button>
+                          <button onClick={(e)=>{ e.stopPropagation(); onDownloadHolerite(it.collaborator_id) }} className="px-2 py-1 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Holerite</button>
                           {canAdmin && (
-                            <button onClick={(e)=>{ e.stopPropagation(); onRemoveHolerite(it.collaborator_id) }} className="px-2 py-1 text-xs rounded-lg border border-red-200 text-red-600 dark:border-red-900">Remover</button>
+                            <>
+                              <button onClick={(e)=>{ e.stopPropagation(); onRemoveHolerite(it.collaborator_id) }} className="px-2 py-1 text-xs rounded-lg border border-red-200 text-red-600 dark:border-red-900">Remover Holerite</button>
+                              <button onClick={(e)=>{ e.stopPropagation(); onRemoveItemFromSheet(it.collaborator_id) }} className="px-2 py-1 text-xs rounded-lg border border-amber-200 text-amber-700 dark:border-amber-900">Retirar da Folha</button>
+                            </>
                           )}
                         </div>
                       </td>

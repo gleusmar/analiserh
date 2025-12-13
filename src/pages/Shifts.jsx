@@ -24,7 +24,7 @@ function ptMonthYear(date) {
 }
 
 export default function Shifts() {
-  const { role } = useAuth()
+  const { role, profile } = useAuth()
   const canManage = role === 'admin' || role === 'super' || role === 'gestor-plantoes'
   const [current, setCurrent] = useState(() => new Date())
   const [functions, setFunctions] = useState([])
@@ -135,6 +135,11 @@ export default function Shifts() {
   function DayCell({ day }) {
     const dateISO = useMemo(() => formatISO(new Date(current.getFullYear(), current.getMonth(), day)), [current, day])
     const items = byDate[dateISO] || []
+    const visibleItems = useMemo(() => {
+      if (canManage) return items
+      const myId = profile?.collaborator_id || null
+      return (items || []).filter(a => a.collaborator_id === myId)
+    }, [items, canManage, profile])
     const [selFn, setSelFn] = useState('')
     const [selCol, setSelCol] = useState('')
     const [rem, setRem] = useState(true)
@@ -144,7 +149,7 @@ export default function Shifts() {
       return m
     }, [functions])
     const orderedItems = useMemo(() => {
-      const arr = [...items]
+      const arr = [...visibleItems]
       arr.sort((a, b) => {
         const av = fnOrderMap[a.shift_function_id] ?? 999999
         const bv = fnOrderMap[b.shift_function_id] ?? 999999
@@ -152,7 +157,7 @@ export default function Shifts() {
         return String(a.id).localeCompare(String(b.id))
       })
       return arr
-    }, [items, fnOrderMap])
+    }, [visibleItems, fnOrderMap])
 
     function onDragStartItem(e, id) {
       if (!canManage) return
@@ -269,9 +274,10 @@ export default function Shifts() {
         alert(e.message || 'Falha ao limpar o dia')
       }
     }
+    const dayHeight = role === 'user' ? 'h-35' : 'h-145'
     return (
       <div
-        className="h-145 flex flex-col rounded-xl border border-neutral-200 dark:border-neutral-800 p-2 gap-2 text-[11px]"
+        className={`${dayHeight} flex flex-col rounded-xl border border-neutral-200 dark:border-neutral-800 p-2 gap-2 text-[11px]`}
         onDragOver={(e)=>{ if (canManage) e.preventDefault() }}
         onDrop={onDropOnContainer}
       >

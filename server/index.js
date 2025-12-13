@@ -218,10 +218,10 @@ app.post('/api/admin/users', async (req, res) => {
     const user = data.user
     if (!user) throw new Error('User creation returned no user')
 
-    // Ensure profile with desired role & status
+    // Ensure profile with desired role & status; force first password change
     const { error: upsertErr } = await admin
       .from('profiles')
-      .upsert({ id: user.id, email: user.email, role, status: 'active' }, { onConflict: 'id' })
+      .upsert({ id: user.id, email: user.email, role, status: 'active', must_change_password: true }, { onConflict: 'id' })
     if (upsertErr) throw upsertErr
 
     // Audit log: user:create
