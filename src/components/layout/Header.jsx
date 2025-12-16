@@ -6,7 +6,7 @@ export default function Header({ onToggleSidebar }) {
   const { user, signOut } = useAuth()
   const { theme, toggleTheme } = useTheme()
   return (
-    <header className="h-14 flex items-center justify-between px-4 border-b border-neutral-200 dark:border-neutral-800">
+    <header className="sticky top-0 z-50 h-14 flex items-center justify-between px-4 border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
       <div className="flex items-center gap-2">
         <button onClick={onToggleSidebar} className="md:hidden p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800" aria-label="Abrir menu">
           <Menu className="size-5" />

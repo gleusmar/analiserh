@@ -306,6 +306,7 @@ export default function Payroll() {
   }
   const selectedSheet = useMemo(() => sheets.find(s=>s.id===selectedSheetId) || null, [sheets, selectedSheetId])
   const isClosed = !!selectedSheet?.closed_at
+  const detailColSpan = canAdmin ? 6 : 5
   const filteredItems = useMemo(() => {
     const baseAll = items || []
     const myColId = profile?.collaborator_id || null
@@ -447,9 +448,9 @@ export default function Payroll() {
         <h1 className="text-2xl font-semibold">Folha Mensal</h1>
         {canAdmin && (
           <div className="inline-flex items-center gap-2">
-            <button onClick={openCreateSheet} className="text-xs rounded-lg bg-green-600 hover:bg-green-700 text-white px-3 py-2">Criar Folha</button>
-            <button onClick={openImportSheet} disabled={!selectedSheetId} className="text-xs rounded-lg bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 disabled:opacity-50">Importar Plantões</button>
-            <button onClick={()=>setOpenSlip(true)} disabled={!selectedSheetId} className="text-xs rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 disabled:opacity-50">Importar Holerites</button>
+            <button onClick={openCreateSheet} className="text-xs rounded-lg bg-green-600 hover:bg-green-700 text-white px-1 py-1">Criar Folha</button>
+            <button onClick={openImportSheet} disabled={!selectedSheetId} className="text-xs rounded-lg bg-blue-600 hover:bg-blue-700 text-white px-1 py-1 disabled:opacity-50">Importar Plantões</button>
+            <button onClick={()=>setOpenSlip(true)} disabled={!selectedSheetId} className="text-xs rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white px-1 py-1 disabled:opacity-50">Importar Holerites</button>
           </div>
         )}
       </div>
@@ -489,8 +490,10 @@ export default function Payroll() {
           <table className="w-full text-sm">
             <thead className="text-left text-neutral-500">
               <tr>
-                <th className="py-2 cursor-pointer" onClick={()=>toggleOrder('concent_id')}>ID Concent</th>
-                <th className="py-2 cursor-pointer" onClick={()=>toggleOrder('name')}>Nome</th>
+                <th className="py-2 cursor-pointer" onClick={()=>toggleOrder('concent_id')}>ID</th>
+                {canAdmin && (
+                  <th className="py-2 cursor-pointer" onClick={()=>toggleOrder('name')}>Nome</th>
+                )}
                 <th className="py-2 cursor-pointer" onClick={()=>toggleOrder('inc')}>Recebimentos</th>
                 <th className="py-2 cursor-pointer" onClick={()=>toggleOrder('out')}>Descontos</th>
                 <th className="py-2 cursor-pointer" onClick={()=>toggleOrder('total')}>Total</th>
@@ -506,12 +509,14 @@ export default function Payroll() {
                 return (
                   <Fragment key={it.id}>
                     <tr onClick={()=>toggleExpanded(it.id)} className={`border-t border-neutral-200 dark:border-neutral-800 cursor-pointer ${rowColor}`}>
-                      <td className="py-2">{col?.concent_id || '-'}</td>
-                      <td className="py-2 font-medium">{col?.name || '-'}</td>
-                      <td className="py-2">{formatBRL(totals.inc)}</td>
-                      <td className="py-2">{formatBRL(totals.out)}</td>
-                      <td className="py-2 font-semibold">{formatBRL(totals.total)}</td>
-                      <td className="py-2">
+                      <td className="py-1 px-1">{col?.concent_id || '-'}</td>
+                      {canAdmin && (
+                        <td className="py-2 px-1 font-medium">{col?.name || '-'}</td>
+                      )}
+                      <td className="py-2 px-1">{formatBRL(totals.inc)}</td>
+                      <td className="py-2 px-1">{formatBRL(totals.out)}</td>
+                      <td className="py-2 px-1 font-semibold">{formatBRL(totals.total)}</td>
+                      <td className="py-2 px-1">
                         <div className="inline-flex items-center gap-2">
                           <button onClick={(e)=>{ e.stopPropagation(); onDownloadHolerite(it.collaborator_id) }} className="w-7 h-7 grid place-items-center rounded-md bg-blue-600 hover:bg-blue-700 text-white" title="Holerite">
                             <FileDown className="size-4" />
@@ -531,7 +536,7 @@ export default function Payroll() {
                     </tr>
                     {expanded[it.id] && (
                       <tr>
-                        <td colSpan={6} className="bg-neutral-50 dark:bg-neutral-900 p-3">
+                        <td colSpan={detailColSpan} className="bg-neutral-50 dark:bg-neutral-900 p-3">
                           <div className="space-y-3">
                             <div className="text-sm text-neutral-500">Lançamentos</div>
                             <div className="space-y-1" style={{ paddingLeft: '40%' }}>

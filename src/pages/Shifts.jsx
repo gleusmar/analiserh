@@ -307,10 +307,10 @@ export default function Shifts() {
                 onDrop={(e)=>onDropOnItem(e, a.id)}
                 className={
                   "flex items-center justify-between gap-2 rounded-lg border border-neutral-200 dark:border-neutral-800 px-2 py-0.5 " +
-                  (fnName.includes('Bio LAB') ? ' bg-blue-50' :
-                   fnName.includes('Téc Apoio') ? ' bg-yellow-50' :
-                   fnName.includes('Téc LAB') ? ' bg-green-50' :
-                   fnName.includes('Téc UPA') ? ' bg-red-50' : '')
+                  (fnName.includes('Bio LAB') ? ' bg-blue-50 dark:bg-blue-50' :
+                   fnName.includes('Téc Apoio') ? ' bg-yellow-50 dark:bg-yellow-50' :
+                   fnName.includes('Téc LAB') ? ' bg-green-50 dark:bg-green-50' :
+                   fnName.includes('Téc UPA') ? ' bg-red-50 dark:bg-red-50' : '')
                 }
               >
                 <div className="min-w-0">
@@ -359,17 +359,17 @@ export default function Shifts() {
   const weekLabels = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Plantões</h1>
-        <div className="inline-flex items-center gap-2">
-          <button onClick={prevMonth} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Anterior</button>
-          <div className="text-sm font-medium w-40 text-center">{ptMonthYear(current)}</div>
-          <button onClick={nextMonth} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Próximo</button>
-          {canManage && (
-            <button onClick={()=>setBulkOpen(true)} className="px-3 py-2 text-xs rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white">Inserção múltipla</button>
-          )}
-        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <button onClick={prevMonth} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Anterior</button>
+        <div className="text-sm font-medium w-40 text-center">{ptMonthYear(current)}</div>
+        <button onClick={nextMonth} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Próximo</button>
+        {canManage && (
+          <button onClick={()=>setBulkOpen(true)} className="px-1 py-1 text-xs rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white">Inserção múltipla</button>
+        )}
       </div>
 
       {error && (
