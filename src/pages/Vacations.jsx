@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext.jsx'
 import { listVacations, createVacation, updateVacation, deleteVacation, listCollaboratorsSimple } from '../lib/db'
+import { FileDown, Pencil, Trash2 } from 'lucide-react'
 
 function ymdParts(s) {
   if (!s) return null
@@ -210,7 +211,9 @@ export default function Vacations() {
                 <div className="text-xs text-neutral-500">Período: {v.period || '-'} | Remuneração: {formatBRL(v.remuneration)}</div>
               </div>
               <div className="flex items-center gap-2">
-                <button className="px-2 py-1 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800" onClick={()=>downloadReceipt(v.id)}>Recibo</button>
+                <button className="w-7 h-7 grid place-items-center rounded-md bg-blue-600 hover:bg-blue-700 text-white" onClick={()=>downloadReceipt(v.id)} title="Recibo">
+                  <FileDown className="size-4" />
+                </button>
               </div>
             </div>
           ))}
@@ -220,20 +223,30 @@ export default function Vacations() {
           {groupByYear(filtered).years.map(y => (
             <div key={y} className="space-y-2">
               <div className="text-sm font-semibold text-neutral-600 dark:text-neutral-300">{y}</div>
+              <div className="hidden md:grid grid-cols-12 gap-2 text-xs text-neutral-500">
+                <div className="col-span-2">ID Concent</div>
+                <div className="col-span-5">Colaborador</div>
+                <div className="col-span-3">Remuneração</div>
+                <div className="col-span-2 text-right pr-1">Ações</div>
+              </div>
               <div className="space-y-2">
                 {(groupByYear(filtered).byYear[y]||[]).map(v => (
-                  <div key={v.id} className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-3 grid grid-cols-12 gap-2 items-center hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
-                    <div className="col-span-2 text-sm font-semibold">{v.collaborators?.concent_id || '-'}</div>
-                    <div className="col-span-3 text-sm">{v.collaborators?.name || '-'}</div>
-                    <div className="col-span-3 text-sm">{formatDateBR(v.start_date)} → {formatDateBR(v.end_date)} ({v.days} dias)</div>
-                    <div className="col-span-1 text-xs text-neutral-500">{v.period || '-'}</div>
-                    <div className="col-span-1 text-xs text-neutral-700 dark:text-neutral-300">{formatBRL(v.remuneration)}</div>
-                    <div className="col-span-2 flex items-center gap-2 justify-end">
-                      <button className="px-2 py-1 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800" onClick={()=>downloadReceipt(v.id)}>Recibo</button>
+                  <div key={v.id} className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-3 grid grid-cols-1 md:grid-cols-12 gap-2 items-center hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+                    <div className="md:col-span-2 px-2 text-sm font-semibold">{v.collaborators?.concent_id || '-'}</div>
+                    <div className="md:col-span-5 px-2 text-sm">{v.collaborators?.name || '-'}</div>
+                    <div className="md:col-span-3 px-2 text-sm">{formatBRL(v.remuneration)}</div>
+                    <div className="md:col-span-2 px-2 flex items-center gap-2 justify-end">
+                      <button className="w-7 h-7 grid place-items-center rounded-md bg-blue-600 hover:bg-blue-700 text-white" onClick={()=>downloadReceipt(v.id)} title="Recibo">
+                        <FileDown className="size-4" />
+                      </button>
                       {canAdmin && (
                         <>
-                          <button className="px-2 py-1 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800" onClick={()=>openEdit(v)}>Editar</button>
-                          <button className="px-2 py-1 text-xs rounded-lg border border-red-200 text-red-600 dark:border-red-900" onClick={()=>remove(v)}>Remover</button>
+                          <button className="w-7 h-7 grid place-items-center rounded-md bg-emerald-600 hover:bg-emerald-700 text-white" onClick={()=>openEdit(v)} title="Editar">
+                            <Pencil className="size-4" />
+                          </button>
+                          <button className="w-7 h-7 grid place-items-center rounded-md bg-red-600 hover:bg-red-700 text-white" onClick={()=>remove(v)} title="Remover">
+                            <Trash2 className="size-4" />
+                          </button>
                         </>
                       )}
                     </div>

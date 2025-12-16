@@ -1,8 +1,8 @@
-import { Home, Users, Settings, Calendar, BarChart } from 'lucide-react'
+import { Home, Users, Settings, Calendar, BarChart, X } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext.jsx'
 
-export default function Sidebar() {
+export default function Sidebar({ open = false, onClose = () => {} }) {
   const { role } = useAuth()
   const canAdmin = role === 'admin' || role === 'super'
   const canGestor = role === 'gestor-plantoes'
@@ -41,20 +41,51 @@ export default function Sidebar() {
     },
   ]
   return (
-    <aside className="w-60 border-r border-neutral-200 dark:border-neutral-800 p-3 hidden md:block">
-      <nav className="space-y-4">
-        {sections.map((sec, idx) => (
-          <div key={idx} className="space-y-1">
-            {sec.title && <div className="px-3 text-xs uppercase tracking-wide text-neutral-500 dark:text-neutral-400">{sec.title}</div>}
-            {sec.items.filter(i=>i.show).map(({ to, label, icon: Icon }) => (
-              <NavLink key={to} to={to} end className={({ isActive }) => `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 ${isActive ? 'bg-neutral-100 dark:bg-neutral-800' : ''}`}>
-                <Icon className="size-4" />
-                <span className="text-sm font-medium">{label}</span>
-              </NavLink>
-            ))}
-          </div>
-        ))}
-      </nav>
-    </aside>
+    <>
+      {/* Desktop */}
+      <aside className="w-60 border-r border-neutral-200 dark:border-neutral-800 p-3 hidden md:block">
+        <nav className="space-y-4">
+          {sections.map((sec, idx) => (
+            <div key={idx} className="space-y-1">
+              {sec.title && <div className="px-3 text-xs uppercase tracking-wide text-neutral-500 dark:text-neutral-400">{sec.title}</div>}
+              {sec.items.filter(i=>i.show).map(({ to, label, icon: Icon }) => (
+                <NavLink key={to} to={to} end className={({ isActive }) => `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 ${isActive ? 'bg-neutral-100 dark:bg-neutral-800' : ''}`}>
+                  <Icon className="size-4" />
+                  <span className="text-sm font-medium">{label}</span>
+                </NavLink>
+              ))}
+            </div>
+          ))}
+        </nav>
+      </aside>
+
+      {/* Mobile drawer */}
+      {open && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+          <aside className="relative w-64 h-full bg-white dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800 p-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="font-semibold">Menu</div>
+              <button onClick={onClose} className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800" aria-label="Fechar menu">
+                <X className="size-4" />
+              </button>
+            </div>
+            <nav className="space-y-4">
+              {sections.map((sec, idx) => (
+                <div key={idx} className="space-y-1">
+                  {sec.title && <div className="px-3 text-xs uppercase tracking-wide text-neutral-500 dark:text-neutral-400">{sec.title}</div>}
+                  {sec.items.filter(i=>i.show).map(({ to, label, icon: Icon }) => (
+                    <NavLink onClick={onClose} key={to} to={to} end className={({ isActive }) => `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 ${isActive ? 'bg-neutral-100 dark:bg-neutral-800' : ''}`}>
+                      <Icon className="size-4" />
+                      <span className="text-sm font-medium">{label}</span>
+                    </NavLink>
+                  ))}
+                </div>
+              ))}
+            </nav>
+          </aside>
+        </div>
+      )}
+    </>
   )
 }

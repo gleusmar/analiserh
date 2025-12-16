@@ -153,11 +153,11 @@ export default function ShiftsDashboard() {
           <tbody>
             {filtered.map(r => (
               <tr key={r.id} className="border-t border-neutral-200 dark:border-neutral-800">
-                <td className="py-2">{formatBRfromYMD(r.date)}</td>
-                <td className="py-2">{r.function_name}</td>
-                <td className="py-2">{r.collaborator_name}</td>
-                <td className="py-2">{r.remunerated ? '✓' : ''}</td>
-                <td className="py-2">{r.value.toLocaleString('pt-BR',{ style:'currency', currency:'BRL'})}</td>
+                <td className="py-2 px-2">{formatBRfromYMD(r.date)}</td>
+                <td className="py-2 px-2">{r.function_name}</td>
+                <td className="py-2 px-2">{r.collaborator_name}</td>
+                <td className="py-2 px-2">{r.remunerated ? '✓' : ''}</td>
+                <td className="py-2 px-2">{r.value.toLocaleString('pt-BR',{ style:'currency', currency:'BRL'})}</td>
               </tr>
             ))}
           </tbody>
@@ -178,8 +178,8 @@ export default function ShiftsDashboard() {
                 <tbody>
                   {totalsByCollaborator.map(([name, val]) => (
                     <tr key={name} className="border-t border-neutral-200 dark:border-neutral-800">
-                      <td className="py-1">{name}</td>
-                      <td className="py-1 text-right">{val.toLocaleString('pt-BR',{ style:'currency', currency:'BRL'})}</td>
+                      <td className="py-1 px-2">{name}</td>
+                      <td className="py-1 px-2 text-right">{val.toLocaleString('pt-BR',{ style:'currency', currency:'BRL'})}</td>
                     </tr>
                   ))}
                 </tbody>

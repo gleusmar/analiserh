@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
+import { FileDown, Trash2, UserMinus } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext.jsx'
 import { listCollaboratorsSimple, listPayrollEntryTypes, listPayrollSheets, createPayrollSheet, listPayrollSheetItems, listPayrollEntriesForSheet, createPayrollEntry, deletePayrollEntry, updatePayrollSheet, deletePayrollSheet, upsertPlantaoEntry, listShiftFunctions, listShiftAssignments, listShiftRateOverrides, addPayrollSheetItems } from '../lib/db'
 
@@ -512,11 +513,17 @@ export default function Payroll() {
                       <td className="py-2 font-semibold">{formatBRL(totals.total)}</td>
                       <td className="py-2">
                         <div className="inline-flex items-center gap-2">
-                          <button onClick={(e)=>{ e.stopPropagation(); onDownloadHolerite(it.collaborator_id) }} className="px-2 py-1 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Holerite</button>
+                          <button onClick={(e)=>{ e.stopPropagation(); onDownloadHolerite(it.collaborator_id) }} className="w-7 h-7 grid place-items-center rounded-md bg-blue-600 hover:bg-blue-700 text-white" title="Holerite">
+                            <FileDown className="size-4" />
+                          </button>
                           {canAdmin && (
                             <>
-                              <button onClick={(e)=>{ e.stopPropagation(); onRemoveHolerite(it.collaborator_id) }} className="px-2 py-1 text-xs rounded-lg border border-red-200 text-red-600 dark:border-red-900">Remover Holerite</button>
-                              <button onClick={(e)=>{ e.stopPropagation(); onRemoveItemFromSheet(it.collaborator_id) }} className="px-2 py-1 text-xs rounded-lg border border-amber-200 text-amber-700 dark:border-amber-900">Retirar da Folha</button>
+                              <button onClick={(e)=>{ e.stopPropagation(); onRemoveHolerite(it.collaborator_id) }} className="w-7 h-7 grid place-items-center rounded-md bg-red-600 hover:bg-red-700 text-white" title="Remover Holerite">
+                                <Trash2 className="size-4" />
+                              </button>
+                              <button onClick={(e)=>{ e.stopPropagation(); onRemoveItemFromSheet(it.collaborator_id) }} className="w-7 h-7 grid place-items-center rounded-md bg-amber-500 hover:bg-amber-600 text-white" title="Retirar da Folha">
+                                <UserMinus className="size-4" />
+                              </button>
                             </>
                           )}
                         </div>

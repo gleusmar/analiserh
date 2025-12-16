@@ -135,6 +135,10 @@ export default function Shifts() {
   function DayCell({ day }) {
     const dateISO = useMemo(() => formatISO(new Date(current.getFullYear(), current.getMonth(), day)), [current, day])
     const items = byDate[dateISO] || []
+    const weekday = useMemo(() => {
+      const d = new Date(current.getFullYear(), current.getMonth(), day)
+      return d.toLocaleDateString('pt-BR', { weekday: 'short' })
+    }, [current, day])
     const visibleItems = useMemo(() => {
       if (canManage) return items
       const myId = profile?.collaborator_id || null
@@ -282,7 +286,10 @@ export default function Shifts() {
         onDrop={onDropOnContainer}
       >
         <div className="flex items-center justify-between" draggable={canManage} onDragStart={onDragStartDay} title="Arraste para copiar este dia">
-          <div className="text-base font-bold text-emerald-800">{String(day)}</div>
+          <div className="text-base font-bold text-emerald-800 flex items-center gap-2">
+            <span>{String(day)}</span>
+            <span className="text-xs text-neutral-500">{weekday}</span>
+          </div>
           {canManage && (
             <button className="text-red-600 hover:text-red-700 text-xs font-bold px-1" title="Remover todos do dia" onClick={clearDay}>x</button>
           )}
@@ -369,7 +376,15 @@ export default function Shifts() {
         <div className="text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-950/30 rounded-xl px-3 py-2 text-sm">{error}</div>
       )}
 
-      <div className="grid grid-cols-7 gap-2">
+      {/* Mobile: dias empilhados */}
+      <div className="md:hidden space-y-2">
+        {days.map(d => (
+          <DayCell key={`m-${d}`} day={d} />
+        ))}
+      </div>
+
+      {/* Desktop: grade com semana */}
+      <div className="hidden md:grid grid-cols-7 gap-2">
         {weekLabels.map((w) => (
           <div key={w} className="text-base text-emerald-600 text-center py-1">{w}</div>
         ))}
