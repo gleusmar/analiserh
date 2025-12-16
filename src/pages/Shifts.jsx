@@ -278,10 +278,9 @@ export default function Shifts() {
         alert(e.message || 'Falha ao limpar o dia')
       }
     }
-    const dayHeight = role === 'user' ? 'h-35' : 'h-145'
     return (
       <div
-        className={`${dayHeight} flex flex-col rounded-xl border border-neutral-200 dark:border-neutral-800 p-2 gap-2 text-[11px]`}
+        className={`flex flex-col rounded-xl border border-neutral-200 dark:border-neutral-800 p-2 gap-2 text-[11px] ${role==='user' ? 'md:h-35' : 'md:h-145'} min-h-14`}
         onDragOver={(e)=>{ if (canManage) e.preventDefault() }}
         onDrop={onDropOnContainer}
       >
@@ -294,7 +293,7 @@ export default function Shifts() {
             <button className="text-red-600 hover:text-red-700 text-xs font-bold px-1" title="Remover todos do dia" onClick={clearDay}>x</button>
           )}
         </div>
-        <div className="flex-1 overflow-y-auto space-y-1">
+        <div className="space-y-1 md:flex-1 md:overflow-y-auto">
           {orderedItems.map(a => {
             const fnName = (functions.find(f => f.id === a.shift_function_id)?.name) || 'Função'
             const colName = (collaborators.find(c => c.id === a.collaborator_id)?.name) || 'Colaborador'
@@ -368,7 +367,7 @@ export default function Shifts() {
         <div className="text-sm font-medium w-40 text-center">{ptMonthYear(current)}</div>
         <button onClick={nextMonth} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Próximo</button>
         {canManage && (
-          <button onClick={()=>setBulkOpen(true)} className="px-1 py-1 text-xs rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white">Inserção múltipla</button>
+          <button onClick={()=>setBulkOpen(true)} className="px-2 md:px-1 py-2  md:py-1 text-xs rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white">Inserção múltipla</button>
         )}
       </div>
 

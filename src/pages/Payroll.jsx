@@ -508,7 +508,7 @@ export default function Payroll() {
                 const rowColor = isBB ? 'bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50' : 'bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50'
                 return (
                   <Fragment key={it.id}>
-                    <tr onClick={()=>toggleExpanded(it.id)} className={`border-t border-neutral-200 dark:border-neutral-800 cursor-pointer ${rowColor}`}>
+                    <tr onClick={()=>toggleExpanded(it.id)} className={`border-t border-neutral-200 dark:border-neutral-800 cursor-pointer ${rowColor} text-neutral-900 dark:text-neutral-100`}>
                       <td className="py-1 px-1">{col?.concent_id || '-'}</td>
                       {canAdmin && (
                         <td className="py-2 px-1 font-medium">{col?.name || '-'}</td>
@@ -539,7 +539,7 @@ export default function Payroll() {
                         <td colSpan={detailColSpan} className="bg-neutral-50 dark:bg-neutral-900 p-3">
                           <div className="space-y-3">
                             <div className="text-sm text-neutral-500">Lançamentos</div>
-                            <div className="space-y-1 pl-[40%] md:pl-0">
+                            <div className="space-y-1 pl-[10%] md:pl-[40%]">
                               {(entriesByItem[it.id]||[]).slice().sort((a,b)=>{
                                 const ka = a.payroll_entry_types?.kind === 'in' ? 0 : 1
                                 const kb = b.payroll_entry_types?.kind === 'in' ? 0 : 1
