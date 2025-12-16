@@ -64,7 +64,7 @@ export default function Sidebar({ open = false, onClose = () => {} }) {
                 <button className="px-3 py-1.5 text-sm font-semibold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-md">
                   {sec.title}
                 </button>
-                <div className="absolute left-0 mt-1 hidden group-hover:block z-40">
+                <div className="absolute left-0 top-full hidden group-hover:block z-40">
                   <div className="min-w-56 rounded-md border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 shadow-lg p-2">
                     <div className="flex flex-col">
                       {items.map(({ to, label, icon: Icon }) => (

@@ -536,7 +536,7 @@ export default function Payroll() {
                     </tr>
                     {expanded[it.id] && (
                       <tr>
-                        <td colSpan={detailColSpan} className="bg-neutral-50 dark:bg-neutral-900 p-3">
+                        <td colSpan={detailColSpan} className="bg-neutral-50 dark:bg-neutral-900 p-3 text-neutral-900 dark:text-neutral-100">
                           <div className="space-y-3">
                             <div className="text-sm text-neutral-500">Lançamentos</div>
                             <div className="space-y-1 pl-[10%] md:pl-[40%]">
@@ -545,10 +545,10 @@ export default function Payroll() {
                                 const kb = b.payroll_entry_types?.kind === 'in' ? 0 : 1
                                 return ka - kb
                               }).map(en => (
-                                <div key={en.id} className="flex items-center justify-between rounded-lg border border-neutral-200 dark:border-neutral-800 px-2 py-1">
+                                <div key={en.id} className="flex items-center justify-between rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 px-2 py-1">
                                   <div className="text-xs">
-                                    <span className="font-medium">{en.payroll_entry_types?.name || '-'}</span>
-                                    <span className="ml-2 text-neutral-500">{en.note || ''}</span>
+                                    <span className="font-medium dark:text-neutral-100">{en.payroll_entry_types?.name || '-'}</span>
+                                    <span className="ml-2 text-neutral-500 dark:text-neutral-300">{en.note || ''}</span>
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <div className={"text-xs " + (en.payroll_entry_types?.kind==='out' ? 'text-red-600' : 'text-green-600')}>

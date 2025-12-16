@@ -367,7 +367,7 @@ export default function Shifts() {
         <div className="text-sm font-medium w-40 text-center">{ptMonthYear(current)}</div>
         <button onClick={nextMonth} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Próximo</button>
         {canManage && (
-          <button onClick={()=>setBulkOpen(true)} className="px-2 md:px-1 py-2  md:py-1 text-xs rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white">Inserção múltipla</button>
+          <button onClick={()=>setBulkOpen(true)} className="px-1 md:px-2 py-1 md:py-2 text-xs rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white">Inserção múltipla</button>
         )}
       </div>
 
