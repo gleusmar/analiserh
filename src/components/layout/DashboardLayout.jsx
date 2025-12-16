@@ -7,10 +7,9 @@ export default function DashboardLayout({ children }) {
   return (
     <div className="min-h-screen flex flex-col">
       <Header onToggleSidebar={() => setMobileOpen(v => !v)} />
-      <div className="flex flex-1">
-        <Sidebar open={mobileOpen} onClose={() => setMobileOpen(false)} />
-        <main className="flex-1 p-4">{children}</main>
-      </div>
+      {/* Top navigation bar (desktop) + Mobile drawer (controlled by open) */}
+      <Sidebar open={mobileOpen} onClose={() => setMobileOpen(false)} />
+      <main className="flex-1 p-4">{children}</main>
     </div>
   )
 }

@@ -115,28 +115,15 @@ export default function ShiftsDashboard() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Dashboard de Plantões</h1>
-        <div className="inline-flex items-center gap-2">
-          <button onClick={prevMonth} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Anterior</button>
-          <div className="text-sm font-medium w-40 text-center">{current.toLocaleDateString('pt-BR',{ month:'long', year:'numeric'})}</div>
-          <button onClick={nextMonth} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Próximo</button>
-        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <button onClick={prevMonth} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Anterior</button>
+        <div className="text-sm font-medium w-40 text-center">{current.toLocaleDateString('pt-BR',{ month:'long', year:'numeric'})}</div>
+        <button onClick={nextMonth} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Próximo</button>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
         <input value={q} onChange={(e)=>setQ(e.target.value)} placeholder="Buscar (função ou colaborador)" className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
-        <select value={filterFn} onChange={(e)=>setFilterFn(e.target.value)} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5">
-          <option value="all">Todas as funções</option>
-          {functions.map(f=> <option key={f.id} value={f.id}>{f.name}</option>)}
-        </select>
-        <select value={filterCol} onChange={(e)=>setFilterCol(e.target.value)} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5">
-          <option value="all">Todos os colaboradores</option>
-          {collaborators.map(c=> <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-        <select value={filterRem} onChange={(e)=>setFilterRem(e.target.value)} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5">
-          <option value="all">Todos</option>
-          <option value="yes">Remunerados</option>
-          <option value="no">Não remunerados</option>
-        </select>
       </div>
 
       <div className="overflow-x-auto">

@@ -230,13 +230,14 @@ export default function Vacations() {
                 <div className="col-span-2">ID Concent</div>
                 <div className="col-span-5">Colaborador</div>
                 <div className="col-span-3">Remuneração</div>
+                <div className="col-span-2 text-right pr-1">Ações</div>
               </div>
               <div className="space-y-2">
                 {(groupByYear(filtered).byYear[y]||[]).map(v => (
                   <div key={v.id} className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-3 grid grid-cols-1 md:grid-cols-12 gap-2 items-center hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
                     <div className="md:col-span-2 px-2 text-sm font-semibold flex items-center justify-between">
                       <span>{v.collaborators?.concent_id || '-'}</span>
-                      <span className="flex items-center gap-2">
+                      <span className="flex items-center gap-2 md:hidden">
                         <button className="w-7 h-7 grid place-items-center rounded-md bg-blue-600 hover:bg-blue-700 text-white" onClick={()=>downloadReceipt(v.id)} title="Recibo">
                           <FileDown className="size-4" />
                         </button>
@@ -254,6 +255,21 @@ export default function Vacations() {
                     </div>
                     <div className="md:col-span-5 px-2 text-sm">{v.collaborators?.name || '-'}</div>
                     <div className="md:col-span-3 px-2 text-sm">{formatBRL(v.remuneration)}</div>
+                    <div className="md:col-span-2 px-2 hidden md:flex items-center gap-2 justify-end">
+                      <button className="w-7 h-7 grid place-items-center rounded-md bg-blue-600 hover:bg-blue-700 text-white" onClick={()=>downloadReceipt(v.id)} title="Recibo">
+                        <FileDown className="size-4" />
+                      </button>
+                      {canAdmin && (
+                        <>
+                          <button className="w-7 h-7 grid place-items-center rounded-md bg-emerald-600 hover:bg-emerald-700 text-white" onClick={()=>openEdit(v)} title="Editar">
+                            <Pencil className="size-4" />
+                          </button>
+                          <button className="w-7 h-7 grid place-items-center rounded-md bg-red-600 hover:bg-red-700 text-white" onClick={()=>remove(v)} title="Remover">
+                            <Trash2 className="size-4" />
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

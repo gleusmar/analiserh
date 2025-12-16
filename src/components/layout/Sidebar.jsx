@@ -42,22 +42,45 @@ export default function Sidebar({ open = false, onClose = () => {} }) {
   ]
   return (
     <>
-      {/* Desktop */}
-      <aside className="w-60 border-r border-neutral-200 dark:border-neutral-800 p-3 hidden md:block">
-        <nav className="space-y-4">
-          {sections.map((sec, idx) => (
-            <div key={idx} className="space-y-1">
-              {sec.title && <div className="px-3 text-xs uppercase tracking-wide text-neutral-500 dark:text-neutral-400">{sec.title}</div>}
-              {sec.items.filter(i=>i.show).map(({ to, label, icon: Icon }) => (
-                <NavLink key={to} to={to} end className={({ isActive }) => `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 ${isActive ? 'bg-neutral-100 dark:bg-neutral-800' : ''}`}>
-                  <Icon className="size-4" />
-                  <span className="text-sm font-medium">{label}</span>
-                </NavLink>
-              ))}
-            </div>
-          ))}
-        </nav>
-      </aside>
+      {/* Desktop: Top navigation bar with hover dropdowns */}
+      <nav className="hidden md:block border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
+        <div className="px-3 py-2 flex items-center gap-6">
+          {sections.map((sec, idx) => {
+            const items = sec.items.filter(i=>i.show)
+            if (!sec.title) {
+              return (
+                <div key={idx} className="flex items-center gap-2">
+                  {items.map(({ to, label, icon: Icon }) => (
+                    <NavLink key={to} to={to} end className={({ isActive }) => `flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 ${isActive ? 'bg-neutral-100 dark:bg-neutral-800' : ''}`}>
+                      <Icon className="size-4" />
+                      <span className="text-sm font-medium">{label}</span>
+                    </NavLink>
+                  ))}
+                </div>
+              )
+            }
+            return (
+              <div key={idx} className="relative group">
+                <button className="px-3 py-1.5 text-sm font-semibold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-md">
+                  {sec.title}
+                </button>
+                <div className="absolute left-0 mt-1 hidden group-hover:block z-40">
+                  <div className="min-w-56 rounded-md border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-lg p-2">
+                    <div className="flex flex-col">
+                      {items.map(({ to, label, icon: Icon }) => (
+                        <NavLink key={to} to={to} end className={({ isActive }) => `flex items-center gap-2 px-3 py-2 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 ${isActive ? 'bg-neutral-100 dark:bg-neutral-800' : ''}`}>
+                          <Icon className="size-4" />
+                          <span className="text-sm font-medium">{label}</span>
+                        </NavLink>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </nav>
 
       {/* Mobile drawer */}
       {open && (

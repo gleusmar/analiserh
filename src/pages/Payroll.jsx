@@ -539,7 +539,7 @@ export default function Payroll() {
                         <td colSpan={detailColSpan} className="bg-neutral-50 dark:bg-neutral-900 p-3">
                           <div className="space-y-3">
                             <div className="text-sm text-neutral-500">Lançamentos</div>
-                            <div className="space-y-1" style={{ paddingLeft: '40%' }}>
+                            <div className="space-y-1 pl-[40%] md:pl-0">
                               {(entriesByItem[it.id]||[]).slice().sort((a,b)=>{
                                 const ka = a.payroll_entry_types?.kind === 'in' ? 0 : 1
                                 const kb = b.payroll_entry_types?.kind === 'in' ? 0 : 1
