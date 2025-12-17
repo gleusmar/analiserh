@@ -325,16 +325,27 @@ function extractMappedValues(text) {
     inss_13: 0,
     irrf_13: 0,
   }
-  for (const raw of lines) {
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i]
     const n = normalize(raw)
     if (/total\s+liquido/.test(n)) break
-    const amount = tryGetAmount(raw)
-    if (!amount) continue
-    // Try to get a 2-3 digit code; in PDFs the code is directly followed by text (no space), so lookahead for non-digit
-    const m = raw.match(/(?:^|\s)(\d{2,3})(?=\D)/)
+    let amount = tryGetAmount(raw)
+    // Capture the first 3 digits at line start (or after space). Some lines like '5141ª PARCELA' have a digit after the code.
+    let m = raw.match(/(?:^|\s)(\d{3})/)
     if (!m) continue
-    const code = String(m[1] || '').trim()
-    const c = code.padStart(3, '0')
+    // If this code line has no amount, scan subsequent continuation lines (no leading code) until next section or 'TOTAL LÍQUIDO'
+    if (!amount) {
+      for (let j = i + 1; j < lines.length; j++) {
+        const ln = lines[j]
+        const nn = normalize(ln)
+        if (/total\s+liquido/.test(nn)) break
+        if (/^\s*\d{3}/.test(ln)) break
+        const a2 = tryGetAmount(ln)
+        if (a2) { amount = a2; break }
+      }
+    }
+    if (!amount) continue
+    const c = String(m[1] || '').trim()
     switch (c) {
       case '001': out.salario += amount; break
       case '025': out.insalubridade += amount; break
