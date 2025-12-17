@@ -312,11 +312,17 @@ function extractMappedValues(text) {
     inss_ferias: 0,
     plantoes: 0,
     atestado: 0,
+    decimo_1: 0,
+    decimo_2: 0,
   }
   for (const raw of lines) {
     const l = normalize(raw)
+    const lp = l.replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim()
     // Specific checks first
-    if ((l.includes('inss') || l.includes('i.n.s.s')) && l.includes('ferias')) out.inss_ferias = Math.max(out.inss_ferias, tryGetAmount(raw))
+    // 13º salário: primeira parcela tem prioridade
+    if (lp.includes('1a parcela 13o salario')) out.decimo_1 = Math.max(out.decimo_1, tryGetAmount(raw))
+    else if (lp.includes('13o salario')) out.decimo_2 = Math.max(out.decimo_2, tryGetAmount(raw))
+    else if ((l.includes('inss') || l.includes('i.n.s.s')) && l.includes('ferias')) out.inss_ferias = Math.max(out.inss_ferias, tryGetAmount(raw))
     else if (l.includes('quinquenio')) out.quinquenio = Math.max(out.quinquenio, tryGetAmount(raw))
     else if (l.includes('1/3')) out.adicional_ferias_terco = Math.max(out.adicional_ferias_terco, tryGetAmount(raw))
     else if (l.includes('antecipacao de ferias')) out.antecipacao_ferias = Math.max(out.antecipacao_ferias, tryGetAmount(raw))
@@ -360,6 +366,8 @@ app.post('/api/holerites/import', async (req, res) => {
     const tINSSFer = await getOrCreateEntryType(admin, 'INSS Férias', 'out')
     const tPlant = await getOrCreateEntryType(admin, 'Plantões', 'in')
     const tAtest = await getOrCreateEntryType(admin, 'Atestado', 'in')
+    const t13p1 = await getOrCreateEntryType(admin, '13º Salário - 1ª Parcela', 'in')
+    const t13p2 = await getOrCreateEntryType(admin, '13º Salário - 2ª Parcela', 'in')
 
     const results = []
     for (const p of pages) {
@@ -404,6 +412,8 @@ app.post('/api/holerites/import', async (req, res) => {
         { type: tINSSFer, amount: vals.inss_ferias, note: 'Holerite' },
         { type: tPlant, amount: vals.plantoes, note: 'Holerite' },
         { type: tAtest, amount: vals.atestado, note: 'Holerite' },
+        { type: t13p1, amount: vals.decimo_1, note: 'Holerite' },
+        { type: t13p2, amount: vals.decimo_2, note: 'Holerite' },
       ].filter(o => o.amount > 0)
 
       for (const op of ops) {

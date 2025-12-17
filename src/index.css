@@ -25,3 +25,20 @@ body {
   background-color: rgba(23, 23, 23, 0.6); /* neutral-900/60 */
   border-color: rgba(20, 83, 45, 0.4); /* green-900/40 */
 }
+
+/* Desktop-friendly global theming for common controls */
+input, select, textarea {
+  background-color: #ffffff;
+  color: #171717;
+  border: 1px solid #e5e5e5; /* neutral-200 */
+  border-radius: 0.75rem; /* rounded-xl */
+}
+.dark input, .dark select, .dark textarea {
+  background-color: #171717; /* neutral-900 */
+  color: #f5f5f5; /* neutral-100 */
+  border-color: #262626; /* neutral-800 */
+}
+
+/* Tables default text color in dark */
+table { color: inherit; }
+.dark table { color: #f5f5f5; }
