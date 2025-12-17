@@ -40,8 +40,10 @@ async function getOrCreateEntryType(admin, name, kind) {
 }
 
 function extractMappedValues(text) {
+  // Break into lines and attempt to find amounts next to known rubricas via numeric codes
   const lines = String(text || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean)
   const tryGetAmount = (line) => {
+    // Capture last BRL number like 1.900,00 or 175,55
     const re = /(\d{1,3}(?:\.\d{3})*,\d{2})/g
     let m, last = null
     while ((m = re.exec(line)) !== null) last = m[1]
@@ -57,30 +59,61 @@ function extractMappedValues(text) {
     gratificacao: 0,
     salario_familia: 0,
     quinquenio: 0,
+    trienio_3: 0,
     ferias: 0,
     adicional_ferias_terco: 0,
     antecipacao_ferias: 0,
     inss_ferias: 0,
     plantoes: 0,
     atestado: 0,
+    emprestimo_consignado: 0,
+    diferenca_salario: 0,
+    decimo_1: 0,
+    decimo_2: 0,
+    insal_13: 0,
+    grat_13: 0,
+    quinq_13: 0,
+    plantao_13: 0,
+    inss_13: 0,
+    irrf_13: 0,
   }
   for (const raw of lines) {
-    const l = normalizeText(raw)
-    if ((l.includes('inss') || l.includes('i.n.s.s')) && l.includes('ferias')) out.inss_ferias = Math.max(out.inss_ferias, tryGetAmount(raw))
-    else if (l.includes('quinquenio')) out.quinquenio = Math.max(out.quinquenio, tryGetAmount(raw))
-    else if (l.includes('1/3')) out.adicional_ferias_terco = Math.max(out.adicional_ferias_terco, tryGetAmount(raw))
-    else if (l.includes('antecipacao de ferias')) out.antecipacao_ferias = Math.max(out.antecipacao_ferias, tryGetAmount(raw))
-    else if (l.includes('ferias')) out.ferias = Math.max(out.ferias, tryGetAmount(raw))
-    else if (l.includes('gratific')) out.gratificacao = Math.max(out.gratificacao, tryGetAmount(raw))
-    else if (l.includes('salario familia')) out.salario_familia = Math.max(out.salario_familia, tryGetAmount(raw))
-    else if (l.includes('planto')) out.plantoes = Math.max(out.plantoes, tryGetAmount(raw))
-    else if (l.includes('atestado')) out.atestado = Math.max(out.atestado, tryGetAmount(raw))
-    else if (l.includes('saldo de salario')) out.salario = Math.max(out.salario, tryGetAmount(raw))
-    else if (l.includes('insalubr')) out.insalubridade = Math.max(out.insalubridade, tryGetAmount(raw))
-    else if (l.includes('inss') || l.includes('i.n.s.s')) out.inss = Math.max(out.inss, tryGetAmount(raw))
-    else if (l.includes('unimed')) out.unimed = Math.max(out.unimed, tryGetAmount(raw))
-    else if (l.includes('fgts') || l.includes('f.g.t.s')) out.fgts = Math.max(out.fgts, tryGetAmount(raw))
-    else if (l.includes('irrf') || l.includes('i.r.r.f') || l.includes('imposto de renda')) out.irrf = Math.max(out.irrf, tryGetAmount(raw))
+    const amount = tryGetAmount(raw)
+    if (!amount) continue
+    // Try to get a 2-3 digit code near the line start
+    const m = raw.match(/(^|\s)(\d{2,3})(?=\s)/)
+    if (!m) continue
+    const code = m[2]
+    switch (code) {
+      case '001': out.salario += amount; break
+      case '025': out.insalubridade += amount; break
+      case '501': out.inss += amount; break
+      case '504': out.irrf += amount; break
+      case '549': out.unimed += amount; break
+      case '062': out.quinquenio += amount; break
+      case '100': out.plantoes += amount; break
+      case '104': out.quinquenio += amount; break
+      case '002': out.salario_familia += amount; break
+      case '038': out.atestado += amount; break
+      case '060': out.trienio_3 += amount; break
+      case '551': out.emprestimo_consignado += amount; break
+      case '028': out.ferias += amount; break
+      case '029': out.adicional_ferias_terco += amount; break
+      case '503': out.inss_ferias += amount; break
+      case '512': out.antecipacao_ferias += amount; break
+      case '107': out.diferenca_salario += amount; break
+      case '011': out.decimo_1 += amount; break
+      case '514': out.decimo_1 += amount; break
+      case '012': out.decimo_2 += amount; break
+      case '017': out.insal_13 += amount; break
+      case '047': out.grat_13 += amount; break
+      case '053': out.quinq_13 += amount; break
+      case '093': out.quinq_13 += amount; break
+      case '094': out.plantao_13 += amount; break
+      case '502': out.inss_13 += amount; break
+      case '528': out.irrf_13 += amount; break
+      default: break
+    }
   }
   return out
 }
@@ -125,6 +158,17 @@ export default async function handler(req, res) {
     const tINSSFer = await getOrCreateEntryType(admin, 'INSS Férias', 'out')
     const tPlant = await getOrCreateEntryType(admin, 'Plantões', 'in')
     const tAtest = await getOrCreateEntryType(admin, 'Atestado', 'in')
+    const tTrienio3 = await getOrCreateEntryType(admin, 'Triênio (3%)', 'in')
+    const tEmpConsig = await getOrCreateEntryType(admin, 'Empréstimo Consignado', 'out')
+    const tDifSal = await getOrCreateEntryType(admin, 'Diferença de Salário', 'in')
+    const tIns13 = await getOrCreateEntryType(admin, 'Insalubridade - 13º Salário', 'in')
+    const tGrat13 = await getOrCreateEntryType(admin, 'Gratificação - 13º Salário', 'in')
+    const tQuinq13 = await getOrCreateEntryType(admin, 'Quinquênio - 13º Salário', 'in')
+    const tPlant13 = await getOrCreateEntryType(admin, 'Plantões - 13º Salário', 'in')
+    const tINSS13 = await getOrCreateEntryType(admin, 'INSS - 13º Salário', 'out')
+    const tIRRF13 = await getOrCreateEntryType(admin, 'IRRF - 13º Salário', 'out')
+    const t13p1 = await getOrCreateEntryType(admin, '13º Salário - 1ª Parcela', 'in')
+    const t13p2 = await getOrCreateEntryType(admin, '13º Salário - 2ª Parcela', 'in')
 
     const results = []
     for (const p of pages) {
@@ -160,12 +204,23 @@ export default async function handler(req, res) {
         { type: tGrat, amount: vals.gratificacao, note: 'Holerite' },
         { type: tSalFam, amount: vals.salario_familia, note: 'Holerite' },
         { type: tQuinq, amount: vals.quinquenio, note: 'Holerite' },
+        { type: tTrienio3, amount: vals.trienio_3, note: 'Holerite' },
         { type: tFerias, amount: vals.ferias, note: 'Holerite' },
         { type: tTerco, amount: vals.adicional_ferias_terco, note: 'Holerite' },
         { type: tAntFer, amount: vals.antecipacao_ferias, note: 'Holerite' },
         { type: tINSSFer, amount: vals.inss_ferias, note: 'Holerite' },
         { type: tPlant, amount: vals.plantoes, note: 'Holerite' },
         { type: tAtest, amount: vals.atestado, note: 'Holerite' },
+        { type: tEmpConsig, amount: vals.emprestimo_consignado, note: 'Holerite' },
+        { type: tDifSal, amount: vals.diferenca_salario, note: 'Holerite' },
+        { type: t13p1, amount: vals.decimo_1, note: 'Holerite' },
+        { type: t13p2, amount: vals.decimo_2, note: 'Holerite' },
+        { type: tIns13, amount: vals.insal_13, note: 'Holerite' },
+        { type: tGrat13, amount: vals.grat_13, note: 'Holerite' },
+        { type: tQuinq13, amount: vals.quinq_13, note: 'Holerite' },
+        { type: tPlant13, amount: vals.plantao_13, note: 'Holerite' },
+        { type: tINSS13, amount: vals.inss_13, note: 'Holerite' },
+        { type: tIRRF13, amount: vals.irrf_13, note: 'Holerite' },
       ].filter(o => o.amount > 0)
 
       for (const op of ops) {
