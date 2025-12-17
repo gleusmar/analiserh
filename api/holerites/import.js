@@ -80,11 +80,12 @@ function extractMappedValues(text) {
   for (const raw of lines) {
     const amount = tryGetAmount(raw)
     if (!amount) continue
-    // Try to get a 2-3 digit code near the line start
-    const m = raw.match(/(^|\s)(\d{2,3})(?=\s)/)
+    // Try to get a 2-3 digit code; in PDFs the code may be directly followed by text (no space)
+    const m = raw.match(/(?:^|\s)(\d{2,3})(?=\D)/)
     if (!m) continue
-    const code = m[2]
-    switch (code) {
+    const code = String(m[1] || '').trim()
+    const c = code.padStart(3, '0')
+    switch (c) {
       case '001': out.salario += amount; break
       case '025': out.insalubridade += amount; break
       case '501': out.inss += amount; break
@@ -93,6 +94,7 @@ function extractMappedValues(text) {
       case '062': out.quinquenio += amount; break
       case '100': out.plantoes += amount; break
       case '104': out.quinquenio += amount; break
+      case '110': out.gratificacao += amount; break
       case '002': out.salario_familia += amount; break
       case '038': out.atestado += amount; break
       case '060': out.trienio_3 += amount; break
