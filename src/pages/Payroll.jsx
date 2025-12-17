@@ -579,7 +579,7 @@ export default function Payroll() {
 
       {openCreate && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4">
-          <div className="w-full max-w-3xl rounded-2xl p-6 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
+          <div className={`w-full max-w-3xl rounded-2xl p-6 border ${isDark ? 'bg-neutral-900 text-neutral-100 border-neutral-800' : 'bg-neutral-50 text-neutral-900 border-neutral-200'}`}>
             <h2 className="text-lg font-semibold mb-4">Criar Folha</h2>
             <div className="space-y-4">
               <input placeholder="Nome da folha" value={sheetName} onChange={(e)=>setSheetName(e.target.value)} className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
@@ -588,7 +588,7 @@ export default function Payroll() {
                 <input type="month" value={sheetYearMonth} onChange={(e)=>setSheetYearMonth(e.target.value)} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
               </label>
               <div className="text-sm text-neutral-500">Colaboradores</div>
-              <div className="max-h-64 overflow-y-auto rounded-xl border border-neutral-200 dark:border-neutral-800 p-3">
+              <div className={`max-h-64 overflow-y-auto rounded-xl border p-3 ${isDark ? 'bg-neutral-950 border-neutral-800' : 'bg-white border-neutral-200'}`}>
                 {collaborators.map(c => (
                   <label key={c.id} className="flex items-center gap-2 text-sm">
                     <input type="checkbox" checked={!!selectedCols[c.id]} onChange={(e)=>setSelectedCols(s=>({ ...s, [c.id]: e.target.checked }))} />
@@ -656,7 +656,7 @@ export default function Payroll() {
 
       {openSlip && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4">
-          <div className="w-full max-w-5xl rounded-2xl p-6 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
+          <div className={`w-full max-w-5xl rounded-2xl p-6 border ${isDark ? 'bg-neutral-900 text-neutral-100 border-neutral-800' : 'bg-neutral-50 text-neutral-900 border-neutral-200'}`}>
             <h2 className="text-lg font-semibold mb-4">Importar Holerites (PDF único)</h2>
             <div className="space-y-3">
               <div className="flex items-center gap-2">
@@ -664,9 +664,9 @@ export default function Payroll() {
                 <button type="button" onClick={async ()=>{ try { const r = await fetch('/holerites.pdf'); if (!r.ok) throw new Error('Arquivo de exemplo não encontrado em /holerites.pdf'); const b = await r.blob(); await onChooseHolerites(b) } catch(e){ alert(e.message || 'Falha ao carregar exemplo') } }} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Carregar exemplo</button>
               </div>
               {slipPages.length>0 && (
-                <div className="max-h-[60vh] overflow-y-auto rounded-xl border border-neutral-200 dark:border-neutral-800">
+                <div className={`max-h-[60vh] overflow-y-auto rounded-xl border ${isDark ? 'bg-neutral-950 border-neutral-800' : 'bg-white border-neutral-200'}`}>
                   <table className="w-full text-sm">
-                    <thead className="text-left text-neutral-500">
+                    <thead className={`text-left ${isDark ? 'text-neutral-400' : 'text-neutral-500'}`}>
                       <tr>
                         <th className="py-2 w-10"></th>
                         <th className="py-2 w-16">Página</th>
@@ -703,11 +703,11 @@ export default function Payroll() {
 
       {openAddCols && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4">
-          <div className="w-full max-w-3xl rounded-2xl p-6 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
+          <div className={`w-full max-w-3xl rounded-2xl p-6 border ${isDark ? 'bg-neutral-900 text-neutral-100 border-neutral-800' : 'bg-neutral-50 text-neutral-900 border-neutral-200'}`}>
             <h2 className="text-lg font-semibold mb-4">Adicionar colaboradores à folha</h2>
             <div className="space-y-3">
               <div className="text-sm text-neutral-500">Selecione os colaboradores que deseja incluir</div>
-              <div className="max-h-80 overflow-y-auto rounded-xl border border-neutral-200 dark:border-neutral-800 p-3">
+              <div className={`max-h-80 overflow-y-auto rounded-xl border p-3 ${isDark ? 'bg-neutral-950 border-neutral-800' : 'bg-white border-neutral-200'}`}>
                 {addLoading && <div className="text-sm text-neutral-500">Carregando...</div>}
                 {!addLoading && addCandidates.length === 0 && (
                   <div className="text-sm text-neutral-500">Nenhum colaborador disponível</div>
