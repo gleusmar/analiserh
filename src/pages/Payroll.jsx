@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { FileDown, Trash2, UserMinus } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext.jsx'
+import { useTheme } from '../contexts/ThemeContext.jsx'
 import { listCollaboratorsSimple, listPayrollEntryTypes, listPayrollSheets, createPayrollSheet, listPayrollSheetItems, listPayrollEntriesForSheet, createPayrollEntry, deletePayrollEntry, updatePayrollSheet, deletePayrollSheet, upsertPlantaoEntry, listShiftFunctions, listShiftAssignments, listShiftRateOverrides, addPayrollSheetItems } from '../lib/db'
 
 function ymOf(date) { return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}` }
@@ -9,6 +10,8 @@ function firstLastOfYM(ym) { const { y, m } = parseYM(ym); if (!y || !m) return 
 
 export default function Payroll() {
   const { role, profile, user } = useAuth()
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
   const canAdmin = role === 'admin' || role === 'super'
   const [sheets, setSheets] = useState([])
   const [selectedSheetId, setSelectedSheetId] = useState('')
@@ -486,9 +489,9 @@ export default function Payroll() {
       )}
 
       {selectedSheetId && (
-        <div className="overflow-x-auto rounded-xl bg-white dark:bg-neutral-950">
+        <div className={`overflow-x-auto rounded-xl ${isDark ? 'bg-neutral-950 text-neutral-100' : 'bg-white text-neutral-900'}`}>
           <table className="w-full text-sm">
-            <thead className="text-left text-neutral-500 dark:text-neutral-400">
+            <thead className={`text-left ${isDark ? 'text-neutral-400' : 'text-neutral-500'}`}>
               <tr>
                 <th className="py-2 cursor-pointer" onClick={()=>toggleOrder('concent_id')}>ID</th>
                 {canAdmin && (
