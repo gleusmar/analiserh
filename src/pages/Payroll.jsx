@@ -486,9 +486,9 @@ export default function Payroll() {
       )}
 
       {selectedSheetId && (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-xl bg-white dark:bg-neutral-950">
           <table className="w-full text-sm">
-            <thead className="text-left text-neutral-500">
+            <thead className="text-left text-neutral-500 dark:text-neutral-400">
               <tr>
                 <th className="py-2 cursor-pointer" onClick={()=>toggleOrder('concent_id')}>ID</th>
                 {canAdmin && (
