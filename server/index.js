@@ -315,7 +315,8 @@ function extractMappedValues(text) {
     atestado: 0,
     emprestimo_consignado: 0,
     diferenca_salario: 0,
-    decimo_1: 0,
+    decimo_1_in: 0,
+    decimo_1_out: 0,
     decimo_2: 0,
     insal_13: 0,
     grat_13: 0,
@@ -353,8 +354,8 @@ function extractMappedValues(text) {
       case '503': out.inss_ferias += amount; break
       case '512': out.antecipacao_ferias += amount; break
       case '107': out.diferenca_salario += amount; break
-      case '011': out.decimo_1 += amount; break
-      case '514': out.decimo_1 += amount; break
+      case '011': out.decimo_1_in += amount; break
+      case '514': out.decimo_1_out += amount; break
       case '012': out.decimo_2 += amount; break
       case '017': out.insal_13 += amount; break
       case '047': out.grat_13 += amount; break
@@ -403,6 +404,7 @@ app.post('/api/holerites/import', async (req, res) => {
     const tINSS13 = await getOrCreateEntryType(admin, 'INSS - 13º Salário', 'out')
     const tIRRF13 = await getOrCreateEntryType(admin, 'IRRF - 13º Salário', 'out')
     const t13p1 = await getOrCreateEntryType(admin, '13º Salário - 1ª Parcela', 'in')
+    const t13p1Out = await getOrCreateEntryType(admin, '1ª Parcela - 13º Salário', 'out')
     const t13p2 = await getOrCreateEntryType(admin, '13º Salário', 'in')
 
     const results = []
@@ -451,7 +453,8 @@ app.post('/api/holerites/import', async (req, res) => {
         { type: tAtest, amount: vals.atestado, note: 'Holerite' },
         { type: tEmpConsig, amount: vals.emprestimo_consignado, note: 'Holerite' },
         { type: tDifSal, amount: vals.diferenca_salario, note: 'Holerite' },
-        { type: t13p1, amount: vals.decimo_1, note: 'Holerite' },
+        { type: t13p1, amount: vals.decimo_1_in, note: 'Holerite' },
+        { type: t13p1Out, amount: vals.decimo_1_out, note: 'Holerite' },
         { type: t13p2, amount: vals.decimo_2, note: 'Holerite' },
         { type: tIns13, amount: vals.insal_13, note: 'Holerite' },
         { type: tGrat13, amount: vals.grat_13, note: 'Holerite' },
