@@ -325,6 +325,8 @@ function extractMappedValues(text) {
     irrf_13: 0,
   }
   for (const raw of lines) {
+    const n = normalize(raw)
+    if (/total\s+liquido/.test(n)) break
     const amount = tryGetAmount(raw)
     if (!amount) continue
     // Try to get a 2-3 digit code; in PDFs the code is directly followed by text (no space), so lookahead for non-digit
@@ -401,7 +403,7 @@ app.post('/api/holerites/import', async (req, res) => {
     const tINSS13 = await getOrCreateEntryType(admin, 'INSS - 13º Salário', 'out')
     const tIRRF13 = await getOrCreateEntryType(admin, 'IRRF - 13º Salário', 'out')
     const t13p1 = await getOrCreateEntryType(admin, '13º Salário - 1ª Parcela', 'in')
-    const t13p2 = await getOrCreateEntryType(admin, '13º Salário - 2ª Parcela', 'in')
+    const t13p2 = await getOrCreateEntryType(admin, '13º Salário', 'in')
 
     const results = []
     for (const p of pages) {
