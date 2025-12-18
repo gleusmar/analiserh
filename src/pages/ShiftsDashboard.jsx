@@ -51,6 +51,27 @@ export default function ShiftsDashboard() {
 
   useEffect(() => { load() }, [current])
 
+  // Refresh when monthly rates are updated elsewhere in the app
+  useEffect(() => {
+    function onRatesUpdate(e) {
+      const ym = e?.detail?.ym
+      if (!ym || ym === monthKey) load()
+    }
+    function onStorage(e) {
+      if (e.key !== 'shift:rates:updated') return
+      try {
+        const v = JSON.parse(e.newValue || '{}')
+        if (!v?.ym || v.ym === monthKey) load()
+      } catch (_) {}
+    }
+    window.addEventListener('shift:rates:update', onRatesUpdate)
+    window.addEventListener('storage', onStorage)
+    return () => {
+      window.removeEventListener('shift:rates:update', onRatesUpdate)
+      window.removeEventListener('storage', onStorage)
+    }
+  }, [monthKey])
+
   const fnMap = useMemo(() => Object.fromEntries(functions.map(f => [f.id, f])), [functions])
   const colMap = useMemo(() => Object.fromEntries(collaborators.map(c => [c.id, c])), [collaborators])
 

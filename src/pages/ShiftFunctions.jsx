@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { listShiftFunctions, createShiftFunction, updateShiftFunction, deleteShiftFunction, listShiftRateOverrides, upsertShiftRateOverride } from '../lib/db'
+import { listShiftFunctions, createShiftFunction, updateShiftFunction, deleteShiftFunction, listShiftRateOverrides, upsertShiftRateOverride, deleteShiftRateOverride } from '../lib/db'
 
 function classNames(...xs) { return xs.filter(Boolean).join(' ') }
 
@@ -100,9 +100,24 @@ export default function ShiftFunctions() {
   async function onOverrideSave(id) {
     try {
       const val = Number(String(overrides[id] ?? '').replace(',', '.'))
-      await upsertShiftRateOverride(month, id, Number.isFinite(val) ? val : 0)
+      const num = Number.isFinite(val) ? val : 0
+      await upsertShiftRateOverride(month, id, num)
+      setOverrides(o => ({ ...o, [id]: num }))
+      try { localStorage.setItem('shift:rates:updated', JSON.stringify({ ym: month, at: Date.now() })) } catch (_) {}
+      try { window.dispatchEvent(new CustomEvent('shift:rates:update', { detail: { ym: month } })) } catch (_) {}
     } catch (e) {
       alert(e.message || 'Falha ao salvar valor do mês')
+    }
+  }
+
+  async function onOverrideDelete(id) {
+    try {
+      await deleteShiftRateOverride(month, id)
+      setOverrides(o => { const c = { ...o }; delete c[id]; return c })
+      try { localStorage.setItem('shift:rates:updated', JSON.stringify({ ym: month, at: Date.now() })) } catch (_) {}
+      try { window.dispatchEvent(new CustomEvent('shift:rates:update', { detail: { ym: month } })) } catch (_) {}
+    } catch (e) {
+      alert(e.message || 'Falha ao excluir valor do mês')
     }
   }
 
@@ -191,6 +206,7 @@ export default function ShiftFunctions() {
                       <div className="flex items-center gap-2">
                         <input value={overrides[r.id] ?? ''} onChange={(e)=>onOverrideChange(r.id, e.target.value)} onBlur={()=>onOverrideSave(r.id)} placeholder="R$" className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-2 py-1 w-40"/>
                         <button type="button" onClick={()=>onOverrideSave(r.id)} className="px-2 py-1 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Salvar</button>
+                        <button type="button" onClick={()=>onOverrideDelete(r.id)} className="px-2 py-1 text-xs rounded-lg border border-red-200 text-red-600 dark:border-red-900">Excluir</button>
                       </div>
                     </td>
                   </tr>

@@ -475,6 +475,17 @@ export async function upsertShiftRateOverride(yearMonth, shift_function_id, valu
   return data
 }
 
+export async function deleteShiftRateOverride(yearMonth, shift_function_id) {
+  const { error } = await supabase
+    .from('shift_rate_overrides')
+    .delete()
+    .eq('year_month', yearMonth)
+    .eq('shift_function_id', shift_function_id)
+  if (error) throw error
+  try { await logAudit('shift:rate:delete', { details: { year_month: yearMonth, shift_function_id } }) } catch (_) {}
+  return true
+}
+
 export async function listCollaboratorsSimple() {
   const { data, error } = await supabase
     .from('collaborators')
