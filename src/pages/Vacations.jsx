@@ -186,6 +186,16 @@ export default function Vacations() {
 
   const { years, byYear } = useMemo(() => groupByYear(vacations), [vacations])
 
+  function computeVacationDays(v) {
+    if (v == null) return ''
+    if (v.days !== undefined && v.days !== null) return v.days
+    const s = dateFromYMD(v.start_date)
+    const e = dateFromYMD(v.end_date)
+    if (!s || !e) return ''
+    const d = Math.max(1, Math.round((e - s) / 86400000) + 1)
+    return d
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
@@ -228,9 +238,12 @@ export default function Vacations() {
               <div className="text-sm font-semibold text-neutral-600 dark:text-neutral-300">{y}</div>
               <div className="hidden md:grid grid-cols-12 gap-2 text-xs text-neutral-500">
                 <div className="col-span-2">ID Concent</div>
-                <div className="col-span-5">Colaborador</div>
-                <div className="col-span-3">Remuneração</div>
-                <div className="col-span-2 text-right pr-1">Ações</div>
+                <div className="col-span-3">Colaborador</div>
+                <div className="col-span-1">Qtd Dias</div>
+                <div className="col-span-2">Saída</div>
+                <div className="col-span-2">Retorno</div>
+                <div className="col-span-1">Remuneração</div>
+                <div className="col-span-1 text-right pr-1">Ações</div>
               </div>
               <div className="space-y-2">
                 {(groupByYear(filtered).byYear[y]||[]).map(v => (
@@ -253,9 +266,12 @@ export default function Vacations() {
                         )}
                       </span>
                     </div>
-                    <div className="md:col-span-5 px-2 text-sm">{v.collaborators?.name || '-'}</div>
-                    <div className="md:col-span-3 px-2 text-sm">{formatBRL(v.remuneration)}</div>
-                    <div className="md:col-span-2 px-2 hidden md:flex items-center gap-2 justify-end">
+                    <div className="md:col-span-3 px-2 text-sm">{v.collaborators?.name || '-'}</div>
+                    <div className="md:col-span-1 px-2 text-sm">{computeVacationDays(v)}</div>
+                    <div className="md:col-span-2 px-2 text-sm">{formatDateBR(v.start_date)}</div>
+                    <div className="md:col-span-2 px-2 text-sm">{formatDateBR(v.end_date)}</div>
+                    <div className="md:col-span-1 px-2 text-sm">{formatBRL(v.remuneration)}</div>
+                    <div className="md:col-span-1 px-2 hidden md:flex items-center gap-2 justify-end">
                       <button className="w-7 h-7 grid place-items-center rounded-md bg-blue-600 hover:bg-blue-700 text-white" onClick={()=>downloadReceipt(v.id)} title="Recibo">
                         <FileDown className="size-4" />
                       </button>
