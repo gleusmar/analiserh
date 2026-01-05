@@ -1,6 +1,12 @@
+const ADMIN_API_BASE = (import.meta.env.VITE_ADMIN_API_URL || '/api').replace(/\/$/, '')
+
+function adminUrl(path) {
+  return `${ADMIN_API_BASE}${path}`
+}
+
 export async function createUser({ email, password, role = 'user' }, actor) {
   try {
-    const res = await fetch('/api/admin/users', {
+    const res = await fetch(adminUrl('/admin/users'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -21,7 +27,7 @@ export async function createUser({ email, password, role = 'user' }, actor) {
 
 export async function updateUserEmail(profileId, email, actor) {
   const body = { profile_id: profileId, email }
-  const res = await fetch('/api/admin/profiles/update-email', {
+  const res = await fetch(adminUrl('/admin/profiles/update-email'), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -39,7 +45,7 @@ export async function updateUserEmail(profileId, email, actor) {
 
 export async function linkProfileCollaborator(profileId, collaboratorId, actor) {
   const body = { profile_id: profileId, collaborator_id: collaboratorId || null }
-  const res = await fetch('/api/admin/profiles/link-collaborator', {
+  const res = await fetch(adminUrl('/admin/profiles/link-collaborator'), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
