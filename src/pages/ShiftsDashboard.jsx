@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { listShiftAssignments, listShiftFunctions, listCollaboratorsSimple, listShiftRateOverrides } from '../lib/db'
+import { useAuth } from '../contexts/AuthContext.jsx'
 
 function formatISO(d) {
   const y = d.getFullYear(); const m = String(d.getMonth()+1).padStart(2,'0'); const day = String(d.getDate()).padStart(2,'0')
@@ -11,6 +12,9 @@ function ymOf(date) { return `${date.getFullYear()}-${String(date.getMonth()+1).
 function formatBRfromYMD(ymd) { if (!ymd) return ''; const parts = String(ymd).split('-'); if (parts.length !== 3) return ymd; const [y,m,d] = parts; return `${d}/${m}/${y}` }
 
 export default function ShiftsDashboard() {
+  const { profile, role } = useAuth()
+  const isGestor = role === 'gestor-plantoes'
+  const myColId = profile?.collaborator_id || null
   const [current, setCurrent] = useState(() => new Date())
   const [assignments, setAssignments] = useState([])
   const [functions, setFunctions] = useState([])
@@ -25,6 +29,7 @@ export default function ShiftsDashboard() {
   const [filterRem, setFilterRem] = useState('all') // all | yes | no
   const [orderBy, setOrderBy] = useState('date')
   const [direction, setDirection] = useState('asc')
+  const [onlyMine, setOnlyMine] = useState(false)
 
   const monthKey = ymOf(current)
 
@@ -104,6 +109,7 @@ export default function ShiftsDashboard() {
     }
     if (filterFn !== 'all') list = list.filter(r => r.function_id === filterFn)
     if (filterCol !== 'all') list = list.filter(r => r.collaborator_id === filterCol)
+    if (onlyMine && myColId) list = list.filter(r => r.collaborator_id === myColId)
     if (filterRem !== 'all') list = list.filter(r => r.remunerated === (filterRem === 'yes'))
     const cmp = (a,b) => {
       let av, bv
@@ -119,7 +125,7 @@ export default function ShiftsDashboard() {
       return 0
     }
     return [...list].sort(cmp)
-  }, [rows, q, filterFn, filterCol, filterRem, orderBy, direction])
+  }, [rows, q, filterFn, filterCol, filterRem, orderBy, direction, onlyMine, myColId])
 
   const totalsByCollaborator = useMemo(() => {
     const map = {}
@@ -143,8 +149,23 @@ export default function ShiftsDashboard() {
         <button onClick={nextMonth} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Próximo</button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <input value={q} onChange={(e)=>setQ(e.target.value)} placeholder="Buscar (função ou colaborador)" className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
+      <div className="flex flex-wrap items-center gap-3">
+        <input
+          value={q}
+          onChange={(e)=>setQ(e.target.value)}
+          placeholder="Buscar (função ou colaborador)"
+          className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"
+        />
+        {isGestor && myColId && (
+          <label className="inline-flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-300">
+            <input
+              type="checkbox"
+              checked={onlyMine}
+              onChange={(e)=>setOnlyMine(e.target.checked)}
+            />
+            <span>Mostrar apenas plantões do meu colaborador vinculado</span>
+          </label>
+        )}
       </div>
 
       <div className="overflow-x-auto">
