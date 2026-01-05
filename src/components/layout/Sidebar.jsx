@@ -43,7 +43,7 @@ export default function Sidebar({ open = false, onClose = () => {} }) {
   return (
     <>
       {/* Desktop: Top navigation bar with hover dropdowns */}
-      <nav className="hidden md:block border-b bg-white text-neutral-900 border-neutral-200">
+      <nav className="hidden md:block border-b bg-slate-100 text-neutral-900 border-neutral-200">
         <div className="px-3 py-2 flex items-center gap-6">
           {sections.map((sec, idx) => {
             const items = sec.items.filter(i=>i.show)
@@ -56,7 +56,7 @@ export default function Sidebar({ open = false, onClose = () => {} }) {
                       to={to}
                       end
                       className={({ isActive }) =>
-                        `flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-neutral-100 ${isActive ? 'bg-neutral-100' : ''}`
+                        `flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-neutral-200 ${isActive ? 'bg-neutral-200 text-neutral-900' : ''}`
                       }
                     >
                       <Icon className="size-4" />
@@ -68,7 +68,7 @@ export default function Sidebar({ open = false, onClose = () => {} }) {
             }
             return (
               <div key={idx} className="relative group">
-                <button className="px-3 py-1.5 text-sm font-semibold rounded-md text-neutral-700 hover:bg-neutral-100">
+                <button className="px-3 py-1.5 text-sm font-semibold rounded-md text-neutral-700 hover:bg-neutral-200">
                   {sec.title}
                 </button>
                 <div className="absolute left-0 top-full hidden group-hover:block z-40">
@@ -80,7 +80,7 @@ export default function Sidebar({ open = false, onClose = () => {} }) {
                           to={to}
                           end
                           className={({ isActive }) =>
-                            `flex items-center gap-2 px-3 py-2 rounded-md hover:bg-neutral-100 ${isActive ? 'bg-neutral-100' : ''}`
+                            `flex items-center gap-2 px-3 py-2 rounded-md hover:bg-neutral-100 ${isActive ? 'bg-neutral-100 text-neutral-900' : ''}`
                           }
                         >
                           <Icon className="size-4" />

@@ -280,7 +280,7 @@ export default function Shifts() {
     }
     return (
       <div
-        className={`flex flex-col rounded-xl border border-neutral-200 dark:border-neutral-800 p-2 gap-2 text-[11px] ${role==='user' ? 'md:h-35' : 'md:h-145'} min-h-14`}
+        className={`flex flex-col rounded-xl border border-neutral-200 p-2 gap-2 text-[11px] ${role==='user' ? 'md:h-35' : 'md:h-145'} min-h-14`}
         onDragOver={(e)=>{ if (canManage) e.preventDefault() }}
         onDrop={onDropOnContainer}
       >
@@ -305,16 +305,16 @@ export default function Shifts() {
                 onDragOver={(e)=>{ if (canManage) { e.preventDefault(); e.stopPropagation(); } }}
                 onDrop={(e)=>onDropOnItem(e, a.id)}
                 className={
-                  "flex items-center justify-between gap-2 rounded-lg border border-neutral-200 dark:border-neutral-800 px-2 py-0.5 " +
-                  (fnName.includes('Bio LAB') ? ' bg-blue-50 dark:bg-blue-50' :
-                   fnName.includes('Téc Apoio') ? ' bg-yellow-50 dark:bg-yellow-50' :
-                   fnName.includes('Téc LAB') ? ' bg-green-50 dark:bg-green-50' :
-                   fnName.includes('Téc UPA') ? ' bg-red-50 dark:bg-red-50' : '')
+                  "flex items-center justify-between gap-2 rounded-lg border border-neutral-200 px-2 py-0.5 " +
+                  (fnName.includes('Bio LAB') ? ' bg-blue-50' :
+                   fnName.includes('Téc Apoio') ? ' bg-yellow-50' :
+                   fnName.includes('Téc LAB') ? ' bg-green-50' :
+                   fnName.includes('Téc UPA') ? ' bg-red-50' : '')
                 }
               >
                 <div className="min-w-0">
                   <div className="truncate text-xs text-neutral-500">{fnName}</div>
-                  <div className="truncate text-xs text-black dark:text-white font-semibold">{colName}</div>
+                  <div className="truncate text-xs text-black font-semibold">{colName}</div>
                 </div>
                 <div className="flex items-center gap-2">
                   <input type="checkbox" checked={!!a.remunerated} onChange={()=>canManage && toggleRemunerated(a)} title="Remunerado" disabled={!canManage} />
@@ -327,15 +327,15 @@ export default function Shifts() {
           })}
         </div>
         {canManage && (
-          <div className="mt-auto pt-1 border-t border-dashed border-neutral-200 dark:border-neutral-800">
+          <div className="mt-auto pt-1 border-t border-dashed border-neutral-200">
             <div className="flex flex-col gap-2">
-              <select value={selFn} onChange={(e)=>setSelFn(e.target.value)} className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 px-2 py-1 text-xs">
+              <select value={selFn} onChange={(e)=>setSelFn(e.target.value)} className="w-full rounded-xl border border-neutral-200 px-2 py-1 text-xs">
                 <option value="">Função</option>
                 {functions.map(f => (
                   <option key={f.id} value={f.id}>{f.name}</option>
                 ))}
               </select>
-              <select value={selCol} onChange={(e)=>setSelCol(e.target.value)} className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 px-2 py-1 text-xs">
+              <select value={selCol} onChange={(e)=>setSelCol(e.target.value)} className="w-full rounded-xl border border-neutral-200 px-2 py-1 text-xs">
                 <option value="">Colaborador</option>
                 {activeCollaborators.map(c => (
                   <option key={c.id} value={c.id}>{c.name}</option>
@@ -363,16 +363,16 @@ export default function Shifts() {
         <h1 className="text-2xl font-semibold">Plantões</h1>
       </div>
       <div className="flex items-center gap-2">
-        <button onClick={prevMonth} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Anterior</button>
+        <button onClick={prevMonth} className="px-3 py-2 text-xs rounded-lg border border-neutral-200">Anterior</button>
         <div className="text-sm font-medium w-40 text-center">{ptMonthYear(current)}</div>
-        <button onClick={nextMonth} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Próximo</button>
+        <button onClick={nextMonth} className="px-3 py-2 text-xs rounded-lg border border-neutral-200">Próximo</button>
         {canManage && (
           <button onClick={()=>setBulkOpen(true)} className="px-1 md:px-2 py-1 md:py-2 text-xs rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white">Inserção múltipla</button>
         )}
       </div>
 
       {error && (
-        <div className="text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-950/30 rounded-xl px-3 py-2 text-sm">{error}</div>
+        <div className="text-red-600 bg-red-50 rounded-xl px-3 py-2 text-sm">{error}</div>
       )}
 
       {/* Mobile: dias empilhados */}
@@ -389,7 +389,7 @@ export default function Shifts() {
         ))}
         {cells.map((c, idx) => (
           c === null ? (
-            <div key={`b-${idx}`} className={(role === 'user' ? 'h-35' : 'h-145') + " rounded-xl border border-dashed border-neutral-200 dark:border-neutral-800"} />
+            <div key={`b-${idx}`} className={(role === 'user' ? 'h-35' : 'h-145') + " rounded-xl border border-dashed border-neutral-200"} />
           ) : (
             <DayCell key={`d-${c}`} day={c} />
           )
@@ -398,16 +398,16 @@ export default function Shifts() {
 
       {bulkOpen && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-lg rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-4 space-y-3">
+          <div className="w-full max-w-lg rounded-xl bg-white border border-neutral-200 p-4 space-y-3">
             <div className="text-sm font-semibold">Inserir em múltiplos dias</div>
             <div className="grid grid-cols-2 gap-2">
-              <select value={bulkFn} onChange={(e)=>setBulkFn(e.target.value)} className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 px-2 py-1 text-xs">
+              <select value={bulkFn} onChange={(e)=>setBulkFn(e.target.value)} className="w-full rounded-xl border border-neutral-200 px-2 py-1 text-xs">
                 <option value="">Função</option>
                 {functions.map(f => (
                   <option key={f.id} value={f.id}>{f.name}</option>
                 ))}
               </select>
-              <select value={bulkCol} onChange={(e)=>setBulkCol(e.target.value)} className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 px-2 py-1 text-xs">
+              <select value={bulkCol} onChange={(e)=>setBulkCol(e.target.value)} className="w-full rounded-xl border border-neutral-200 px-2 py-1 text-xs">
                 <option value="">Colaborador</option>
                 {activeCollaborators.map(c => (
                   <option key={c.id} value={c.id}>{c.name}</option>
@@ -435,14 +435,14 @@ export default function Shifts() {
                     onClick={()=>setBulkDays(prev=>{ const ns = new Set(prev); if (ns.has(d)) ns.delete(d); else ns.add(d); return ns })}
                     className={
                       "h-8 rounded-lg text-xs font-semibold " +
-                      (sel ? "bg-emerald-600 text-white" : "bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200")
+                      (sel ? "bg-emerald-600 text-white" : "bg-neutral-100 text-neutral-700")
                     }
                   >{d}</button>
                 )
               })}
             </div>
             <div className="flex items-center justify-end gap-2 pt-1">
-              <button onClick={()=>{ setBulkOpen(false); }} className="px-3 py-1.5 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Cancelar</button>
+              <button onClick={()=>{ setBulkOpen(false); }} className="px-3 py-1.5 text-xs rounded-lg border border-neutral-200">Cancelar</button>
               <button disabled={!bulkFn || !bulkCol || bulkDays.size===0} onClick={bulkSave} className="px-3 py-1.5 text-xs rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50">Salvar</button>
             </div>
           </div>

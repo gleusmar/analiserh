@@ -455,20 +455,20 @@ export default function Payroll() {
         )}
       </div>
 
-      {error && <div className="text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-950/30 rounded-xl px-3 py-2 text-sm">{error}</div>}
+      {error && <div className="text-red-600 bg-red-50 rounded-xl px-3 py-2 text-sm">{error}</div>}
 
       <div className="flex flex-wrap items-center gap-2">
-        <select value={selectedSheetId} onChange={(e)=>setSelectedSheetId(e.target.value)} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5 min-w-64">
+        <select value={selectedSheetId} onChange={(e)=>setSelectedSheetId(e.target.value)} className="rounded-xl border border-neutral-200 px-3 py-2.5 min-w-64">
           <option value="">Selecione uma folha</option>
           {sheets.map(s => (<option key={s.id} value={s.id}>{s.name} ({s.year_month})</option>))}
         </select>
         {selectedSheetId && canAdmin && (
           <>
-            <button onClick={onRenameSheet} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Editar nome</button>
-            <button onClick={onCloseSheet} disabled={isClosed} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800 disabled:opacity-50">Encerrar folha</button>
-            <button onClick={onDeleteSheet} className="px-3 py-2 text-xs rounded-lg border border-red-200 text-red-600 dark:border-red-900">Excluir</button>
-            <button onClick={openAddCollaborators} disabled={!selectedSheetId || isClosed} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800 disabled:opacity-50">Adicionar colaboradores</button>
-            {isClosed && <span className="text-xs px-2 py-1 rounded bg-neutral-200/60 dark:bg-neutral-800">Encerrada</span>}
+            <button onClick={onRenameSheet} className="px-3 py-2 text-xs rounded-lg border border-neutral-200">Editar nome</button>
+            <button onClick={onCloseSheet} disabled={isClosed} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 disabled:opacity-50">Encerrar folha</button>
+            <button onClick={onDeleteSheet} className="px-3 py-2 text-xs rounded-lg border border-red-200 text-red-600">Excluir</button>
+            <button onClick={openAddCollaborators} disabled={!selectedSheetId || isClosed} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 disabled:opacity-50">Adicionar colaboradores</button>
+            {isClosed && <span className="text-xs px-2 py-1 rounded bg-neutral-200/60">Encerrada</span>}
           </>
         )}
       </div>
@@ -476,19 +476,19 @@ export default function Payroll() {
       {selectedSheetId && (
         <div className="flex items-center gap-3">
           {canAdmin && (
-            <div className="text-sm text-neutral-700 dark:text-neutral-300 font-medium">Total geral: {formatBRL(grandTotal)}</div>
+            <div className="text-sm text-neutral-700 font-medium">Total geral: {formatBRL(grandTotal)}</div>
           )}
-          <input placeholder="Filtrar por nome" value={q} onChange={(e)=>setQ(e.target.value)} className="mx-auto rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
+          <input placeholder="Filtrar por nome" value={q} onChange={(e)=>setQ(e.target.value)} className="mx-auto rounded-xl border border-neutral-200 px-3 py-2.5"/>
         </div>
       )}
       {!canAdmin && !profile?.collaborator_id && (
-        <div className="text-xs text-amber-700 bg-amber-50 dark:text-amber-300 dark:bg-amber-900/30 rounded-xl px-3 py-2">Seu usuário não está vinculado a um colaborador. Solicite ao administrador para associar seu perfil.</div>
+        <div className="text-xs text-amber-700 bg-amber-50 rounded-xl px-3 py-2">Seu usuário não está vinculado a um colaborador. Solicite ao administrador para associar seu perfil.</div>
       )}
 
       {selectedSheetId && (
-        <div className="overflow-x-auto rounded-xl bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
+        <div className="overflow-x-auto rounded-xl bg-white text-neutral-900">
           <table className="w-full text-sm">
-            <thead className="text-left text-neutral-500 dark:text-neutral-400">
+            <thead className="text-left text-neutral-500">
               <tr>
                 <th className="py-2 cursor-pointer" onClick={()=>toggleOrder('concent_id')}>ID</th>
                 {canAdmin && (
@@ -505,10 +505,10 @@ export default function Payroll() {
                 const col = it.collaborators
                 const totals = totalsByItem[it.id] || { inc:0, out:0, total:0 }
                 const isBB = (col?.bank_code || '').trim() === '001'
-                const rowColor = isBB ? 'bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50' : 'bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50'
+                const rowColor = isBB ? 'bg-amber-50 hover:bg-amber-100' : 'bg-green-50 hover:bg-green-100'
                 return (
                   <Fragment key={it.id}>
-                    <tr onClick={()=>toggleExpanded(it.id)} className={`border-t border-neutral-200 dark:border-neutral-800 cursor-pointer ${rowColor} text-neutral-900 dark:text-neutral-100`}>
+                    <tr onClick={()=>toggleExpanded(it.id)} className={`border-t border-neutral-200 cursor-pointer ${rowColor} text-neutral-900`}>
                       <td className="py-1 px-1">{col?.concent_id || '-'}</td>
                       {canAdmin && (
                         <td className="py-2 px-1 font-medium">{col?.name || '-'}</td>
@@ -536,7 +536,7 @@ export default function Payroll() {
                     </tr>
                     {expanded[it.id] && (
                       <tr>
-                        <td colSpan={detailColSpan} className="bg-neutral-50 dark:bg-neutral-900 p-3 text-neutral-900 dark:text-neutral-100">
+                        <td colSpan={detailColSpan} className="bg-neutral-50 p-3 text-neutral-900">
                           <div className="space-y-3">
                             <div className="text-sm text-neutral-500">Lançamentos</div>
                             <div className="space-y-1 pl-[10%] md:pl-[40%]">
@@ -545,17 +545,17 @@ export default function Payroll() {
                                 const kb = b.payroll_entry_types?.kind === 'in' ? 0 : 1
                                 return ka - kb
                               }).map(en => (
-                                <div key={en.id} className="flex items-center justify-between rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 px-2 py-1">
+                                <div key={en.id} className="flex items-center justify-between rounded-lg border border-neutral-200 bg-white text-neutral-900 px-2 py-1">
                                   <div className="text-xs">
-                                    <span className="font-medium dark:text-neutral-100">{en.payroll_entry_types?.name || '-'}</span>
-                                    <span className="ml-2 text-neutral-500 dark:text-neutral-300">{en.note || ''}</span>
+                                    <span className="font-medium">{en.payroll_entry_types?.name || '-'}</span>
+                                    <span className="ml-2 text-neutral-500">{en.note || ''}</span>
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <div className={"text-xs " + (en.payroll_entry_types?.kind==='out' ? 'text-red-600' : 'text-green-600')}>
                                       {en.payroll_entry_types?.kind==='out' ? '-' : '+'} {formatBRL(en.amount)}
                                     </div>
                                     {canAdmin && !isClosed && (
-                                      <button onClick={()=>removeEntry(it.id, en.id)} className="px-2 py-1 text-xs rounded-lg border border-red-200 text-red-600 dark:border-red-900">X</button>
+                                      <button onClick={()=>removeEntry(it.id, en.id)} className="px-2 py-1 text-xs rounded-lg border border-red-200 text-red-600">X</button>
                                     )}
                                   </div>
                                 </div>
@@ -576,16 +576,16 @@ export default function Payroll() {
 
       {openCreate && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4">
-          <div className="w-full max-w-3xl rounded-2xl p-6 border bg-neutral-50 text-neutral-900 border-neutral-200 dark:bg-neutral-900 dark:text-neutral-100 dark:border-neutral-800">
+          <div className="w-full max-w-3xl rounded-2xl p-6 border bg-neutral-50 text-neutral-900 border-neutral-200">
             <h2 className="text-lg font-semibold mb-4">Criar Folha</h2>
             <div className="space-y-4">
-              <input placeholder="Nome da folha" value={sheetName} onChange={(e)=>setSheetName(e.target.value)} className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
+              <input placeholder="Nome da folha" value={sheetName} onChange={(e)=>setSheetName(e.target.value)} className="w-full rounded-xl border border-neutral-200 px-3 py-2.5"/>
               <label className="text-sm flex items-center gap-2">
                 <span className="text-neutral-500">Mês</span>
-                <input type="month" value={sheetYearMonth} onChange={(e)=>setSheetYearMonth(e.target.value)} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
+                <input type="month" value={sheetYearMonth} onChange={(e)=>setSheetYearMonth(e.target.value)} className="rounded-xl border border-neutral-200 px-3 py-2.5"/>
               </label>
               <div className="text-sm text-neutral-500">Colaboradores</div>
-              <div className="max-h-64 overflow-y-auto rounded-xl border p-3 bg-white border-neutral-200 dark:bg-neutral-950 dark:border-neutral-800">
+              <div className="max-h-64 overflow-y-auto rounded-xl border p-3 bg-white border-neutral-200">
                 {collaborators.map(c => (
                   <label key={c.id} className="flex items-center gap-2 text-sm">
                     <input type="checkbox" checked={!!selectedCols[c.id]} onChange={(e)=>setSelectedCols(s=>({ ...s, [c.id]: e.target.checked }))} />
@@ -594,7 +594,7 @@ export default function Payroll() {
                 ))}
               </div>
               <div className="flex justify-end gap-2">
-                <button onClick={()=>setOpenCreate(false)} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Cancelar</button>
+                <button onClick={()=>setOpenCreate(false)} className="px-3 py-2 text-xs rounded-lg border border-neutral-200">Cancelar</button>
                 <button onClick={onConfirmCreateSheet} disabled={saving} className="px-3 py-2 text-xs rounded-lg bg-green-600 hover:bg-green-700 text-white disabled:opacity-50">Criar</button>
               </div>
             </div>
@@ -604,22 +604,22 @@ export default function Payroll() {
 
       {openImport && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4">
-          <div className="w-full max-w-4xl rounded-2xl p-6 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
+          <div className="w-full max-w-4xl rounded-2xl p-6 bg-neutral-50 border border-neutral-200">
             <h2 className="text-lg font-semibold mb-4">Importar Plantões</h2>
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <span className="text-sm text-neutral-500">Enviar para</span>
-                <select value={importSheetId} onChange={async (e)=>{ const v=e.target.value; setImportSheetId(v); if (v) await loadImportPreview(v, importYearMonth) }} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5 min-w-64">
+                <select value={importSheetId} onChange={async (e)=>{ const v=e.target.value; setImportSheetId(v); if (v) await loadImportPreview(v, importYearMonth) }} className="rounded-xl border border-neutral-200 px-3 py-2.5 min-w-64">
                   <option value="">Selecione uma folha</option>
                   {sheets.map(s => (<option key={s.id} value={s.id}>{s.name} ({s.year_month})</option>))}
                 </select>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-neutral-500">Mês a importar</span>
-                <input type="month" value={importYearMonth} onChange={async (e)=>{ const v=e.target.value; setImportYearMonth(v); if (importSheetId) await loadImportPreview(importSheetId, v) }} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
+                <input type="month" value={importYearMonth} onChange={async (e)=>{ const v=e.target.value; setImportYearMonth(v); if (importSheetId) await loadImportPreview(importSheetId, v) }} className="rounded-xl border border-neutral-200 px-3 py-2.5"/>
               </div>
               {importSheetId && (
-                <div className="max-h-80 overflow-y-auto rounded-xl border border-neutral-200 dark:border-neutral-800">
+                <div className="max-h-80 overflow-y-auto rounded-xl border border-neutral-200">
                   <table className="w-full text-sm">
                     <thead className="text-left text-neutral-500">
                       <tr>
@@ -631,7 +631,7 @@ export default function Payroll() {
                     </thead>
                     <tbody>
                       {importPreview.map(p => (
-                        <tr key={p.item_id} className="border-t border-neutral-200 dark:border-neutral-800">
+                        <tr key={p.item_id} className="border-t border-neutral-200">
                           <td className="py-2 text-center"><input type="checkbox" checked={!!importSel[p.item_id]} onChange={(e)=>setImportSel(s=>({ ...s, [p.item_id]: e.target.checked }))}/></td>
                           <td className="py-2">{p.concent_id}</td>
                           <td className="py-2">{p.name}</td>
@@ -643,7 +643,7 @@ export default function Payroll() {
                 </div>
               )}
               <div className="flex justify-end gap-2">
-                <button onClick={()=>setOpenImport(false)} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Cancelar</button>
+                <button onClick={()=>setOpenImport(false)} className="px-3 py-2 text-xs rounded-lg border border-neutral-200">Cancelar</button>
                 <button onClick={onConfirmImport} disabled={importLoading || !importSheetId} className="px-3 py-2 text-xs rounded-lg bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50">Importar</button>
               </div>
             </div>
@@ -653,17 +653,17 @@ export default function Payroll() {
 
       {openSlip && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4">
-          <div className="w-full max-w-5xl rounded-2xl p-6 border bg-neutral-50 text-neutral-900 border-neutral-200 dark:bg-neutral-900 dark:text-neutral-100 dark:border-neutral-800">
+          <div className="w-full max-w-5xl rounded-2xl p-6 border bg-neutral-50 text-neutral-900 border-neutral-200">
             <h2 className="text-lg font-semibold mb-4">Importar Holerites (PDF único)</h2>
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <input type="file" accept="application/pdf" onChange={(e)=>onChooseHolerites(e.target.files?.[0])} />
-                <button type="button" onClick={async ()=>{ try { const r = await fetch('/holerites.pdf'); if (!r.ok) throw new Error('Arquivo de exemplo não encontrado em /holerites.pdf'); const b = await r.blob(); await onChooseHolerites(b) } catch(e){ alert(e.message || 'Falha ao carregar exemplo') } }} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Carregar exemplo</button>
+                <button type="button" onClick={async ()=>{ try { const r = await fetch('/holerites.pdf'); if (!r.ok) throw new Error('Arquivo de exemplo não encontrado em /holerites.pdf'); const b = await r.blob(); await onChooseHolerites(b) } catch(e){ alert(e.message || 'Falha ao carregar exemplo') } }} className="px-3 py-2 text-xs rounded-lg border border-neutral-200">Carregar exemplo</button>
               </div>
               {slipPages.length>0 && (
-                <div className="max-h-[60vh] overflow-y-auto rounded-xl border bg-white border-neutral-200 dark:bg-neutral-950 dark:border-neutral-800">
+                <div className="max-h-[60vh] overflow-y-auto rounded-xl border bg-white border-neutral-200">
                   <table className="w-full text-sm">
-                    <thead className="text-left text-neutral-500 dark:text-neutral-400">
+                    <thead className="text-left text-neutral-500">
                       <tr>
                         <th className="py-2 w-10"></th>
                         <th className="py-2 w-16">Página</th>
@@ -672,11 +672,11 @@ export default function Payroll() {
                     </thead>
                     <tbody>
                       {slipPages.map((p,idx)=>(
-                        <tr key={idx} className="border-t border-neutral-200 dark:border-neutral-800">
+                        <tr key={idx} className="border-t border-neutral-200">
                           <td className="py-2 text-center"><input type="checkbox" checked={p.selected} onChange={(e)=>setSlipPages(arr=>arr.map((x,i)=>i===idx?{...x,selected:e.target.checked}:x))}/></td>
                           <td className="py-2">{p.idx}</td>
                           <td className="py-2">
-                            <select value={p.collaborator_id} onChange={(e)=>setSlipPages(arr=>arr.map((x,i)=>i===idx?{...x,collaborator_id:e.target.value}:x))} className={`rounded-xl border border-neutral-200 dark:border-neutral-800 px-2 py-1 min-w-64 ${p.collaborator_id ? 'bg-green-100 dark:bg-green-900/50' : ''}`}>
+                            <select value={p.collaborator_id} onChange={(e)=>setSlipPages(arr=>arr.map((x,i)=>i===idx?{...x,collaborator_id:e.target.value}:x))} className={`rounded-xl border border-neutral-200 px-2 py-1 min-w-64 ${p.collaborator_id ? 'bg-green-100' : ''}`}>
                               <option value="">Selecione</option>
                               {itemsSortedByName.map(it => (
                                 <option key={it.collaborator_id} value={it.collaborator_id}>{it.collaborators?.name} — {it.collaborators?.concent_id}</option>
@@ -690,7 +690,7 @@ export default function Payroll() {
                 </div>
               )}
               <div className="flex justify-end gap-2">
-                <button onClick={()=>{setOpenSlip(false); setSlipPages([])}} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Cancelar</button>
+                <button onClick={()=>{setOpenSlip(false); setSlipPages([])}} className="px-3 py-2 text-xs rounded-lg border border-neutral-200">Cancelar</button>
                 <button onClick={onConfirmSlips} disabled={slipLoading || !slipPages.length} className="px-3 py-2 text-xs rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50">Enviar</button>
               </div>
             </div>
@@ -700,11 +700,11 @@ export default function Payroll() {
 
       {openAddCols && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4">
-          <div className="w-full max-w-3xl rounded-2xl p-6 border bg-neutral-50 text-neutral-900 border-neutral-200 dark:bg-neutral-900 dark:text-neutral-100 dark:border-neutral-800">
+          <div className="w-full max-w-3xl rounded-2xl p-6 border bg-neutral-50 text-neutral-900 border-neutral-200">
             <h2 className="text-lg font-semibold mb-4">Adicionar colaboradores à folha</h2>
             <div className="space-y-3">
               <div className="text-sm text-neutral-500">Selecione os colaboradores que deseja incluir</div>
-              <div className="max-h-80 overflow-y-auto rounded-xl border p-3 bg-white border-neutral-200 dark:bg-neutral-950 dark:border-neutral-800">
+              <div className="max-h-80 overflow-y-auto rounded-xl border p-3 bg-white border-neutral-200">
                 {addLoading && <div className="text-sm text-neutral-500">Carregando...</div>}
                 {!addLoading && addCandidates.length === 0 && (
                   <div className="text-sm text-neutral-500">Nenhum colaborador disponível</div>
@@ -717,7 +717,7 @@ export default function Payroll() {
                 ))}
               </div>
               <div className="flex justify-end gap-2">
-                <button onClick={()=>{ setOpenAddCols(false); setAddCandidates([]); setAddSel({}) }} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Cancelar</button>
+                <button onClick={()=>{ setOpenAddCols(false); setAddCandidates([]); setAddSel({}) }} className="px-3 py-2 text-xs rounded-lg border border-neutral-200">Cancelar</button>
                 <button onClick={onConfirmAddCollaborators} disabled={addLoading || !addCandidates.length} className="px-3 py-2 text-xs rounded-lg bg-green-600 hover:bg-green-700 text-white disabled:opacity-50">Adicionar</button>
               </div>
             </div>
@@ -732,13 +732,13 @@ function AddEntryForm({ types, onSubmit }) {
   const [form, setForm] = useState({ entry_type_id: '', amount: '', note: '' })
   return (
     <form onSubmit={(e)=>{ e.preventDefault(); onSubmit({ form, setForm }) }} className="flex flex-wrap items-center gap-2">
-      <select value={form.entry_type_id} onChange={(e)=>setForm(f=>({ ...f, entry_type_id: e.target.value }))} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5">
+      <select value={form.entry_type_id} onChange={(e)=>setForm(f=>({ ...f, entry_type_id: e.target.value }))} className="rounded-xl border border-neutral-200 px-3 py-2.5">
         <option value="">Tipo</option>
         {types.map(t => <option key={t.id} value={t.id}>{t.name} ({t.kind==='out'?'desconto':'recebimento'})</option>)}
       </select>
-      <input placeholder="Valor" value={form.amount} onChange={(e)=>setForm(f=>({ ...f, amount: e.target.value }))} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5 w-40" inputMode="decimal"/>
-      <input placeholder="Observação" value={form.note} onChange={(e)=>setForm(f=>({ ...f, note: e.target.value }))} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5 flex-1"/>
-      <button type="submit" className="text-xs rounded-lg border border-neutral-200 dark:border-neutral-800 px-3 py-2">Adicionar</button>
+      <input placeholder="Valor" value={form.amount} onChange={(e)=>setForm(f=>({ ...f, amount: e.target.value }))} className="rounded-xl border border-neutral-200 px-3 py-2.5 w-40" inputMode="decimal"/>
+      <input placeholder="Observação" value={form.note} onChange={(e)=>setForm(f=>({ ...f, note: e.target.value }))} className="rounded-xl border border-neutral-200 px-3 py-2.5 flex-1"/>
+      <button type="submit" className="text-xs rounded-lg border border-neutral-200 px-3 py-2">Adicionar</button>
     </form>
   )
 }

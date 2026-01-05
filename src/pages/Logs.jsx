@@ -42,8 +42,8 @@ export default function Logs() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <input value={q} onChange={(e)=>{setPage(1);setQ(e.target.value)}} placeholder="Buscar ator/alvo" className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white/60 dark:bg-neutral-900/60 px-3 py-2.5"/>
-        <select value={action} onChange={(e)=>{setPage(1);setAction(e.target.value)}} className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white/60 dark:bg-neutral-900/60 px-3 py-2.5">
+        <input value={q} onChange={(e)=>{setPage(1);setQ(e.target.value)}} placeholder="Buscar ator/alvo" className="rounded-xl border border-neutral-200 bg-white/60 px-3 py-2.5"/>
+        <select value={action} onChange={(e)=>{setPage(1);setAction(e.target.value)}} className="rounded-xl border border-neutral-200 bg-white/60 px-3 py-2.5">
           <option value="all">todas ações</option>
           {actions.map(a => (<option key={a} value={a}>{a}</option>))}
         </select>
@@ -52,7 +52,7 @@ export default function Logs() {
       {loading ? (
         <div className="text-neutral-500">Carregando...</div>
       ) : error ? (
-        <div className="text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-950/30 rounded-xl px-3 py-2 text-sm">{error}</div>
+        <div className="text-red-600 bg-red-50 rounded-xl px-3 py-2 text-sm">{error}</div>
       ) : (
         <>
           <div className="overflow-x-auto">
@@ -68,7 +68,7 @@ export default function Logs() {
               </thead>
               <tbody>
                 {logs.map((log) => (
-                  <tr key={log.id} className="border-t border-neutral-200 dark:border-neutral-800">
+                  <tr key={log.id} className="border-t border-neutral-200">
                     <td className="py-2">{log.action}</td>
                     <td className="py-2">{log.actor_email || '-'}</td>
                     <td className="py-2">{log.target_email || '-'}</td>
@@ -79,18 +79,18 @@ export default function Logs() {
               </tbody>
             </table>
           </div>
-          <div className="flex items-center justify-between text-sm text-neutral-600 dark:text-neutral-400">
+          <div className="flex items-center justify-between text-sm text-neutral-600">
             <div>
               {total === 0 ? '0 resultados' : `${(page-1)*pageSize+1}-${Math.min(page*pageSize, total)} de ${total}`}
             </div>
             <div className="inline-flex items-center gap-2">
-              <select value={pageSize} onChange={(e)=>{setPage(1);setPageSize(parseInt(e.target.value)||20)}} className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-transparent px-2 py-1">
+              <select value={pageSize} onChange={(e)=>{setPage(1);setPageSize(parseInt(e.target.value)||20)}} className="rounded-lg border border-neutral-200 bg-transparent px-2 py-1">
                 <option value={10}>10</option>
                 <option value={20}>20</option>
                 <option value={50}>50</option>
               </select>
-              <button disabled={page<=1} onClick={()=>setPage(p=>Math.max(1,p-1))} className="px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-800 disabled:opacity-50">Anterior</button>
-              <button disabled={page*pageSize>=total} onClick={()=>setPage(p=>p+1)} className="px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-800 disabled:opacity-50">Próxima</button>
+              <button disabled={page<=1} onClick={()=>setPage(p=>Math.max(1,p-1))} className="px-2 py-1 rounded-lg border border-neutral-200 disabled:opacity-50">Anterior</button>
+              <button disabled={page*pageSize>=total} onClick={()=>setPage(p=>p+1)} className="px-2 py-1 rounded-lg border border-neutral-200 disabled:opacity-50">Próxima</button>
             </div>
           </div>
         </>

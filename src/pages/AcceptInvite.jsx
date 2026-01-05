@@ -37,8 +37,8 @@ export default function AcceptInvite() {
       <div className="min-h-screen grid place-items-center p-6">
         <div className="glass max-w-md w-full rounded-2xl p-6 text-center space-y-3">
           <h1 className="text-xl font-semibold">Você precisa entrar para aceitar o convite</h1>
-          <p className="text-neutral-600 dark:text-neutral-400">Acesse com o mesmo e-mail que recebeu o convite.</p>
-          <Link to="/login" state={{ from: location }} className="inline-flex justify-center rounded-xl bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 px-4 py-2.5">Ir para login</Link>
+          <p className="text-neutral-600">Acesse com o mesmo e-mail que recebeu o convite.</p>
+          <Link to="/login" state={{ from: location }} className="inline-flex justify-center rounded-xl bg-neutral-900 text-white px-4 py-2.5">Ir para login</Link>
         </div>
       </div>
     )
@@ -48,9 +48,9 @@ export default function AcceptInvite() {
     <div className="min-h-screen grid place-items-center p-6">
       <div className="glass max-w-md w-full rounded-2xl p-6 text-center space-y-3">
         <h1 className="text-xl font-semibold">Aceitando convite...</h1>
-        {status === 'processing' && <p className="text-neutral-600 dark:text-neutral-400">Processando...</p>}
-        {status === 'done' && <p className="text-emerald-600 dark:text-emerald-400">{message}</p>}
-        {status === 'error' && <p className="text-red-600 dark:text-red-400">{message}</p>}
+        {status === 'processing' && <p className="text-neutral-600">Processando...</p>}
+        {status === 'done' && <p className="text-emerald-600">{message}</p>}
+        {status === 'error' && <p className="text-red-600">{message}</p>}
       </div>
     </div>
   )

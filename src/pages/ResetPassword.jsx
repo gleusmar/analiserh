@@ -41,12 +41,12 @@ export default function ResetPassword() {
       <div className="glass w-full max-w-md rounded-2xl p-6">
         <h1 className="text-xl font-semibold mb-4">Definir nova senha</h1>
         <form onSubmit={onSubmit} className="space-y-3">
-          <input type="password" required value={password} onChange={(e)=>setPassword(e.target.value)} placeholder="Nova senha" className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white/60 dark:bg-neutral-900/60 px-3 py-2.5 outline-none focus:ring-4 ring-violet-100 dark:ring-violet-900/30"/>
-          <input type="password" required value={confirm} onChange={(e)=>setConfirm(e.target.value)} placeholder="Confirmar senha" className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white/60 dark:bg-neutral-900/60 px-3 py-2.5 outline-none focus:ring-4 ring-violet-100 dark:ring-violet-900/30"/>
+          <input type="password" required value={password} onChange={(e)=>setPassword(e.target.value)} placeholder="Nova senha" className="w-full rounded-xl border border-neutral-200 bg-white/60 px-3 py-2.5 outline-none focus:ring-4 ring-violet-100"/>
+          <input type="password" required value={confirm} onChange={(e)=>setConfirm(e.target.value)} placeholder="Confirmar senha" className="w-full rounded-xl border border-neutral-200 bg-white/60 px-3 py-2.5 outline-none focus:ring-4 ring-violet-100"/>
           {message && (
-            <div className={`${message.type === 'error' ? 'text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-950/30' : 'text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-950/30'} text-sm rounded-xl px-3 py-2`}>{message.text}</div>
+            <div className={`${message.type === 'error' ? 'text-red-600 bg-red-50' : 'text-emerald-600 bg-emerald-50'} text-sm rounded-xl px-3 py-2`}>{message.text}</div>
           )}
-          <button type="submit" disabled={loading} className="w-full rounded-xl bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 py-2.5">{loading? 'Atualizando...' : 'Salvar'}</button>
+          <button type="submit" disabled={loading} className="w-full rounded-xl bg-neutral-900 text-white py-2.5">{loading? 'Atualizando...' : 'Salvar'}</button>
         </form>
       </div>
     </div>

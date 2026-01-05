@@ -205,20 +205,20 @@ export default function Vacations() {
         )}
       </div>
       <div className="md:hidden">
-        <input value={q} onChange={(e)=>setQ(e.target.value)} placeholder="Buscar por nome, ID Concent ou período" className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 px-2 py-1 text-xs" />
+        <input value={q} onChange={(e)=>setQ(e.target.value)} placeholder="Buscar por nome, ID Concent ou período" className="w-full rounded-xl border border-neutral-200 px-2 py-1 text-xs" />
       </div>
       <div className="hidden md:flex items-center">
-        <input value={q} onChange={(e)=>setQ(e.target.value)} placeholder="Buscar por nome, ID Concent ou período" className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2 text-sm w-72" />
+        <input value={q} onChange={(e)=>setQ(e.target.value)} placeholder="Buscar por nome, ID Concent ou período" className="rounded-xl border border-neutral-200 px-3 py-2 text-sm w-72" />
       </div>
 
       {error && (
-        <div className="text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-950/30 rounded-xl px-3 py-2 text-sm">{error}</div>
+        <div className="text-red-600 bg-red-50 rounded-xl px-3 py-2 text-sm">{error}</div>
       )}
 
       {onlyMine ? (
         <div className="space-y-2">
           {filtered.map(v => (
-            <div key={v.id} className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-3 flex items-center justify-between hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+            <div key={v.id} className="rounded-xl border border-neutral-200 p-3 flex items-center justify-between hover:bg-neutral-50 transition-colors">
               <div className="space-y-1">
                 <div className="text-sm font-semibold">{formatDateBR(v.start_date)} → {formatDateBR(v.end_date)} ({v.days} dias)</div>
                 <div className="text-xs text-neutral-500">Período: {v.period || '-'} | Remuneração: {formatBRL(v.remuneration)}</div>
@@ -235,7 +235,7 @@ export default function Vacations() {
         <div className="space-y-6">
           {groupByYear(filtered).years.map(y => (
             <div key={y} className="space-y-2">
-              <div className="text-sm font-semibold text-neutral-600 dark:text-neutral-300">{y}</div>
+              <div className="text-sm font-semibold text-neutral-600">{y}</div>
               <div className="hidden md:grid grid-cols-12 gap-2 text-xs text-neutral-500">
                 <div className="col-span-2">ID Concent</div>
                 <div className="col-span-3">Colaborador</div>
@@ -247,7 +247,7 @@ export default function Vacations() {
               </div>
               <div className="space-y-2">
                 {(groupByYear(filtered).byYear[y]||[]).map(v => (
-                  <div key={v.id} className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-3 grid grid-cols-1 md:grid-cols-12 gap-2 items-center hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+                  <div key={v.id} className="rounded-xl border border-neutral-200 p-3 grid grid-cols-1 md:grid-cols-12 gap-2 items-center hover:bg-neutral-50 transition-colors">
                     <div className="md:col-span-2 px-2 text-sm font-semibold flex items-center justify-between">
                       <span>{v.collaborators?.concent_id || '-'}</span>
                       <span className="flex items-center gap-2 md:hidden">
@@ -296,12 +296,12 @@ export default function Vacations() {
 
       {modalOpen && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-lg rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-4 space-y-3">
+          <div className="w-full max-w-lg rounded-xl bg-white border border-neutral-200 p-4 space-y-3">
             <div className="text-sm font-semibold">{editing ? 'Editar Férias' : 'Nova Férias'}</div>
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
                 <label className="block text-xs mb-1">Colaborador</label>
-                <select disabled={!canAdmin} value={form.collaborator_id} onChange={(e)=>setForm(f=>({ ...f, collaborator_id: e.target.value }))} className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 px-2 py-1 text-sm">
+                <select disabled={!canAdmin} value={form.collaborator_id} onChange={(e)=>setForm(f=>({ ...f, collaborator_id: e.target.value }))} className="w-full rounded-xl border border-neutral-200 px-2 py-1 text-sm">
                   <option value="">Selecione</option>
                   {collabs.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
@@ -310,23 +310,23 @@ export default function Vacations() {
               </div>
               <div>
                 <label className="block text-xs mb-1">ID Concent</label>
-                <input value={selectedCollab?.concent_id || ''} readOnly className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 px-2 py-1 text-sm bg-neutral-50 dark:bg-neutral-800" />
+                <input value={selectedCollab?.concent_id || ''} readOnly className="w-full rounded-xl border border-neutral-200 px-2 py-1 text-sm bg-neutral-50" />
               </div>
               <div>
                 <label className="block text-xs mb-1">Período Aquisitivo</label>
-                <input value={form.period} onChange={(e)=>setForm(f=>({ ...f, period: e.target.value }))} className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 px-2 py-1 text-sm" />
+                <input value={form.period} onChange={(e)=>setForm(f=>({ ...f, period: e.target.value }))} className="w-full rounded-xl border border-neutral-200 px-2 py-1 text-sm" />
               </div>
               <div>
                 <label className="block text-xs mb-1">Data de Saída</label>
-                <input type="date" required value={form.start_date} onChange={(e)=>setForm(f=>({ ...f, start_date: e.target.value }))} className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 px-2 py-1 text-sm" />
+                <input type="date" required value={form.start_date} onChange={(e)=>setForm(f=>({ ...f, start_date: e.target.value }))} className="w-full rounded-xl border border-neutral-200 px-2 py-1 text-sm" />
               </div>
               <div>
                 <label className="block text-xs mb-1">Data de Retorno</label>
-                <input type="date" required value={form.end_date} onChange={(e)=>setForm(f=>({ ...f, end_date: e.target.value }))} className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 px-2 py-1 text-sm" />
+                <input type="date" required value={form.end_date} onChange={(e)=>setForm(f=>({ ...f, end_date: e.target.value }))} className="w-full rounded-xl border border-neutral-200 px-2 py-1 text-sm" />
               </div>
               <div>
                 <label className="block text-xs mb-1">Qtde de dias</label>
-                <input value={days} readOnly className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 px-2 py-1 text-sm bg-neutral-50 dark:bg-neutral-800" />
+                <input value={days} readOnly className="w-full rounded-xl border border-neutral-200 px-2 py-1 text-sm bg-neutral-50" />
               </div>
               <div>
                 <label className="block text-xs mb-1">Remuneração</label>
@@ -336,7 +336,7 @@ export default function Vacations() {
                   placeholder="0,00"
                   value={form.remuneration}
                   onChange={(e)=>setForm(f=>({ ...f, remuneration: e.target.value }))}
-                  className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 px-2 py-1 text-sm"
+                  className="w-full rounded-xl border border-neutral-200 px-2 py-1 text-sm"
                 />
               </div>
               <div className="col-span-2">
@@ -345,7 +345,7 @@ export default function Vacations() {
               </div>
             </div>
             <div className="flex items-center justify-end gap-2 pt-1">
-              <button onClick={()=>{ setModalOpen(false); setEditing(null); }} className="px-3 py-1.5 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Cancelar</button>
+              <button onClick={()=>{ setModalOpen(false); setEditing(null); }} className="px-3 py-1.5 text-xs rounded-lg border border-neutral-200">Cancelar</button>
               <button onClick={save} className="px-3 py-1.5 text-xs rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white">Salvar</button>
             </div>
           </div>

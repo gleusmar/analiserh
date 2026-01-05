@@ -58,11 +58,11 @@ export default function PayrollEntries() {
         <h1 className="text-2xl font-semibold">Lançamentos</h1>
       </div>
 
-      {error && <div className="text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-950/30 rounded-xl px-3 py-2 text-sm">{error}</div>}
+      {error && <div className="text-red-600 bg-red-50 rounded-xl px-3 py-2 text-sm">{error}</div>}
 
       <form onSubmit={onCreate} className="flex flex-wrap items-center gap-2">
-        <input required placeholder="Nome" value={name} onChange={(e)=>setName(e.target.value)} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
-        <select value={kind} onChange={(e)=>setKind(e.target.value)} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5">
+        <input required placeholder="Nome" value={name} onChange={(e)=>setName(e.target.value)} className="rounded-xl border border-neutral-200 px-3 py-2.5"/>
+        <select value={kind} onChange={(e)=>setKind(e.target.value)} className="rounded-xl border border-neutral-200 px-3 py-2.5">
           <option value="in">Entrada (acréscimo)</option>
           <option value="out">Saída (desconto)</option>
         </select>
@@ -80,15 +80,15 @@ export default function PayrollEntries() {
           </thead>
           <tbody>
             {rows.map(r => (
-              <tr key={r.id} className="border-t border-neutral-200 dark:border-neutral-800">
+              <tr key={r.id} className="border-t border-neutral-200">
                 <td className="py-2">
                   {editingId===r.id ? (
-                    <input value={editName} onChange={(e)=>setEditName(e.target.value)} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-2 py-1"/>
+                    <input value={editName} onChange={(e)=>setEditName(e.target.value)} className="rounded-xl border border-neutral-200 px-2 py-1"/>
                   ) : r.name}
                 </td>
                 <td className="py-2">
                   {editingId===r.id ? (
-                    <select value={editKind} onChange={(e)=>setEditKind(e.target.value)} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-2 py-1">
+                    <select value={editKind} onChange={(e)=>setEditKind(e.target.value)} className="rounded-xl border border-neutral-200 px-2 py-1">
                       <option value="in">Entrada</option>
                       <option value="out">Saída</option>
                     </select>
@@ -97,13 +97,13 @@ export default function PayrollEntries() {
                 <td className="py-2">
                   {editingId===r.id ? (
                     <div className="inline-flex gap-2">
-                      <button type="button" onClick={()=>onEditSave(r.id)} className="px-2 py-1 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Salvar</button>
-                      <button type="button" onClick={()=>setEditingId(null)} className="px-2 py-1 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Cancelar</button>
+                      <button type="button" onClick={()=>onEditSave(r.id)} className="px-2 py-1 text-xs rounded-lg border border-neutral-200">Salvar</button>
+                      <button type="button" onClick={()=>setEditingId(null)} className="px-2 py-1 text-xs rounded-lg border border-neutral-200">Cancelar</button>
                     </div>
                   ) : (
                     <div className="inline-flex gap-2">
-                      <button type="button" onClick={()=>onEditStart(r)} className="px-2 py-1 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Editar</button>
-                      <button type="button" onClick={()=>onDelete(r.id)} className="px-2 py-1 text-xs rounded-lg border border-red-200 text-red-600 dark:border-red-900">Excluir</button>
+                      <button type="button" onClick={()=>onEditStart(r)} className="px-2 py-1 text-xs rounded-lg border border-neutral-200">Editar</button>
+                      <button type="button" onClick={()=>onDelete(r.id)} className="px-2 py-1 text-xs rounded-lg border border-red-200 text-red-600">Excluir</button>
                     </div>
                   )}
                 </td>

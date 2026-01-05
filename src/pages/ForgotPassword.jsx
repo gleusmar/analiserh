@@ -28,11 +28,11 @@ export default function ForgotPassword() {
         <h1 className="text-xl font-semibold mb-2">Recuperar senha</h1>
         <p className="text-sm text-neutral-500 mb-4">Informe seu e-mail para receber o link de recuperação.</p>
         <form onSubmit={onSubmit} className="space-y-3">
-          <input type="email" required value={email} onChange={(e)=>setEmail(e.target.value)} placeholder="seu@email.com" className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white/60 dark:bg-neutral-900/60 px-3 py-2.5 outline-none focus:ring-4 ring-sky-100 dark:ring-sky-900/30"/>
+          <input type="email" required value={email} onChange={(e)=>setEmail(e.target.value)} placeholder="seu@email.com" className="w-full rounded-xl border border-neutral-200 bg-white/60 px-3 py-2.5 outline-none focus:ring-4 ring-sky-100"/>
           {message && (
-            <div className={`${message.type === 'error' ? 'text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-950/30' : 'text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-950/30'} text-sm rounded-xl px-3 py-2`}>{message.text}</div>
+            <div className={`${message.type === 'error' ? 'text-red-600 bg-red-50' : 'text-emerald-600 bg-emerald-50'} text-sm rounded-xl px-3 py-2`}>{message.text}</div>
           )}
-          <button type="submit" disabled={loading} className="w-full rounded-xl bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 py-2.5">{loading? 'Enviando...' : 'Enviar link'}</button>
+          <button type="submit" disabled={loading} className="w-full rounded-xl bg-neutral-900 text-white py-2.5">{loading? 'Enviando...' : 'Enviar link'}</button>
         </form>
       </div>
     </div>

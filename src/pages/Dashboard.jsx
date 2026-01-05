@@ -9,6 +9,7 @@ import {
   listPayrollSheets,
   listPayrollSheetItems,
   listPayrollEntriesForItem,
+  listShiftRateOverrides,
 } from '../lib/db'
 
 function ymOf(d) {
@@ -49,6 +50,7 @@ export default function Dashboard() {
   const [monthRef, setMonthRef] = useState(() => new Date())
 
   const [shiftFns, setShiftFns] = useState([])
+  const [shiftOverrides, setShiftOverrides] = useState([])
   const [myShifts, setMyShifts] = useState([])
   const [vacations, setVacations] = useState([])
   const [payHistory, setPayHistory] = useState([])
@@ -63,6 +65,13 @@ export default function Dashboard() {
     return m
   }, [shiftFns])
 
+  const fnValueMap = useMemo(() => {
+    const m = {}
+    ;(shiftFns || []).forEach(f => { m[f.id] = Number(f.base_value || 0) })
+    ;(shiftOverrides || []).forEach(o => { m[o.shift_function_id] = Number(o.value || 0) })
+    return m
+  }, [shiftFns, shiftOverrides])
+
   useEffect(() => {
     if (!myColId) return
     let cancelled = false
@@ -72,12 +81,15 @@ export default function Dashboard() {
       try {
         const from = startOfMonth(monthRef)
         const to = endOfMonth(monthRef)
-        const [fns, asg] = await Promise.all([
+        const ym = ymOf(monthRef)
+        const [fns, ovs, asg] = await Promise.all([
           listShiftFunctions(),
+          listShiftRateOverrides(ym),
           listShiftAssignments(formatISO(from), formatISO(to)),
         ])
         if (cancelled) return
         setShiftFns(fns || [])
+        setShiftOverrides(ovs || [])
         const mine = (asg || []).filter(a => a.collaborator_id === myColId)
         setMyShifts(mine)
       } catch (e) {
@@ -148,6 +160,7 @@ export default function Dashboard() {
             inc,
             out,
             total,
+            entries,
           }
         })
         setPayHistory(rows)
@@ -167,6 +180,13 @@ export default function Dashboard() {
     [myShifts]
   )
 
+  const totalShiftValueMonth = useMemo(
+    () => myShifts
+      .filter(a => a.remunerated)
+      .reduce((s, a) => s + (fnValueMap[a.shift_function_id] || 0), 0),
+    [myShifts, fnValueMap]
+  )
+
   const upcomingVacation = useMemo(() => {
     if (!vacations.length) return null
     const today = new Date()
@@ -180,6 +200,8 @@ export default function Dashboard() {
   }, [vacations])
 
   const lastPay = payHistory.length ? payHistory[0] : null
+
+  const [selectedSheetId, setSelectedSheetId] = useState(null)
 
   async function downloadHolerite(sheetId) {
     if (!myColId) return
@@ -225,28 +247,31 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Início</h1>
-          <p className="text-sm text-neutral-600 dark:text-neutral-400">
-            Visão geral rápida dos seus plantões, férias e remunerações.
-          </p>
+        <div className="flex items-center gap-2">
+          <img src="/ico.png" alt="Meu Análise" className="w-7 h-7 rounded-md" />
+          <div>
+            <h1 className="text-2xl font-semibold">Meu Análise</h1>
+            <p className="text-sm text-neutral-600">
+              Visão geral rápida dos seus plantões, férias e remunerações.
+            </p>
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link
             to="/shifts"
-            className="px-3 py-1.5 text-xs rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+            className="px-3 py-1.5 text-xs rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
           >
             Ver calendário de plantões
           </Link>
           <Link
             to="/payroll/vacations"
-            className="px-3 py-1.5 text-xs rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+            className="px-3 py-1.5 text-xs rounded-lg bg-amber-600 hover:bg-amber-700 text-white shadow-sm"
           >
             Ver minhas férias
           </Link>
           <Link
             to="/payroll"
-            className="px-3 py-1.5 text-xs rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+            className="px-3 py-1.5 text-xs rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
           >
             Ir para folhas mensais
           </Link>
@@ -254,45 +279,49 @@ export default function Dashboard() {
       </div>
 
       {!myColId && (
-        <div className="text-xs text-amber-700 bg-amber-50 dark:text-amber-300 dark:bg-amber-900/30 rounded-xl px-3 py-2">
+        <div className="text-xs text-amber-700 bg-amber-50 rounded-xl px-3 py-2">
           Seu usuário ainda não está vinculado a um colaborador. Solicite ao administrador para associar seu perfil
           a um colaborador para visualizar plantões, férias e holerites personalizados.
         </div>
       )}
 
       {error && (
-        <div className="text-xs text-red-700 bg-red-50 dark:text-red-300 dark:bg-red-900/30 rounded-xl px-3 py-2">
+        <div className="text-xs text-red-700 bg-red-50 rounded-xl px-3 py-2">
           {error}
         </div>
       )}
 
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-4 flex flex-col gap-2">
+        <div className="rounded-xl border border-sky-100 bg-sky-50 p-4 flex flex-col gap-2">
           <div className="text-xs text-neutral-500">Colaborador vinculado</div>
-          <div className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+          <div className="text-sm font-semibold text-neutral-900">
             {profile?.collaborators?.name || '-'}
           </div>
           <div className="text-xs text-neutral-500">
             ID Concent:{' '}
-            <span className="font-mono text-neutral-700 dark:text-neutral-300">
+            <span className="font-mono text-neutral-700">
               {profile?.collaborators?.concent_id || '-'}
             </span>
           </div>
         </div>
 
-        <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-4 flex flex-col gap-2">
+        <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4 flex flex-col gap-2">
           <div className="text-xs text-neutral-500">Plantões neste mês</div>
-          <div className="text-2xl font-semibold text-neutral-900 dark:text-neutral-100">
+          <div className="text-2xl font-semibold text-neutral-900">
             {totalShiftsMonth}
           </div>
           <div className="text-xs text-neutral-500">
             {totalRemShiftsMonth} remunerados
           </div>
+          <div className="text-xs text-neutral-500">
+            Total (remunerados):{' '}
+            <span className="font-semibold text-neutral-800">{formatBRL(totalShiftValueMonth)}</span>
+          </div>
         </div>
 
-        <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-4 flex flex-col gap-2">
+        <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-4 flex flex-col gap-2">
           <div className="text-xs text-neutral-500">Última remuneração líquida</div>
-          <div className="text-2xl font-semibold text-neutral-900 dark:text-neutral-100">
+          <div className="text-2xl font-semibold text-neutral-900">
             {lastPay ? formatBRL(lastPay.total) : '-'}
           </div>
           <div className="text-xs text-neutral-500">
@@ -302,7 +331,7 @@ export default function Dashboard() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2 rounded-xl border border-neutral-200 dark:border-neutral-800 p-4 space-y-3">
+        <div className="lg:col-span-2 rounded-xl border border-neutral-200 p-4 space-y-3 bg-white">
           <div className="flex items-center justify-between gap-2">
             <div>
               <div className="text-sm font-semibold">Meus plantões</div>
@@ -311,7 +340,7 @@ export default function Dashboard() {
             <div className="flex items-center gap-2">
               <button
                 onClick={prevMonth}
-                className="px-2 py-1 text-xs rounded-lg border border-neutral-200 dark:border-neutral-700"
+                className="px-2 py-1 text-xs rounded-lg border border-neutral-200 hover:bg-neutral-50"
               >
                 Anterior
               </button>
@@ -320,7 +349,7 @@ export default function Dashboard() {
               </div>
               <button
                 onClick={nextMonth}
-                className="px-2 py-1 text-xs rounded-lg border border-neutral-200 dark:border-neutral-700"
+                className="px-2 py-1 text-xs rounded-lg border border-neutral-200 hover:bg-neutral-50"
               >
                 Próximo
               </button>
@@ -342,30 +371,34 @@ export default function Dashboard() {
           )}
 
           {!loadingShifts && shiftsSorted.length > 0 && (
-            <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
+            <div className="rounded-xl border border-neutral-200 overflow-hidden">
               <table className="w-full text-xs">
-                <thead className="bg-neutral-50 dark:bg-neutral-900 text-neutral-500">
+                <thead className="bg-neutral-50 text-neutral-500">
                   <tr>
                     <th className="py-2 px-2 text-left">Data</th>
                     <th className="py-2 px-2 text-left">Função</th>
                     <th className="py-2 px-2 text-left">Remuneração</th>
+                    <th className="py-2 px-2 text-right">Valor</th>
                   </tr>
                 </thead>
                 <tbody>
                   {shiftsSorted.map(s => (
-                    <tr key={s.id} className="border-t border-neutral-100 dark:border-neutral-800">
+                    <tr key={s.id} className="border-t border-neutral-100">
                       <td className="py-1.5 px-2 text-sm">{formatDateBR(s.date)}</td>
                       <td className="py-1.5 px-2 text-sm">{fnMap[s.shift_function_id]?.name || '-'}</td>
                       <td className="py-1.5 px-2 text-sm">
                         {s.remunerated ? (
-                          <span className="inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200 px-2 py-0.5 text-[11px]">
+                          <span className="inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 px-2 py-0.5 text-[11px]">
                             Remunerado
                           </span>
                         ) : (
-                          <span className="inline-flex items-center rounded-full bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300 px-2 py-0.5 text-[11px]">
+                          <span className="inline-flex items-center rounded-full bg-neutral-100 text-neutral-600 px-2 py-0.5 text-[11px]">
                             Não remunerado
                           </span>
                         )}
+                      </td>
+                      <td className="py-1.5 px-2 text-sm text-right">
+                        {s.remunerated ? formatBRL(fnValueMap[s.shift_function_id] || 0) : '-'}
                       </td>
                     </tr>
                   ))}
@@ -375,14 +408,14 @@ export default function Dashboard() {
           )}
         </div>
 
-        <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-4 space-y-3">
+        <div className="rounded-xl border border-neutral-200 p-4 space-y-3 bg-white">
           <div className="flex items-center justify-between">
             <div>
               <div className="text-sm font-semibold">Férias do ano corrente</div>
               <div className="text-xs text-neutral-500">Períodos de férias do colaborador neste ano.</div>
             </div>
             {upcomingVacation && (
-              <span className="inline-flex items-center rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-200 px-2 py-0.5 text-[11px]">
+              <span className="inline-flex items-center rounded-full bg-blue-50 text-blue-700 px-2 py-0.5 text-[11px]">
                 Próxima: {formatDateBR(upcomingVacation.start_date)}
               </span>
             )}
@@ -403,10 +436,10 @@ export default function Dashboard() {
               {vacations.map(v => (
                 <div
                   key={v.id}
-                  className="rounded-lg border border-neutral-200 dark:border-neutral-800 px-3 py-2 flex flex-col gap-1 bg-white dark:bg-neutral-900"
+                  className="rounded-lg border border-neutral-200 px-3 py-2 flex flex-col gap-1 bg-white"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <div className="font-medium text-neutral-800 dark:text-neutral-100">
+                    <div className="font-medium text-neutral-800">
                       {formatDateBR(v.start_date)} → {formatDateBR(v.end_date)} ({v.days} dias)
                     </div>
                   </div>
@@ -423,7 +456,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-4 space-y-3">
+      <div className="rounded-xl border border-neutral-200 p-4 space-y-3 bg-white">
         <div className="flex items-center justify-between gap-2">
           <div>
             <div className="text-sm font-semibold">Últimas remunerações e holerites</div>
@@ -445,9 +478,9 @@ export default function Dashboard() {
         )}
 
         {myColId && payHistory.length > 0 && (
-          <div className="overflow-x-auto rounded-xl border border-neutral-200 dark:border-neutral-800">
+          <div className="overflow-x-auto rounded-xl border border-neutral-200">
             <table className="w-full text-xs">
-              <thead className="bg-neutral-50 dark:bg-neutral-900 text-neutral-500">
+              <thead className="bg-neutral-50 text-neutral-500">
                 <tr>
                   <th className="py-2 px-2 text-left">Competência</th>
                   <th className="py-2 px-2 text-left">Folha</th>
@@ -459,22 +492,60 @@ export default function Dashboard() {
               </thead>
               <tbody>
                 {payHistory.map(row => (
-                  <tr key={row.sheetId} className="border-t border-neutral-100 dark:border-neutral-800">
-                    <td className="py-1.5 px-2 text-sm">{row.year_month}</td>
-                    <td className="py-1.5 px-2 text-sm">{row.name}</td>
-                    <td className="py-1.5 px-2 text-sm text-right">{formatBRL(row.inc)}</td>
-                    <td className="py-1.5 px-2 text-sm text-right text-red-600 dark:text-red-300">{formatBRL(row.out)}</td>
-                    <td className="py-1.5 px-2 text-sm text-right font-medium">{formatBRL(row.total)}</td>
-                    <td className="py-1.5 px-2 text-center">
-                      <button
-                        onClick={() => downloadHolerite(row.sheetId)}
-                        className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-blue-600 hover:bg-blue-700 text-white"
-                        title="Baixar holerite"
-                      >
-                        <FileDown className="size-4" />
-                      </button>
-                    </td>
-                  </tr>
+                  <>
+                    <tr
+                      key={row.sheetId}
+                      className={`border-t border-neutral-100 cursor-pointer ${selectedSheetId === row.sheetId ? 'bg-neutral-50' : ''}`}
+                      onClick={() => setSelectedSheetId(prev => (prev === row.sheetId ? null : row.sheetId))}
+                    >
+                      <td className="py-1.5 px-2 text-sm">{row.year_month}</td>
+                      <td className="py-1.5 px-2 text-sm">{row.name}</td>
+                      <td className="py-1.5 px-2 text-sm text-right">{formatBRL(row.inc)}</td>
+                      <td className="py-1.5 px-2 text-sm text-right text-red-600">{formatBRL(row.out)}</td>
+                      <td className="py-1.5 px-2 text-sm text-right font-medium">{formatBRL(row.total)}</td>
+                      <td className="py-1.5 px-2 text-center">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); downloadHolerite(row.sheetId) }}
+                          className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-blue-600 hover:bg-blue-700 text-white"
+                          title="Baixar holerite"
+                        >
+                          <FileDown className="size-4" />
+                        </button>
+                      </td>
+                    </tr>
+                    {selectedSheetId === row.sheetId && row.entries && row.entries.length > 0 && (
+                      <tr>
+                        <td colSpan={6} className="bg-white border-t border-neutral-100 px-3 py-2">
+                          <div className="text-[11px] text-neutral-500 mb-1">Lançamentos desta remuneração</div>
+                          <div className="space-y-1">
+                            {row.entries
+                              .slice()
+                              .sort((a, b) => {
+                                const ka = a.payroll_entry_types?.kind === 'in' ? 0 : 1
+                                const kb = b.payroll_entry_types?.kind === 'in' ? 0 : 1
+                                return ka - kb
+                              })
+                              .map(e => (
+                                <div
+                                  key={e.id}
+                                  className="flex items-center justify-between rounded-lg border border-neutral-200 bg-white px-2 py-1"
+                                >
+                                  <div className="flex flex-col">
+                                    <span className="text-xs font-medium text-neutral-800">{e.payroll_entry_types?.name || '-'}</span>
+                                    {e.note && (
+                                      <span className="text-[11px] text-neutral-500">{e.note}</span>
+                                    )}
+                                  </div>
+                                  <div className={`text-xs font-semibold ${e.payroll_entry_types?.kind === 'out' ? 'text-red-600' : 'text-emerald-700'}`}>
+                                    {e.payroll_entry_types?.kind === 'out' ? '-' : '+'} {formatBRL(e.amount)}
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </>
                 ))}
               </tbody>
             </table>

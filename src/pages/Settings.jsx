@@ -49,24 +49,24 @@ export default function Settings() {
       </div>
 
       {error && (
-        <div className="text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-950/30 rounded-xl px-3 py-2 text-sm">{error}</div>
+        <div className="text-red-600 bg-red-50 rounded-xl px-3 py-2 text-sm">{error}</div>
       )}
 
-      <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
-        <div className="grid grid-cols-6 bg-neutral-50 dark:bg-neutral-900/50 px-3 py-2 text-xs font-semibold">
+      <div className="rounded-xl border border-neutral-200 overflow-hidden">
+        <div className="grid grid-cols-6 bg-neutral-50 px-3 py-2 text-xs font-semibold">
           <div className="col-span-4">Função</div>
           <div className="col-span-1">Ordem fixa</div>
           <div className="col-span-1 text-right">Ação</div>
         </div>
-        <div className="divide-y divide-neutral-200 dark:divide-neutral-800">
+        <div className="divide-y divide-neutral-200">
           {(loading ? Array.from({ length: 5 }) : functions).map((f, idx) => (
             <div key={f?.id || idx} className="grid grid-cols-6 px-3 py-2 items-center text-sm">
-              <div className="col-span-4">{loading ? <div className="h-4 bg-neutral-200 dark:bg-neutral-800 rounded" /> : f.name}</div>
+              <div className="col-span-4">{loading ? <div className="h-4 bg-neutral-200 rounded" /> : f.name}</div>
               <div className="col-span-1">
                 {loading ? (
-                  <div className="h-8 bg-neutral-200 dark:bg-neutral-800 rounded" />
+                  <div className="h-8 bg-neutral-200 rounded" />
                 ) : (
-                  <input type="number" className="w-24 rounded-lg border border-neutral-200 dark:border-neutral-800 px-2 py-1 text-sm"
+                  <input type="number" className="w-24 rounded-lg border border-neutral-200 px-2 py-1 text-sm"
                     value={values[f.id] ?? ''}
                     onChange={(e)=>setValues(v => ({ ...v, [f.id]: e.target.value }))}
                   />

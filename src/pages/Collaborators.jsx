@@ -468,16 +468,16 @@ export default function Collaborators() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <input value={q} onChange={(e)=>{setPage(1);setQ(e.target.value)}} placeholder="Buscar por nome ou CPF" className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white/60 dark:bg-neutral-900/60 px-3 py-2.5"/>
-        <button onClick={onExportCSV} className="px-3 py-2 text-xs rounded-xl border border-neutral-200 dark:border-neutral-800">Exportar CSV</button>
-        <button onClick={onDownloadTemplate} className="px-3 py-2 text-xs rounded-xl border border-neutral-200 dark:border-neutral-800">Baixar modelo CSV</button>
-        <button onClick={() => { setToast({ title: 'Modelo de CSV', message: `Cabeçalhos (ordem): ${CSV_HEADERS.join(', ')}\nObrigatórios: ${CSV_REQUIRED.join(', ')}` }); clearTimeout(window.__csv_toast_timer); window.__csv_toast_timer = setTimeout(() => setToast(null), 6000); fileInputRef.current?.click() }} className="px-3 py-2 text-xs rounded-xl border border-neutral-200 dark:border-neutral-800">Importar CSV</button>
+        <input value={q} onChange={(e)=>{setPage(1);setQ(e.target.value)}} placeholder="Buscar por nome ou CPF" className="rounded-xl border border-neutral-200 bg-white/60 px-3 py-2.5"/>
+        <button onClick={onExportCSV} className="px-3 py-2 text-xs rounded-xl border border-neutral-200">Exportar CSV</button>
+        <button onClick={onDownloadTemplate} className="px-3 py-2 text-xs rounded-xl border border-neutral-200">Baixar modelo CSV</button>
+        <button onClick={() => { setToast({ title: 'Modelo de CSV', message: `Cabeçalhos (ordem): ${CSV_HEADERS.join(', ')}\nObrigatórios: ${CSV_REQUIRED.join(', ')}` }); clearTimeout(window.__csv_toast_timer); window.__csv_toast_timer = setTimeout(() => setToast(null), 6000); fileInputRef.current?.click() }} className="px-3 py-2 text-xs rounded-xl border border-neutral-200">Importar CSV</button>
         <input ref={fileInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={(e)=>onImportCSV(e.target.files?.[0])} />
-        <button onClick={onPrintPDF} className="px-3 py-2 text-xs rounded-xl border border-neutral-200 dark:border-neutral-800">Exportar PDF</button>
+        <button onClick={onPrintPDF} className="px-3 py-2 text-xs rounded-xl border border-neutral-200">Exportar PDF</button>
         <div className="relative">
-          <button onClick={()=>setColumnsOpen(v=>!v)} className="px-3 py-2 text-xs rounded-xl border border-neutral-200 dark:border-neutral-800">Colunas</button>
+          <button onClick={()=>setColumnsOpen(v=>!v)} className="px-3 py-2 text-xs rounded-xl border border-neutral-200">Colunas</button>
           {columnsOpen && (
-            <div className="absolute z-10 mt-2 w-64 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-3 shadow">
+            <div className="absolute z-10 mt-2 w-64 rounded-xl border border-neutral-200 bg-white p-3 shadow">
               <div className="text-sm font-medium mb-2">Selecionar colunas</div>
               <div className="space-y-1">
                 {COLS.map(col => (
@@ -497,7 +497,7 @@ export default function Collaborators() {
       {loading ? (
         <div className="text-neutral-500">Carregando...</div>
       ) : error ? (
-        <div className="text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-950/30 rounded-xl px-3 py-2 text-sm">{error}</div>
+        <div className="text-red-600 bg-red-50 rounded-xl px-3 py-2 text-sm">{error}</div>
       ) : (
         <>
           <div className="overflow-x-auto" ref={printRef}>
@@ -512,7 +512,7 @@ export default function Collaborators() {
               </thead>
               <tbody>
                 {rows.map((r) => (
-                  <tr key={r.id} className="border-t border-neutral-200 dark:border-neutral-800">
+                  <tr key={r.id} className="border-t border-neutral-200">
                     {COLS.filter(c => selectedColumns.includes(c.key)).map(c => {
                       let val = r[c.key]
                       if (c.key === 'function') val = functionMap[r.function_id] || ''
@@ -526,9 +526,9 @@ export default function Collaborators() {
                     })}
                     <td className="py-2">
                       <div className="inline-flex gap-2">
-                        <button onClick={()=>onEdit(r)} className="px-2 py-1 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Editar</button>
-                        <button onClick={()=>setConfirmDelete(r)} className="px-2 py-1 text-xs rounded-lg border border-red-200 text-red-600 dark:border-red-900">Excluir</button>
-                        <button onClick={()=>onDetail(r)} className="px-2 py-1 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Detalhes</button>
+                        <button onClick={()=>onEdit(r)} className="px-2 py-1 text-xs rounded-lg border border-neutral-200">Editar</button>
+                        <button onClick={()=>setConfirmDelete(r)} className="px-2 py-1 text-xs rounded-lg border border-red-200 text-red-600">Excluir</button>
+                        <button onClick={()=>onDetail(r)} className="px-2 py-1 text-xs rounded-lg border border-neutral-200">Detalhes</button>
                         <button onClick={()=>onToggleStatus(r)} className={"px-2 py-1 text-xs rounded-lg border " + (r.status==='active' ? 'border-amber-300 text-amber-700' : 'border-green-300 text-green-700')}>{r.status==='active'?'Inativar':'Ativar'}</button>
                       </div>
                     </td>
@@ -538,18 +538,18 @@ export default function Collaborators() {
             </table>
           </div>
 
-          <div className="flex items-center justify-between text-sm text-neutral-600 dark:text-neutral-400">
+          <div className="flex items-center justify-between text-sm text-neutral-600">
             <div>
               {total === 0 ? '0 resultados' : `${(page-1)*pageSize+1}-${Math.min(page*pageSize, total)} de ${total}`}
             </div>
             <div className="inline-flex items-center gap-2">
-              <select value={pageSize} onChange={(e)=>{setPage(1);setPageSize(parseInt(e.target.value)||10)}} className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-transparent px-2 py-1">
+              <select value={pageSize} onChange={(e)=>{setPage(1);setPageSize(parseInt(e.target.value)||10)}} className="rounded-lg border border-neutral-200 bg-transparent px-2 py-1">
                 <option value={10}>10</option>
                 <option value={20}>20</option>
                 <option value={50}>50</option>
               </select>
-              <button disabled={page<=1} onClick={()=>setPage(p=>Math.max(1,p-1))} className="px-2 py-1 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800 disabled:opacity-50">Anterior</button>
-              <button disabled={page*pageSize>=total} onClick={()=>setPage(p=>p+1)} className="px-2 py-1 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800 disabled:opacity-50">Próxima</button>
+              <button disabled={page<=1} onClick={()=>setPage(p=>Math.max(1,p-1))} className="px-2 py-1 text-xs rounded-lg border border-neutral-200 disabled:opacity-50">Anterior</button>
+              <button disabled={page*pageSize>=total} onClick={()=>setPage(p=>p+1)} className="px-2 py-1 text-xs rounded-lg border border-neutral-200 disabled:opacity-50">Próxima</button>
             </div>
           </div>
         </>
@@ -557,20 +557,20 @@ export default function Collaborators() {
 
       {openForm && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4">
-          <div className="w-full max-w-3xl rounded-2xl p-6 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
+          <div className="w-full max-w-3xl rounded-2xl p-6 bg-neutral-50 border border-neutral-200">
             <h2 className="text-lg font-semibold mb-4">{editing ? 'Editar colaborador' : 'Novo colaborador'}</h2>
             <form onSubmit={onSave} className="space-y-4">
               <div className="grid md:grid-cols-2 gap-3">
-                <input required placeholder="Nome" value={form.name} onChange={(e)=>setForm(f=>({...f,name:e.target.value}))} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
+                <input required placeholder="Nome" value={form.name} onChange={(e)=>setForm(f=>({...f,name:e.target.value}))} className="rounded-xl border border-neutral-200 px-3 py-2.5"/>
                 <div>
-                  <input ref={cpfInputRef} required placeholder="CPF" value={maskCPF(form.cpf)} onChange={(e)=>{ const v=e.target.value; setForm(f=>({...f,cpf:v})); setFormErrors(err => ({...err, cpf: validateCPF(v) ? '' : 'CPF inválido'})) }} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5 w-full"/>
+                  <input ref={cpfInputRef} required placeholder="CPF" value={maskCPF(form.cpf)} onChange={(e)=>{ const v=e.target.value; setForm(f=>({...f,cpf:v})); setFormErrors(err => ({...err, cpf: validateCPF(v) ? '' : 'CPF inválido'})) }} className="rounded-xl border border-neutral-200 px-3 py-2.5 w-full"/>
                   {formErrors.cpf ? <div className="text-xs text-red-600 mt-1">{formErrors.cpf}</div> : null}
                 </div>
                 <label className="text-sm flex flex-col">
                   <span className="text-neutral-500 mb-1">Data de Nascimento</span>
-                  <input type="date" value={form.dob} onChange={(e)=>setForm(f=>({...f,dob:e.target.value}))} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
+                  <input type="date" value={form.dob} onChange={(e)=>setForm(f=>({...f,dob:e.target.value}))} className="rounded-xl border border-neutral-200 px-3 py-2.5"/>
                 </label>
-                <input placeholder="Nome da Mãe" value={form.mother_name} onChange={(e)=>setForm(f=>({...f,mother_name:e.target.value}))} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
+                <input placeholder="Nome da Mãe" value={form.mother_name} onChange={(e)=>setForm(f=>({...f,mother_name:e.target.value}))} className="rounded-xl border border-neutral-200 px-3 py-2.5"/>
               </div>
 
               <div className="grid md:grid-cols-6 gap-3">
@@ -578,7 +578,7 @@ export default function Collaborators() {
                   <label className="text-sm flex flex-col">
                     <span className="text-neutral-500 mb-1">CEP</span>
                     <div>
-                      <input ref={cepInputRef} placeholder="CEP" value={maskCEP(form.cep)} onChange={(e)=>{ const v=e.target.value; setForm(f=>({...f,cep:v})); setFormErrors(err => ({...err, cep: (!v || onlyDigits(v).length===8) ? '' : 'CEP inválido'})); fillFromCep(v) }} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
+                      <input ref={cepInputRef} placeholder="CEP" value={maskCEP(form.cep)} onChange={(e)=>{ const v=e.target.value; setForm(f=>({...f,cep:v})); setFormErrors(err => ({...err, cep: (!v || onlyDigits(v).length===8) ? '' : 'CEP inválido'})); fillFromCep(v) }} className="rounded-xl border border-neutral-200 px-3 py-2.5"/>
                       {formErrors.cep ? <div className="text-xs text-red-600 mt-1">{formErrors.cep}</div> : null}
                     </div>
                   </label>
@@ -586,35 +586,35 @@ export default function Collaborators() {
                 <div className="md:col-span-2">
                   <label className="text-sm flex flex-col">
                     <span className="text-neutral-500 mb-1">Rua</span>
-                    <input value={form.street} onChange={(e)=>setForm(f=>({...f,street:e.target.value}))} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
+                    <input value={form.street} onChange={(e)=>setForm(f=>({...f,street:e.target.value}))} className="rounded-xl border border-neutral-200 px-3 py-2.5"/>
                   </label>
                 </div>
                 <label className="text-sm flex flex-col">
                   <span className="text-neutral-500 mb-1">Nº</span>
-                  <input value={form.number} onChange={(e)=>setForm(f=>({...f,number:e.target.value}))} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
+                  <input value={form.number} onChange={(e)=>setForm(f=>({...f,number:e.target.value}))} className="rounded-xl border border-neutral-200 px-3 py-2.5"/>
                 </label>
                 <label className="text-sm flex flex-col">
                   <span className="text-neutral-500 mb-1">Complemento</span>
-                  <input value={form.complement} onChange={(e)=>setForm(f=>({...f,complement:e.target.value}))} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
+                  <input value={form.complement} onChange={(e)=>setForm(f=>({...f,complement:e.target.value}))} className="rounded-xl border border-neutral-200 px-3 py-2.5"/>
                 </label>
                 <label className="text-sm flex flex-col">
                   <span className="text-neutral-500 mb-1">Bairro</span>
-                  <input value={form.district} onChange={(e)=>setForm(f=>({...f,district:e.target.value}))} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
+                  <input value={form.district} onChange={(e)=>setForm(f=>({...f,district:e.target.value}))} className="rounded-xl border border-neutral-200 px-3 py-2.5"/>
                 </label>
                 <label className="text-sm flex flex-col">
                   <span className="text-neutral-500 mb-1">Cidade</span>
-                  <input value={form.city} onChange={(e)=>setForm(f=>({...f,city:e.target.value}))} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
+                  <input value={form.city} onChange={(e)=>setForm(f=>({...f,city:e.target.value}))} className="rounded-xl border border-neutral-200 px-3 py-2.5"/>
                 </label>
                 <label className="text-sm flex flex-col">
                   <span className="text-neutral-500 mb-1">UF</span>
-                  <input value={form.state} onChange={(e)=>setForm(f=>({...f,state:e.target.value}))} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
+                  <input value={form.state} onChange={(e)=>setForm(f=>({...f,state:e.target.value}))} className="rounded-xl border border-neutral-200 px-3 py-2.5"/>
                 </label>
               </div>
               <div className="grid md:grid-cols-3 gap-3">
-                <input placeholder="ID Concent" value={form.concent_id} onChange={(e)=>setForm(f=>({...f,concent_id:e.target.value}))} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
+                <input placeholder="ID Concent" value={form.concent_id} onChange={(e)=>setForm(f=>({...f,concent_id:e.target.value}))} className="rounded-xl border border-neutral-200 px-3 py-2.5"/>
                 <label className="text-sm flex flex-col">
                   <span className="text-neutral-500 mb-1">Banco</span>
-                  <select value={form.bank_code || ''} onChange={(e)=>setForm(f=>({...f,bank_code:e.target.value}))} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5">
+                  <select value={form.bank_code || ''} onChange={(e)=>setForm(f=>({...f,bank_code:e.target.value}))} className="rounded-xl border border-neutral-200 px-3 py-2.5">
                     <option value="">Selecione</option>
                     {BANKS.map(b => (
                       <option key={b.code} value={b.code}>{b.code} - {b.name}</option>
@@ -623,7 +623,7 @@ export default function Collaborators() {
                 </label>
                 <label className="text-sm flex flex-col">
                   <span className="text-neutral-500 mb-1">Função</span>
-                  <select value={form.function_id || ''} onChange={(e)=>setForm(f=>({...f,function_id:e.target.value||null}))} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5">
+                  <select value={form.function_id || ''} onChange={(e)=>setForm(f=>({...f,function_id:e.target.value||null}))} className="rounded-xl border border-neutral-200 px-3 py-2.5">
                     <option value="">Selecione</option>
                     {functions.map(fn => (
                       <option key={fn.id} value={fn.id}>{fn.name}</option>
@@ -635,33 +635,33 @@ export default function Collaborators() {
               <div className="grid md:grid-cols-3 gap-3">
                 <label className="text-sm flex flex-col">
                   <span className="text-neutral-500 mb-1">Agência</span>
-                  <input placeholder="Agência" value={form.agency || ''} onChange={(e)=>setForm(f=>({...f,agency:e.target.value}))} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
+                  <input placeholder="Agência" value={form.agency || ''} onChange={(e)=>setForm(f=>({...f,agency:e.target.value}))} className="rounded-xl border border-neutral-200 px-3 py-2.5"/>
                 </label>
                 <label className="text-sm flex flex-col">
                   <span className="text-neutral-500 mb-1">Conta</span>
-                  <input placeholder="Conta" value={form.account || ''} onChange={(e)=>setForm(f=>({...f,account:e.target.value}))} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
+                  <input placeholder="Conta" value={form.account || ''} onChange={(e)=>setForm(f=>({...f,account:e.target.value}))} className="rounded-xl border border-neutral-200 px-3 py-2.5"/>
                 </label>
                 <label className="text-sm flex flex-col">
                   <span className="text-neutral-500 mb-1">Salário (BRL)</span>
-                  <input ref={salaryInputRef} placeholder="0,00" value={form.salary || ''} onChange={(e)=>setForm(f=>({...f,salary:e.target.value}))} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
+                  <input ref={salaryInputRef} placeholder="0,00" value={form.salary || ''} onChange={(e)=>setForm(f=>({...f,salary:e.target.value}))} className="rounded-xl border border-neutral-200 px-3 py-2.5"/>
                 </label>
               </div>
 
               <div className="grid md:grid-cols-3 gap-3">
                 <label className="text-sm flex flex-col md:col-span-1">
                   <span className="text-neutral-500 mb-1">Chave PIX</span>
-                  <input placeholder="PIX" value={form.pix_key || ''} onChange={(e)=>setForm(f=>({...f,pix_key:e.target.value}))} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
+                  <input placeholder="PIX" value={form.pix_key || ''} onChange={(e)=>setForm(f=>({...f,pix_key:e.target.value}))} className="rounded-xl border border-neutral-200 px-3 py-2.5"/>
                 </label>
               </div>
 
               <div className="grid md:grid-cols-3 gap-3">
                 <label className="text-sm flex flex-col">
                   <span className="text-neutral-500 mb-1">Telefone</span>
-                  <input placeholder="(11) 99999-0000" value={maskPhone(form.phone)} onChange={(e)=>setForm(f=>({...f,phone:e.target.value}))} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
+                  <input placeholder="(11) 99999-0000" value={maskPhone(form.phone)} onChange={(e)=>setForm(f=>({...f,phone:e.target.value}))} className="rounded-xl border border-neutral-200 px-3 py-2.5"/>
                 </label>
                 <label className="text-sm flex flex-col">
                   <span className="text-neutral-500 mb-1">Status</span>
-                  <select value={form.status} onChange={(e)=>setForm(f=>({...f,status:e.target.value}))} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5">
+                  <select value={form.status} onChange={(e)=>setForm(f=>({...f,status:e.target.value}))} className="rounded-xl border border-neutral-200 px-3 py-2.5">
                     <option value="active">Ativo</option>
                     <option value="inactive">Inativo</option>
                   </select>
@@ -670,16 +670,16 @@ export default function Collaborators() {
               <div className="grid md:grid-cols-3 gap-3">
                 <label className="text-sm flex flex-col">
                   <span className="text-neutral-500 mb-1">Data de Admissão</span>
-                  <input type="date" value={form.admission_date} onChange={(e)=>setForm(f=>({...f,admission_date:e.target.value}))} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
+                  <input type="date" value={form.admission_date} onChange={(e)=>setForm(f=>({...f,admission_date:e.target.value}))} className="rounded-xl border border-neutral-200 px-3 py-2.5"/>
                 </label>
                 <label className="text-sm flex flex-col md:col-span-2">
                   <span className="text-neutral-500 mb-1">Observações</span>
-                  <textarea rows={3} value={form.notes || ''} onChange={(e)=>setForm(f=>({...f,notes:e.target.value}))} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
+                  <textarea rows={3} value={form.notes || ''} onChange={(e)=>setForm(f=>({...f,notes:e.target.value}))} className="rounded-xl border border-neutral-200 px-3 py-2.5"/>
                 </label>
               </div>
 
               <div className="flex justify-end gap-2">
-                <button type="button" onClick={()=>{setOpenForm(false);setEditing(null)}} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Cancelar</button>
+                <button type="button" onClick={()=>{setOpenForm(false);setEditing(null)}} className="px-3 py-2 text-xs rounded-lg border border-neutral-200">Cancelar</button>
                 <button type="submit" disabled={saving} className="px-3 py-2 text-xs rounded-lg bg-green-600 hover:bg-green-700 text-white disabled:opacity-50">{saving ? 'Salvando...' : 'Salvar'}</button>
               </div>
             </form>
@@ -689,11 +689,11 @@ export default function Collaborators() {
 
       {confirmDelete && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4">
-          <div className="w-full max-w-md rounded-2xl p-6 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
+          <div className="w-full max-w-md rounded-2xl p-6 bg-neutral-50 border border-neutral-200">
             <h2 className="text-lg font-semibold mb-2">Confirmar exclusão</h2>
-            <p className="text-sm text-neutral-600 dark:text-neutral-300 mb-4">Deseja realmente excluir o colaborador {confirmDelete.name}?</p>
+            <p className="text-sm text-neutral-600 mb-4">Deseja realmente excluir o colaborador {confirmDelete.name}?</p>
             <div className="flex justify-end gap-2">
-              <button onClick={()=>setConfirmDelete(null)} className="px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800">Cancelar</button>
+              <button onClick={()=>setConfirmDelete(null)} className="px-3 py-2 rounded-xl border border-neutral-200">Cancelar</button>
               <button onClick={onConfirmDelete} disabled={deleting} className="px-3 py-2 rounded-xl bg-red-600 text-white">{deleting? 'Excluindo...' : 'Excluir'}</button>
             </div>
           </div>
@@ -703,10 +703,10 @@ export default function Collaborators() {
       {detailOpen && (
         <div className="fixed inset-0 z-50 flex">
           <div className="flex-1 bg-black/30" onClick={()=>setDetailOpen(false)}></div>
-          <div className="w-full max-w-xl h-full bg-white dark:bg-neutral-900 border-l border-neutral-200 dark:border-neutral-800 p-6 overflow-y-auto">
+          <div className="w-full max-w-xl h-full bg-white border-l border-neutral-200 p-6 overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">Detalhes do colaborador</h2>
-              <button onClick={()=>setDetailOpen(false)} className="px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-800">Fechar</button>
+              <button onClick={()=>setDetailOpen(false)} className="px-3 py-1.5 rounded-lg border border-neutral-200">Fechar</button>
             </div>
             {detailRow && (
               <div className="space-y-3 text-sm">
@@ -733,7 +733,7 @@ export default function Collaborators() {
                   </thead>
                   <tbody>
                     {detailLogs.map((l)=> (
-                      <tr key={l.id} className="border-t border-neutral-200 dark:border-neutral-800">
+                      <tr key={l.id} className="border-t border-neutral-200">
                         <td className="py-2">{l.action}</td>
                         <td className="py-2">{l.actor_email || '-'}</td>
                         <td className="py-2">{new Date(l.created_at).toLocaleString()}</td>
@@ -764,9 +764,9 @@ export default function Collaborators() {
       )}
 
       {toast && (
-        <div className="fixed top-4 right-4 z-50 max-w-md rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow p-4">
+        <div className="fixed top-4 right-4 z-50 max-w-md rounded-xl border border-neutral-200 bg-white shadow p-4">
           <div className="font-medium mb-1">{toast.title}</div>
-          <div className="text-sm whitespace-pre-wrap text-neutral-700 dark:text-neutral-300">{toast.message}</div>
+          <div className="text-sm whitespace-pre-wrap text-neutral-700">{toast.message}</div>
         </div>
       )}
     </div>

@@ -144,9 +144,9 @@ export default function ShiftsDashboard() {
         <h1 className="text-2xl font-semibold">Dashboard de Plantões</h1>
       </div>
       <div className="flex items-center gap-2">
-        <button onClick={prevMonth} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Anterior</button>
+        <button onClick={prevMonth} className="px-3 py-2 text-xs rounded-lg border border-neutral-200">Anterior</button>
         <div className="text-sm font-medium w-40 text-center">{current.toLocaleDateString('pt-BR',{ month:'long', year:'numeric'})}</div>
-        <button onClick={nextMonth} className="px-3 py-2 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Próximo</button>
+        <button onClick={nextMonth} className="px-3 py-2 text-xs rounded-lg border border-neutral-200">Próximo</button>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -154,10 +154,10 @@ export default function ShiftsDashboard() {
           value={q}
           onChange={(e)=>setQ(e.target.value)}
           placeholder="Buscar (função ou colaborador)"
-          className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"
+          className="rounded-xl border border-neutral-200 px-3 py-2.5"
         />
         {isGestor && myColId && (
-          <label className="inline-flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-300">
+          <label className="inline-flex items-center gap-2 text-xs text-neutral-600">
             <input
               type="checkbox"
               checked={onlyMine}
@@ -181,7 +181,7 @@ export default function ShiftsDashboard() {
           </thead>
           <tbody>
             {filtered.map(r => (
-              <tr key={r.id} className="border-t border-neutral-200 dark:border-neutral-800">
+              <tr key={r.id} className="border-t border-neutral-200">
                 <td className="py-2 px-2">{formatBRfromYMD(r.date)}</td>
                 <td className="py-2 px-2">{r.function_name}</td>
                 <td className="py-2 px-2">{r.collaborator_name}</td>
@@ -196,17 +196,17 @@ export default function ShiftsDashboard() {
       <div>
         <h2 className="font-semibold mb-2">Totais</h2>
         <div className="grid md:grid-cols-3 gap-3">
-          <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-3">
+          <div className="rounded-xl border border-neutral-200 p-3">
             <div className="text-neutral-500 text-sm">Total do mês</div>
             <div className="text-lg font-semibold">{totalMonth.toLocaleString('pt-BR',{ style:'currency', currency:'BRL'})}</div>
           </div>
-          <div className="md:col-span-2 rounded-xl border border-neutral-200 dark:border-neutral-800 p-3">
+          <div className="md:col-span-2 rounded-xl border border-neutral-200 p-3">
             <div className="text-neutral-500 text-sm mb-2">Por colaborador</div>
             <div className="max-h-60 overflow-y-auto">
               <table className="w-full text-sm">
                 <tbody>
                   {totalsByCollaborator.map(([name, val]) => (
-                    <tr key={name} className="border-t border-neutral-200 dark:border-neutral-800">
+                    <tr key={name} className="border-t border-neutral-200">
                       <td className="py-1 px-2">{name}</td>
                       <td className="py-1 px-2 text-right">{val.toLocaleString('pt-BR',{ style:'currency', currency:'BRL'})}</td>
                     </tr>

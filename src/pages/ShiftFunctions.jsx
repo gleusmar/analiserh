@@ -128,19 +128,19 @@ export default function ShiftFunctions() {
         <div className="flex items-center gap-2">
           <label className="text-sm flex items-center gap-2">
             <span className="text-neutral-500">Mês</span>
-            <input type="month" value={month} onChange={(e)=>setMonth(e.target.value)} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
+            <input type="month" value={month} onChange={(e)=>setMonth(e.target.value)} className="rounded-xl border border-neutral-200 px-3 py-2.5"/>
           </label>
         </div>
       </div>
 
-      {error && <div className="text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-950/30 rounded-xl px-3 py-2 text-sm">{error}</div>}
+      {error && <div className="text-red-600 bg-red-50 rounded-xl px-3 py-2 text-sm">{error}</div>}
 
       <div className="grid md:grid-cols-2 gap-6">
         <div>
           <h2 className="font-medium mb-2">Cadastro</h2>
           <form onSubmit={onCreate} className="flex flex-col sm:flex-row gap-2">
-            <input required placeholder="Nome da função" value={name} onChange={(e)=>setName(e.target.value)} className="flex-1 rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
-            <input required placeholder="Valor base" value={baseValue} onChange={(e)=>setBaseValue(e.target.value)} className="w-40 rounded-xl border border-neutral-200 dark:border-neutral-800 px-3 py-2.5"/>
+            <input required placeholder="Nome da função" value={name} onChange={(e)=>setName(e.target.value)} className="flex-1 rounded-xl border border-neutral-200 px-3 py-2.5"/>
+            <input required placeholder="Valor base" value={baseValue} onChange={(e)=>setBaseValue(e.target.value)} className="w-40 rounded-xl border border-neutral-200 px-3 py-2.5"/>
             <button type="submit" disabled={saving} className="text-xs rounded-lg bg-green-600 hover:bg-green-700 text-white px-3 py-2 disabled:opacity-50">Adicionar</button>
           </form>
 
@@ -155,27 +155,27 @@ export default function ShiftFunctions() {
               </thead>
               <tbody>
                 {rows.map(r => (
-                  <tr key={r.id} className="border-t border-neutral-200 dark:border-neutral-800">
+                  <tr key={r.id} className="border-t border-neutral-200">
                     <td className="py-2">
                       {editingId===r.id ? (
-                        <input value={editName} onChange={(e)=>setEditName(e.target.value)} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-2 py-1"/>
+                        <input value={editName} onChange={(e)=>setEditName(e.target.value)} className="rounded-xl border border-neutral-200 px-2 py-1"/>
                       ) : r.name}
                     </td>
                     <td className="py-2">
                       {editingId===r.id ? (
-                        <input value={editBase} onChange={(e)=>setEditBase(e.target.value)} className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-2 py-1 w-32"/>
+                        <input value={editBase} onChange={(e)=>setEditBase(e.target.value)} className="rounded-xl border border-neutral-200 px-2 py-1 w-32"/>
                       ) : (new Intl.NumberFormat('pt-BR',{ style:'currency', currency:'BRL'}).format(r.base_value || 0))}
                     </td>
                     <td className="py-2">
                       {editingId===r.id ? (
                         <div className="inline-flex gap-2">
-                          <button type="button" onClick={()=>onEditSave(r.id)} className="px-2 py-1 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Salvar</button>
-                          <button type="button" onClick={()=>setEditingId(null)} className="px-2 py-1 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Cancelar</button>
+                          <button type="button" onClick={()=>onEditSave(r.id)} className="px-2 py-1 text-xs rounded-lg border border-neutral-200">Salvar</button>
+                          <button type="button" onClick={()=>setEditingId(null)} className="px-2 py-1 text-xs rounded-lg border border-neutral-200">Cancelar</button>
                         </div>
                       ) : (
                         <div className="inline-flex gap-2">
-                          <button type="button" onClick={()=>onEditStart(r)} className="px-2 py-1 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Editar</button>
-                          <button type="button" onClick={()=>onDelete(r.id)} className="px-2 py-1 text-xs rounded-lg border border-red-200 text-red-600 dark:border-red-900">Excluir</button>
+                          <button type="button" onClick={()=>onEditStart(r)} className="px-2 py-1 text-xs rounded-lg border border-neutral-200">Editar</button>
+                          <button type="button" onClick={()=>onDelete(r.id)} className="px-2 py-1 text-xs rounded-lg border border-red-200 text-red-600">Excluir</button>
                         </div>
                       )}
                     </td>
@@ -199,14 +199,14 @@ export default function ShiftFunctions() {
               </thead>
               <tbody>
                 {rows.map(r => (
-                  <tr key={r.id} className="border-t border-neutral-200 dark:border-neutral-800">
+                  <tr key={r.id} className="border-t border-neutral-200">
                     <td className="py-2">{r.name}</td>
                     <td className="py-2">{new Intl.NumberFormat('pt-BR',{ style:'currency', currency:'BRL'}).format(r.base_value || 0)}</td>
                     <td className="py-2">
                       <div className="flex items-center gap-2">
-                        <input value={overrides[r.id] ?? ''} onChange={(e)=>onOverrideChange(r.id, e.target.value)} onBlur={()=>onOverrideSave(r.id)} placeholder="R$" className="rounded-xl border border-neutral-200 dark:border-neutral-800 px-2 py-1 w-40"/>
-                        <button type="button" onClick={()=>onOverrideSave(r.id)} className="px-2 py-1 text-xs rounded-lg border border-neutral-200 dark:border-neutral-800">Salvar</button>
-                        <button type="button" onClick={()=>onOverrideDelete(r.id)} className="px-2 py-1 text-xs rounded-lg border border-red-200 text-red-600 dark:border-red-900">Excluir</button>
+                        <input value={overrides[r.id] ?? ''} onChange={(e)=>onOverrideChange(r.id, e.target.value)} onBlur={()=>onOverrideSave(r.id)} placeholder="R$" className="rounded-xl border border-neutral-200 px-2 py-1 w-40"/>
+                        <button type="button" onClick={()=>onOverrideSave(r.id)} className="px-2 py-1 text-xs rounded-lg border border-neutral-200">Salvar</button>
+                        <button type="button" onClick={()=>onOverrideDelete(r.id)} className="px-2 py-1 text-xs rounded-lg border border-red-200 text-red-600">Excluir</button>
                       </div>
                     </td>
                   </tr>
