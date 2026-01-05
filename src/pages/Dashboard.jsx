@@ -248,9 +248,7 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-2">
-          <img src="/ico.png" alt="Meu Análise" className="w-7 h-7 rounded-md" />
           <div>
-            <h1 className="text-2xl font-semibold">Meu Análise</h1>
             <p className="text-sm text-neutral-600">
               Visão geral rápida dos seus plantões, férias e remunerações.
             </p>
@@ -515,7 +513,7 @@ export default function Dashboard() {
                     </tr>
                     {selectedSheetId === row.sheetId && row.entries && row.entries.length > 0 && (
                       <tr>
-                        <td colSpan={6} className="bg-white border-t border-neutral-100 px-3 py-2">
+                        <td colSpan={6} className="bg-neutral-100 border-t border-neutral-100 pl-[50%] pr-3 md:px-3 py-2">
                           <div className="text-[11px] text-neutral-500 mb-1">Lançamentos desta remuneração</div>
                           <div className="space-y-1">
                             {row.entries
@@ -536,7 +534,7 @@ export default function Dashboard() {
                                       <span className="text-[11px] text-neutral-500">{e.note}</span>
                                     )}
                                   </div>
-                                  <div className={`text-xs font-semibold ${e.payroll_entry_types?.kind === 'out' ? 'text-red-600' : 'text-emerald-700'}`}>
+                                  <div className={`text-xs font-semibold ${e.payroll_entry_types?.kind === 'out' ? 'text-red-600 bg-red-50' : 'text-emerald-700 bg-emerald-50'}`}>
                                     {e.payroll_entry_types?.kind === 'out' ? '-' : '+'} {formatBRL(e.amount)}
                                   </div>
                                 </div>
