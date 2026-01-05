@@ -302,13 +302,31 @@ export default function Users() {
                           </td>
                           <td className="py-2">
                             {isSuper ? (
-                              <div className="inline-flex gap-2">
-                                <button disabled={lock || currentRole==='admin'} onClick={()=>onChangeRole(u,'admin')} className="px-2 py-1 rounded-lg border border-neutral-200 disabled:opacity-50">Tornar admin</button>
-                                <button disabled={lock || currentRole==='user'} onClick={()=>onChangeRole(u,'user')} className="px-2 py-1 rounded-lg border border-neutral-200 disabled:opacity-50">Tornar user</button>
-                                <button disabled={lock || currentRole==='gestor-plantoes'} onClick={()=>onChangeRole(u,'gestor-plantoes')} className="px-2 py-1 rounded-lg border border-neutral-200 disabled:opacity-50">Tornar gestor</button>
-                                <button disabled={lock || (u.status==='inactive')} onClick={()=>onChangeStatus(u,'inactive')} className="px-2 py-1 rounded-lg border border-neutral-200 disabled:opacity-50">Desativar</button>
-                                <button disabled={lock || (u.status==='active' || !u.status)} onClick={()=>onChangeStatus(u,'active')} className="px-2 py-1 rounded-lg border border-neutral-200 disabled:opacity-50">Ativar</button>
-                                <button disabled={lock} onClick={()=>onChangeEmail(u)} className="px-2 py-1 rounded-lg border border-neutral-200 disabled:opacity-50">Editar e-mail</button>
+                              <div className="inline-flex items-center gap-2">
+                                <select
+                                  value={currentRole}
+                                  onChange={(e)=>onChangeRole(u, e.target.value)}
+                                  disabled={lock}
+                                  className="rounded-lg border border-neutral-200 bg-white/60 px-2 py-1.5"
+                                >
+                                  <option value="user">user</option>
+                                  <option value="admin">admin</option>
+                                  <option value="gestor-plantoes">gestor-plantoes</option>
+                                </select>
+                                <button
+                                  disabled={lock}
+                                  onClick={()=>onChangeStatus(u, (u.status === 'inactive') ? 'active' : 'inactive')}
+                                  className="px-2 py-1 rounded-lg border border-neutral-200 disabled:opacity-50"
+                                >
+                                  {u.status === 'inactive' ? 'Ativar' : 'Desativar'}
+                                </button>
+                                <button
+                                  disabled={lock}
+                                  onClick={()=>onChangeEmail(u)}
+                                  className="px-2 py-1 rounded-lg border border-neutral-200 disabled:opacity-50"
+                                >
+                                  Editar
+                                </button>
                               </div>
                             ) : (
                               <div className="text-xs text-neutral-500">Somente visualização</div>
