@@ -493,7 +493,7 @@ export default function Dashboard() {
                   <>
                     <tr
                       key={row.sheetId}
-                      className={`border-t border-neutral-100 cursor-pointer ${selectedSheetId === row.sheetId ? 'bg-neutral-50' : ''}`}
+                      className={`border-t border-neutral-100 cursor-pointer bg-neutral-100 ${selectedSheetId === row.sheetId ? 'bg-neutral-300' : ''}`}
                       onClick={() => setSelectedSheetId(prev => (prev === row.sheetId ? null : row.sheetId))}
                     >
                       <td className="py-1.5 px-2 text-sm">{row.year_month}</td>
@@ -513,7 +513,7 @@ export default function Dashboard() {
                     </tr>
                     {selectedSheetId === row.sheetId && row.entries && row.entries.length > 0 && (
                       <tr>
-                        <td colSpan={6} className="bg-neutral-100 border-t border-neutral-100 pl-[50%] pr-3 md:px-3 py-2">
+                        <td colSpan={6} className="bg-neutral-100 border-t border-neutral-100 md:pl-[50%] md:pr-3 pl-[10%] pr-3 py-2">
                           <div className="text-[11px] text-neutral-500 mb-1">Lançamentos desta remuneração</div>
                           <div className="space-y-1">
                             {row.entries
@@ -526,7 +526,7 @@ export default function Dashboard() {
                               .map(e => (
                                 <div
                                   key={e.id}
-                                  className="flex items-center justify-between rounded-lg border border-neutral-200 bg-white px-2 py-1"
+                                  className={`flex items-center justify-between rounded-lg border border-neutral-200 bg-white px-2 py-1 ${e.payroll_entry_types?.kind === 'out' ? 'text-red-600 bg-red-50' : 'text-emerald-700 bg-emerald-50'}`}
                                 >
                                   <div className="flex flex-col">
                                     <span className="text-xs font-medium text-neutral-800">{e.payroll_entry_types?.name || '-'}</span>
@@ -534,7 +534,7 @@ export default function Dashboard() {
                                       <span className="text-[11px] text-neutral-500">{e.note}</span>
                                     )}
                                   </div>
-                                  <div className={`text-xs font-semibold ${e.payroll_entry_types?.kind === 'out' ? 'text-red-600 bg-red-50' : 'text-emerald-700 bg-emerald-50'}`}>
+                                  <div className={`text-xs font-semibold ${e.payroll_entry_types?.kind === 'out' ? 'text-red-600' : 'text-emerald-700'}`}>
                                     {e.payroll_entry_types?.kind === 'out' ? '-' : '+'} {formatBRL(e.amount)}
                                   </div>
                                 </div>
