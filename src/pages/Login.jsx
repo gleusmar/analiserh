@@ -1,9 +1,8 @@
 import { useState } from 'react'
-import { Mail, Lock, Eye, EyeOff, LogIn, Moon, Sun } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext.jsx'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
-import { useTheme } from '../contexts/ThemeContext.jsx'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -12,7 +11,6 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState(null)
   const { signIn, user } = useAuth()
-  const { theme, toggleTheme } = useTheme()
   const navigate = useNavigate()
   const location = useLocation()
   const from = location.state?.from?.pathname || '/'
@@ -38,7 +36,7 @@ export default function Login() {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-violet-50 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-violet-50 flex items-center justify-center p-6">
       <div className="glass w-full max-w-md rounded-2xl p-8">
         <div className="mb-8 text-center">
           <div className="inline-flex items-center gap-2">
@@ -46,10 +44,7 @@ export default function Login() {
             <span className="text-2xl font-semibold tracking-tight">Análise RH</span>
           </div>
           <div className="mt-3 flex items-center justify-center gap-3">
-            <p className="text-sm text-neutral-500 dark:text-neutral-400">Acesse sua conta para continuar</p>
-            <button onClick={toggleTheme} className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800" aria-label="Alternar tema">
-              {theme === 'dark' ? <Sun className="size-4" /> : <Moon className="size-4" />}
-            </button>
+            <p className="text-sm text-neutral-500">Acesse sua conta para continuar</p>
           </div>
         </div>
 
@@ -64,7 +59,7 @@ export default function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="seu@email.com"
-                className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white/60 dark:bg-neutral-900/60 pl-10 pr-3 py-2.5 outline-none focus:ring-4 ring-sky-100 dark:ring-sky-900/30"
+                className="w-full rounded-xl border border-neutral-200 bg-white/60 pl-10 pr-3 py-2.5 outline-none focus:ring-4 ring-sky-100"
               />
             </div>
           </div>
@@ -79,12 +74,12 @@ export default function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white/60 dark:bg-neutral-900/60 pl-10 pr-10 py-2.5 outline-none focus:ring-4 ring-violet-100 dark:ring-violet-900/30"
+                className="w-full rounded-xl border border-neutral-200 bg-white/60 pl-10 pr-10 py-2.5 outline-none focus:ring-4 ring-violet-100"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 text-neutral-500 hover:text-neutral-700"
                 aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
               >
                 {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -93,7 +88,7 @@ export default function Login() {
           </div>
 
           {message && (
-            <div className={`${message.type === 'error' ? 'text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-950/30' : 'text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-950/30'} text-sm rounded-xl px-3 py-2`}>{message.text}</div>
+            <div className={`${message.type === 'error' ? 'text-red-600 bg-red-50' : 'text-emerald-600 bg-emerald-50'} text-sm rounded-xl px-3 py-2`}>{message.text}</div>
           )}
 
           <button
@@ -106,8 +101,8 @@ export default function Login() {
           </button>
         </form>
 
-        <div className="mt-6 text-center text-sm text-neutral-600 dark:text-neutral-400">
-          <Link to="/forgot-password" className="font-medium text-sky-600 hover:underline dark:text-sky-400">Esqueci a senha</Link>
+        <div className="mt-6 text-center text-sm text-neutral-600">
+          <Link to="/forgot-password" className="font-medium text-sky-600 hover:underline">Esqueci a senha</Link>
         </div>
       </div>
     </div>

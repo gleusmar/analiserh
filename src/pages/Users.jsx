@@ -12,7 +12,7 @@ import {
   listAuditLogsPaged,
   listCollaboratorsSimple,
 } from '../lib/db'
-import { createUser, linkProfileCollaborator } from '../lib/adminApi'
+import { createUser, linkProfileCollaborator, updateUserEmail } from '../lib/adminApi'
 import { CreateUserModal } from '../components/CreateUserModal.jsx'
 
 function classNames(...xs) { return xs.filter(Boolean).join(' ') }
@@ -135,6 +135,20 @@ export default function Users() {
       setUsersList((xs) => xs.map((x) => (x.id === u.id ? { ...x, status } : x)))
     } catch (e) {
       alert(e.message || 'Erro ao atualizar status')
+    }
+  }
+
+  async function onChangeEmail(u) {
+    const current = u.email || ''
+    const next = window.prompt('Novo e-mail do usuário:', current)
+    if (!next || next === current) return
+    const email = next.trim()
+    if (!email) return
+    try {
+      const res = await updateUserEmail(u.id, email, { id: user?.id, email: user?.email })
+      setUsersList((xs) => xs.map((x) => (x.id === u.id ? { ...x, email: res.email } : x)))
+    } catch (e) {
+      alert(e.message || 'Erro ao atualizar e-mail')
     }
   }
 
@@ -294,6 +308,7 @@ export default function Users() {
                                 <button disabled={lock || currentRole==='gestor-plantoes'} onClick={()=>onChangeRole(u,'gestor-plantoes')} className="px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-800 disabled:opacity-50">Tornar gestor</button>
                                 <button disabled={lock || (u.status==='inactive')} onClick={()=>onChangeStatus(u,'inactive')} className="px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-800 disabled:opacity-50">Desativar</button>
                                 <button disabled={lock || (u.status==='active' || !u.status)} onClick={()=>onChangeStatus(u,'active')} className="px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-800 disabled:opacity-50">Ativar</button>
+                                <button disabled={lock} onClick={()=>onChangeEmail(u)} className="px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-800 disabled:opacity-50">Editar e-mail</button>
                               </div>
                             ) : (
                               <div className="text-xs text-neutral-500">Somente visualização</div>

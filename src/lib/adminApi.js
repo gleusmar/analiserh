@@ -19,6 +19,24 @@ export async function createUser({ email, password, role = 'user' }, actor) {
   }
 }
 
+export async function updateUserEmail(profileId, email, actor) {
+  const body = { profile_id: profileId, email }
+  const res = await fetch('/api/admin/profiles/update-email', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(actor?.id ? { 'x-actor-id': actor.id } : {}),
+      ...(actor?.email ? { 'x-actor-email': actor.email } : {}),
+    },
+    body: JSON.stringify(body),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    throw new Error(data?.error || data?.message || 'Falha ao atualizar e-mail do usuário')
+  }
+  return data
+}
+
 export async function linkProfileCollaborator(profileId, collaboratorId, actor) {
   const body = { profile_id: profileId, collaborator_id: collaboratorId || null }
   const res = await fetch('/api/admin/profiles/link-collaborator', {

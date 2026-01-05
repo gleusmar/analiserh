@@ -1,7 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { FileDown, Trash2, UserMinus } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext.jsx'
-import { useTheme } from '../contexts/ThemeContext.jsx'
 import { listCollaboratorsSimple, listPayrollEntryTypes, listPayrollSheets, createPayrollSheet, listPayrollSheetItems, listPayrollEntriesForSheet, createPayrollEntry, deletePayrollEntry, updatePayrollSheet, deletePayrollSheet, upsertPlantaoEntry, listShiftFunctions, listShiftAssignments, listShiftRateOverrides, addPayrollSheetItems } from '../lib/db'
 
 function ymOf(date) { return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}` }
@@ -10,8 +9,6 @@ function firstLastOfYM(ym) { const { y, m } = parseYM(ym); if (!y || !m) return 
 
 export default function Payroll() {
   const { role, profile, user } = useAuth()
-  const { theme } = useTheme()
-  const isDark = theme === 'dark'
   const canAdmin = role === 'admin' || role === 'super'
   const [sheets, setSheets] = useState([])
   const [selectedSheetId, setSelectedSheetId] = useState('')

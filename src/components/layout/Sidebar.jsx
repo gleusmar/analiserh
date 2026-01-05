@@ -1,12 +1,9 @@
 import { Home, Users, Settings, Calendar, BarChart, X } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext.jsx'
-import { useTheme } from '../../contexts/ThemeContext.jsx'
 
 export default function Sidebar({ open = false, onClose = () => {} }) {
   const { role } = useAuth()
-  const { theme } = useTheme()
-  const isDark = theme === 'dark'
   const canAdmin = role === 'admin' || role === 'super'
   const canGestor = role === 'gestor-plantoes'
   const isUser = role === 'user'
@@ -46,7 +43,7 @@ export default function Sidebar({ open = false, onClose = () => {} }) {
   return (
     <>
       {/* Desktop: Top navigation bar with hover dropdowns */}
-      <nav className={`hidden md:block border-b ${isDark ? 'bg-neutral-900 text-neutral-100 border-neutral-800' : 'bg-white text-neutral-900 border-neutral-200'}`}>
+      <nav className="hidden md:block border-b bg-white text-neutral-900 border-neutral-200">
         <div className="px-3 py-2 flex items-center gap-6">
           {sections.map((sec, idx) => {
             const items = sec.items.filter(i=>i.show)
@@ -54,7 +51,14 @@ export default function Sidebar({ open = false, onClose = () => {} }) {
               return (
                 <div key={idx} className="flex items-center gap-2">
                   {items.map(({ to, label, icon: Icon }) => (
-                    <NavLink key={to} to={to} end className={({ isActive }) => `flex items-center gap-2 px-3 py-1.5 rounded-md ${isDark ? 'hover:bg-neutral-800' : 'hover:bg-neutral-100'} ${isActive ? (isDark ? 'bg-neutral-800' : 'bg-neutral-100') : ''}`}>
+                    <NavLink
+                      key={to}
+                      to={to}
+                      end
+                      className={({ isActive }) =>
+                        `flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-neutral-100 ${isActive ? 'bg-neutral-100' : ''}`
+                      }
+                    >
                       <Icon className="size-4" />
                       <span className="text-sm font-medium">{label}</span>
                     </NavLink>
@@ -64,14 +68,21 @@ export default function Sidebar({ open = false, onClose = () => {} }) {
             }
             return (
               <div key={idx} className="relative group">
-                <button className={`px-3 py-1.5 text-sm font-semibold rounded-md ${isDark ? 'text-neutral-300 hover:bg-neutral-800' : 'text-neutral-700 hover:bg-neutral-100'}`}>
+                <button className="px-3 py-1.5 text-sm font-semibold rounded-md text-neutral-700 hover:bg-neutral-100">
                   {sec.title}
                 </button>
                 <div className="absolute left-0 top-full hidden group-hover:block z-40">
-                  <div className={`min-w-56 rounded-md border shadow-lg p-2 ${isDark ? 'bg-neutral-900 text-neutral-100 border-neutral-800' : 'bg-white text-neutral-900 border-neutral-200'}`}>
+                  <div className="min-w-56 rounded-md border shadow-lg p-2 bg-white text-neutral-900 border-neutral-200">
                     <div className="flex flex-col">
                       {items.map(({ to, label, icon: Icon }) => (
-                        <NavLink key={to} to={to} end className={({ isActive }) => `flex items-center gap-2 px-3 py-2 rounded-md ${isDark ? 'hover:bg-neutral-800' : 'hover:bg-neutral-100'} ${isActive ? (isDark ? 'bg-neutral-800' : 'bg-neutral-100') : ''}`}>
+                        <NavLink
+                          key={to}
+                          to={to}
+                          end
+                          className={({ isActive }) =>
+                            `flex items-center gap-2 px-3 py-2 rounded-md hover:bg-neutral-100 ${isActive ? 'bg-neutral-100' : ''}`
+                          }
+                        >
                           <Icon className="size-4" />
                           <span className="text-sm font-medium">{label}</span>
                         </NavLink>
@@ -89,19 +100,27 @@ export default function Sidebar({ open = false, onClose = () => {} }) {
       {open && (
         <div className="fixed inset-0 z-50 md:hidden">
           <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-          <aside className={`relative w-64 h-full border-r p-3 ${isDark ? 'bg-neutral-900 text-neutral-100 border-neutral-800' : 'bg-white text-neutral-900 border-neutral-200'}`}>
+          <aside className="relative w-64 h-full border-r p-3 bg-white text-neutral-900 border-neutral-200">
             <div className="flex items-center justify-between mb-2">
               <div className="font-semibold">Menu</div>
-              <button onClick={onClose} className={`p-2 rounded-lg ${isDark ? 'hover:bg-neutral-800' : 'hover:bg-neutral-100'}`} aria-label="Fechar menu">
+              <button onClick={onClose} className="p-2 rounded-lg hover:bg-neutral-100" aria-label="Fechar menu">
                 <X className="size-4" />
               </button>
             </div>
             <nav className="space-y-4">
               {sections.map((sec, idx) => (
                 <div key={idx} className="space-y-1">
-                  {sec.title && <div className={`px-3 text-xs uppercase tracking-wide ${isDark ? 'text-neutral-400' : 'text-neutral-500'}`}>{sec.title}</div>}
+                  {sec.title && <div className="px-3 text-xs uppercase tracking-wide text-neutral-500">{sec.title}</div>}
                   {sec.items.filter(i=>i.show).map(({ to, label, icon: Icon }) => (
-                    <NavLink onClick={onClose} key={to} to={to} end className={({ isActive }) => `flex items-center gap-2 px-3 py-2 rounded-lg ${isDark ? 'hover:bg-neutral-800' : 'hover:bg-neutral-100'} ${isActive ? (isDark ? 'bg-neutral-800' : 'bg-neutral-100') : ''}`}>
+                    <NavLink
+                      onClick={onClose}
+                      key={to}
+                      to={to}
+                      end
+                      className={({ isActive }) =>
+                        `flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-neutral-100 ${isActive ? 'bg-neutral-100' : ''}`
+                      }
+                    >
                       <Icon className="size-4" />
                       <span className="text-sm font-medium">{label}</span>
                     </NavLink>
