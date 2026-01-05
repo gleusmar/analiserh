@@ -306,15 +306,15 @@ export default function Shifts() {
                 onDrop={(e)=>onDropOnItem(e, a.id)}
                 className={
                   "flex items-center justify-between gap-2 rounded-lg border border-neutral-200 px-2 py-0.5 " +
-                  (fnName.includes('Bio LAB') ? ' bg-blue-200' :
-                   fnName.includes('Téc Apoio') ? ' bg-yellow-200' :
-                   fnName.includes('Téc LAB') ? ' bg-green-200' :
-                   fnName.includes('Téc UPA') ? ' bg-red-200' : '')
+                  (fnName.includes('Bio LAB') ? ' bg-blue-100' :
+                   fnName.includes('Téc Apoio') ? ' bg-yellow-100' :
+                   fnName.includes('Téc LAB') ? ' bg-green-100' :
+                   fnName.includes('Téc UPA') ? ' bg-red-100' : '')
                 }
               >
                 <div className="min-w-0">
                   <div className="truncate text-xs text-neutral-500">{fnName}</div>
-                  <div className="truncate text-xs text-black font-semibold">{colName}</div>
+                  <div className="truncate text-xs text-black font-black">{colName}</div>
                 </div>
                 <div className="flex items-center gap-2">
                   <input type="checkbox" checked={!!a.remunerated} onChange={()=>canManage && toggleRemunerated(a)} title="Remunerado" disabled={!canManage} />
