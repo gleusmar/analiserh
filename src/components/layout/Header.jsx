@@ -9,7 +9,8 @@ export default function Header({ onToggleSidebar }) {
         <button onClick={onToggleSidebar} className="md:hidden p-2 rounded-lg hover:bg-neutral-100" aria-label="Abrir menu">
           <Menu className="size-5" />
         </button>
-        <div className="font-semibold">Análise RH</div>
+        <div><img alt="Meu Análise" class="w-10 h-10 rounded-md" src="/ico.png"></img></div>
+        <div className="font-semibold">Meu Análise</div>
       </div>
       <div className="flex items-center gap-2">
         <div className="text-sm hidden sm:block text-neutral-600">{user?.email}</div>

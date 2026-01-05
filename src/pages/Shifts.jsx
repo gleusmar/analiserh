@@ -306,10 +306,10 @@ export default function Shifts() {
                 onDrop={(e)=>onDropOnItem(e, a.id)}
                 className={
                   "flex items-center justify-between gap-2 rounded-lg border border-neutral-200 px-2 py-0.5 " +
-                  (fnName.includes('Bio LAB') ? ' bg-blue-50' :
-                   fnName.includes('Téc Apoio') ? ' bg-yellow-50' :
-                   fnName.includes('Téc LAB') ? ' bg-green-50' :
-                   fnName.includes('Téc UPA') ? ' bg-red-50' : '')
+                  (fnName.includes('Bio LAB') ? ' bg-blue-200' :
+                   fnName.includes('Téc Apoio') ? ' bg-yellow-200' :
+                   fnName.includes('Téc LAB') ? ' bg-green-200' :
+                   fnName.includes('Téc UPA') ? ' bg-red-200' : '')
                 }
               >
                 <div className="min-w-0">
