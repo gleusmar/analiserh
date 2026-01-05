@@ -478,7 +478,7 @@ export default function Dashboard() {
         {myColId && payHistory.length > 0 && (
           <div className="overflow-x-auto rounded-xl border border-neutral-200">
             <table className="w-full text-xs">
-              <thead className="bg-neutral-50 text-neutral-500">
+              <thead className="bg-neutral-300 text-neutral-700">
                 <tr>
                   <th className="py-2 px-2 text-left">Competência</th>
                   <th className="py-2 px-2 text-left">Folha</th>
@@ -493,12 +493,12 @@ export default function Dashboard() {
                   <>
                     <tr
                       key={row.sheetId}
-                      className={`border-t border-neutral-100 cursor-pointer bg-neutral-100 ${selectedSheetId === row.sheetId ? 'bg-neutral-300' : ''}`}
+                      className={`border-t border-neutral-100 cursor-pointer ${selectedSheetId === row.sheetId ? 'bg-neutral-200' : 'bg-neutral-100'}`}
                       onClick={() => setSelectedSheetId(prev => (prev === row.sheetId ? null : row.sheetId))}
                     >
                       <td className="py-1.5 px-2 text-sm">{row.year_month}</td>
                       <td className="py-1.5 px-2 text-sm">{row.name}</td>
-                      <td className="py-1.5 px-2 text-sm text-right">{formatBRL(row.inc)}</td>
+                      <td className="py-1.5 px-2 text-sm text-right text-emerald-600">{formatBRL(row.inc)}</td>
                       <td className="py-1.5 px-2 text-sm text-right text-red-600">{formatBRL(row.out)}</td>
                       <td className="py-1.5 px-2 text-sm text-right font-medium">{formatBRL(row.total)}</td>
                       <td className="py-1.5 px-2 text-center">
@@ -513,7 +513,7 @@ export default function Dashboard() {
                     </tr>
                     {selectedSheetId === row.sheetId && row.entries && row.entries.length > 0 && (
                       <tr>
-                        <td colSpan={6} className="bg-neutral-100 border-t border-neutral-100 md:pl-[50%] md:pr-3 pl-[10%] pr-3 py-2">
+                        <td colSpan={6} className="bg-amber-50 border-t border-neutral-100 md:pl-[50%] md:pr-3 pl-[10%] pr-3 py-2">
                           <div className="text-[11px] text-neutral-500 mb-1">Lançamentos desta remuneração</div>
                           <div className="space-y-1">
                             {row.entries
@@ -526,7 +526,7 @@ export default function Dashboard() {
                               .map(e => (
                                 <div
                                   key={e.id}
-                                  className={`flex items-center justify-between rounded-lg border border-neutral-200 bg-white px-2 py-1 ${e.payroll_entry_types?.kind === 'out' ? 'text-red-600 bg-red-50' : 'text-emerald-700 bg-emerald-50'}`}
+                                  className={`flex items-center justify-between rounded-lg border border-neutral-200 px-2 py-1 ${e.payroll_entry_types?.kind === 'out' ? 'text-red-600 bg-red-50' : 'text-emerald-700 bg-emerald-50'}`}
                                 >
                                   <div className="flex flex-col">
                                     <span className="text-xs font-medium text-neutral-800">{e.payroll_entry_types?.name || '-'}</span>

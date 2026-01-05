@@ -545,7 +545,7 @@ export default function Payroll() {
                                 const kb = b.payroll_entry_types?.kind === 'in' ? 0 : 1
                                 return ka - kb
                               }).map(en => (
-                                <div key={en.id} className={"flex items-center justify-between rounded-lg border border-neutral-200 bg-white text-neutral-900 px-2 py-1" + (en.payroll_entry_types?.kind==='out' ? 'text-red-600 bg-red-50' : 'text-emerald-600 bg-emerald-50')}>
+                                <div key={en.id} className={"flex items-center justify-between rounded-lg border border-neutral-200 text-neutral-900 px-2 py-1" + (en.payroll_entry_types?.kind==='out' ? 'text-red-600 bg-red-50' : 'text-emerald-600 bg-emerald-50')}>
                                   <div className="text-xs">
                                     <span className="font-medium">{en.payroll_entry_types?.name || '-'}</span>
                                     <span className="ml-2 text-neutral-500">{en.note || ''}</span>
