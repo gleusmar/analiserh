@@ -27,6 +27,7 @@ export default function ResetPassword() {
       const { error } = await updatePassword(password)
       if (error) throw error
       try { await clearMustChangePassword() } catch (_) {}
+      try { window.localStorage.setItem('skip-must-change-password', '1') } catch (_) {}
       try { await signOut() } catch (_) {}
       setMessage({ type: 'success', text: 'Senha atualizada com sucesso. Faça login novamente.' })
       setTimeout(()=>navigate('/login'), 1200)

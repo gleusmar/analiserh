@@ -371,8 +371,8 @@ export default function Shifts() {
 
   return (
     <div className="space-y-4">
-      <div className="sticky top-16 z-20 bg-white/95 backdrop-blur border-b border-neutral-200">
-        <div className="py-2 px-1 sm:px-2 flex flex-col gap-2 md:flex-row md:items-center">
+      <div className="sticky top-14 z-20 bg-white/95 backdrop-blur border-b border-neutral-200">
+        <div className="py-2 px-1 sm:px-2 flex flex-row gap-2 md:flex-row md:items-center">
           <div className="flex-1">
             <h1 className="text-sm md:text-2xl font-semibold">Plantões</h1>
           </div>

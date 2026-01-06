@@ -43,58 +43,7 @@ export default function Sidebar({ open = false, onClose = () => {} }) {
   return (
     <>
       {/* Desktop: Top navigation bar with hover dropdowns */}
-      <nav className="hidden md:block border-b bg-slate-100 text-neutral-900 border-neutral-200">
-        <div className="px-3 py-2 flex items-center gap-6">
-          {sections.map((sec, idx) => {
-            const items = sec.items.filter(i=>i.show)
-            if (!sec.title) {
-              return (
-                <div key={idx} className="flex items-center gap-2">
-                  {items.map(({ to, label, icon: Icon }) => (
-                    <NavLink
-                      key={to}
-                      to={to}
-                      end
-                      className={({ isActive }) =>
-                        `flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-neutral-200 ${isActive ? 'bg-neutral-200 text-neutral-900' : ''}`
-                      }
-                    >
-                      <Icon className="size-4" />
-                      <span className="text-sm font-medium">{label}</span>
-                    </NavLink>
-                  ))}
-                </div>
-              )
-            }
-            return (
-              <div key={idx} className="relative group">
-                <button className="px-3 py-1.5 text-sm font-semibold rounded-md text-neutral-700 hover:bg-neutral-200">
-                  {sec.title}
-                </button>
-                <div className="absolute left-0 top-full hidden group-hover:block z-40">
-                  <div className="min-w-56 rounded-md border shadow-lg p-2 bg-white text-neutral-900 border-neutral-200">
-                    <div className="flex flex-col">
-                      {items.map(({ to, label, icon: Icon }) => (
-                        <NavLink
-                          key={to}
-                          to={to}
-                          end
-                          className={({ isActive }) =>
-                            `flex items-center gap-2 px-3 py-2 rounded-md hover:bg-neutral-100 ${isActive ? 'bg-neutral-100 text-neutral-900' : ''}`
-                          }
-                        >
-                          <Icon className="size-4" />
-                          <span className="text-sm font-medium">{label}</span>
-                        </NavLink>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </nav>
+      <nav className="hidden" />
 
       {/* Mobile drawer */}
       {open && (

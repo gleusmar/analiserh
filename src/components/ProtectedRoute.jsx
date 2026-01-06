@@ -5,6 +5,15 @@ export default function ProtectedRoute({ children }) {
   const { user, profile, loading } = useAuth()
   const location = useLocation()
 
+  // Allow a one-time skip of the forced password change flow,
+  // used right after a successful password reset + novo login.
+  let skipMustChange = false
+  if (typeof window !== 'undefined') {
+    try {
+      skipMustChange = window.localStorage.getItem('skip-must-change-password') === '1'
+    } catch (_) {}
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen grid place-items-center text-neutral-500">Carregando...</div>
@@ -16,6 +25,13 @@ export default function ProtectedRoute({ children }) {
   }
 
   // Force password change flow
+  if (skipMustChange && profile?.must_change_password) {
+    try {
+      window.localStorage.removeItem('skip-must-change-password')
+    } catch (_) {}
+    return children
+  }
+
   if (profile?.must_change_password && location.pathname !== '/reset-password') {
     return <Navigate to="/reset-password" replace state={{ from: location }} />
   }
