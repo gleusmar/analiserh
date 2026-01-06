@@ -15,6 +15,7 @@ function formatBRfromYMD(ymd) { if (!ymd) return ''; const parts = String(ymd).s
 export default function ShiftsDashboard() {
   const { profile, role } = useAuth()
   const isGestor = role === 'gestor-plantoes'
+  const isUser = role === 'user'
   const myColId = profile?.collaborator_id || null
   const [current, setCurrent] = useState(() => new Date())
   const [assignments, setAssignments] = useState([])
@@ -111,6 +112,16 @@ export default function ShiftsDashboard() {
 
   const filtered = useMemo(() => {
     let list = rows
+
+    // Para usuários finais, sempre limitar ao colaborador vinculado.
+    if (isUser) {
+      if (myColId) {
+        list = list.filter(r => r.collaborator_id === myColId)
+      } else {
+        // Sem colaborador vinculado: não mostrar registros.
+        list = []
+      }
+    }
     if (q) {
       const k = q.toLowerCase()
       list = list.filter(r => r.function_name.toLowerCase().includes(k) || r.collaborator_name.toLowerCase().includes(k))
@@ -133,7 +144,7 @@ export default function ShiftsDashboard() {
       return 0
     }
     return [...list].sort(cmp)
-  }, [rows, q, filterFn, filterCol, filterRem, orderBy, direction, onlyMine, myColId])
+  }, [rows, q, filterFn, filterCol, filterRem, orderBy, direction, onlyMine, myColId, isUser])
 
   const totalsByCollaborator = useMemo(() => {
     const map = {}
@@ -230,6 +241,12 @@ export default function ShiftsDashboard() {
         </div>
       </div>
 
+      {isUser && !myColId && (
+        <div className="text-xs text-neutral-500 px-1 sm:px-2">
+          Vincule um colaborador ao seu usuário para visualizar os plantões do mês.
+        </div>
+      )}
+
       {/* Mobile: cards legíveis */}
       <div className="space-y-2 md:hidden">
         {filtered.map(r => (
@@ -239,10 +256,10 @@ export default function ShiftsDashboard() {
           >
             <div className="flex items-baseline justify-between gap-2">
               <div>
-                <div className="font-semibold text-neutral-900">{formatBRfromYMD(r.date)}</div>
+                <div className="font-semibold text-xs text-neutral-900">{formatBRfromYMD(r.date)}</div>
                 <div className="mt-1">
-                  <div className="text-sm font-semibold text-neutral-900 truncate">{r.collaborator_name}</div>
-                  <div className="text-sm text-neutral-600 truncate">{r.function_name}</div>
+                  <div className="text-xs font-semibold text-neutral-900 truncate">{r.collaborator_name}</div>
+                  <div className="text-xs text-neutral-600 truncate">{r.function_name}</div>
                 </div>
               </div>
               <div className="text-right">

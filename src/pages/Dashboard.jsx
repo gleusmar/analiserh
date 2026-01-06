@@ -250,7 +250,7 @@ export default function Dashboard() {
   }, [myShifts])
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pt-2">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-2">
           <div>

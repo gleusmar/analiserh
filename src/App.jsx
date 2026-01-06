@@ -111,7 +111,7 @@ function App() {
         path="/shifts/dashboard"
         element={
           <ProtectedRoute>
-            <RoleRoute allow={["admin", "super", "gestor-plantoes"]}>
+            <RoleRoute allow={["admin", "super", "gestor-plantoes", "user"]}>
               <DashboardLayout>
                 <ShiftsDashboard />
               </DashboardLayout>

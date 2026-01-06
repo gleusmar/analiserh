@@ -197,7 +197,7 @@ export default function Vacations() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pt-2">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">Férias</h1>
         {canAdmin && (
