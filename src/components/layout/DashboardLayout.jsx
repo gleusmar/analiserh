@@ -9,7 +9,7 @@ export default function DashboardLayout({ children }) {
       <Header onToggleSidebar={() => setMobileOpen(v => !v)} />
       {/* Top navigation bar (desktop) + Mobile drawer (controlled by open) */}
       <Sidebar open={mobileOpen} onClose={() => setMobileOpen(false)} />
-      <main className="flex-1 p-4">{children}</main>
+      <main className="flex-1 p-4 pt-0">{children}</main>
     </div>
   )
 }

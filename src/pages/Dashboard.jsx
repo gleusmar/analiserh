@@ -325,19 +325,57 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-4 flex flex-col gap-2">
-          <div className="text-xs text-neutral-500">Última remuneração líquida</div>
-          <div className="text-2xl font-semibold text-neutral-900">
-            {lastPay ? formatBRL(lastPay.total) : '-'}
+        {/* Férias do ano corrente no topo, no lugar da última remuneração líquida */}
+        <div className="rounded-xl border border-neutral-200 p-4 space-y-3 bg-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-semibold">Férias do ano corrente</div>
+              <div className="text-xs text-neutral-500">Períodos de férias do colaborador neste ano.</div>
+            </div>
+            {upcomingVacation && (
+              <span className="inline-flex items-center rounded-full bg-blue-50 text-blue-700 px-2 py-0.5 text-[11px]">
+                Próxima: {formatDateBR(upcomingVacation.start_date)}
+              </span>
+            )}
           </div>
-          <div className="text-xs text-neutral-500">
-            {lastPay ? `Referente à folha ${lastPay.year_month}` : 'Ainda não há folhas com lançamentos para você.'}
-          </div>
+
+          {!myColId && (
+            <div className="text-xs text-neutral-500">
+              Vincule um colaborador ao seu usuário para visualizar as férias.
+            </div>
+          )}
+
+          {myColId && vacations.length === 0 && (
+            <div className="text-xs text-neutral-500">Nenhum registro de férias para o ano corrente.</div>
+          )}
+
+          {myColId && vacations.length > 0 && (
+            <div className="space-y-2 text-xs">
+              {vacations.map(v => (
+                <div
+                  key={v.id}
+                  className="rounded-lg border border-neutral-200 px-3 py-2 flex flex-col gap-1 bg-white"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="font-medium text-neutral-800">
+                      {formatDateBR(v.start_date)} → {formatDateBR(v.end_date)} ({v.days} dias)
+                    </div>
+                  </div>
+                  <div className="text-[11px] text-neutral-500">
+                    Período aquisitivo: {v.period || '-'}
+                  </div>
+                  <div className="text-[11px] text-neutral-500">
+                    Remuneração: {formatBRL(v.remuneration)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2 rounded-xl border border-neutral-200 p-4 space-y-3 bg-white">
+        <div className="rounded-xl border border-neutral-200 p-4 space-y-3 bg-white lg:col-span-1">
           <div className="flex items-center justify-between gap-2">
             <div>
               <div className="text-sm font-semibold">Meus plantões</div>
@@ -393,9 +431,9 @@ export default function Dashboard() {
                 <tbody>
                   {shiftsSorted.map(s => (
                     <tr key={s.id} className="border-t border-neutral-100">
-                      <td className="py-1.5 px-2 text-sm">{formatDateBR(s.date)}</td>
-                      <td className="py-1.5 px-2 text-sm">{fnMap[s.shift_function_id]?.name || '-'}</td>
-                      <td className="py-1.5 px-2 text-sm">
+                      <td className="py-1.5 px-2 text-xs">{formatDateBR(s.date)}</td>
+                      <td className="py-1.5 px-2 text-xs">{fnMap[s.shift_function_id]?.name || '-'}</td>
+                      <td className="py-1.5 px-2 text-xs">
                         {s.remunerated ? (
                           <span className="inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 px-2 py-0.5 text-[11px]">
                             Remunerado
@@ -417,218 +455,171 @@ export default function Dashboard() {
           )}
         </div>
 
-        <div className="rounded-xl border border-neutral-200 p-4 space-y-3 bg-white">
-          <div className="flex items-center justify-between">
+        <div className="rounded-xl border border-neutral-200 p-4 space-y-3 bg-white lg:col-span-2">
+          <div className="flex items-center justify-between gap-2">
             <div>
-              <div className="text-sm font-semibold">Férias do ano corrente</div>
-              <div className="text-xs text-neutral-500">Períodos de férias do colaborador neste ano.</div>
+              <div className="text-sm font-semibold">Últimas remunerações e holerites</div>
+              <div className="text-xs text-neutral-500">Até as últimas 12 folhas em que você aparece, com total líquido e acesso rápido ao holerite.</div>
             </div>
-            {upcomingVacation && (
-              <span className="inline-flex items-center rounded-full bg-blue-50 text-blue-700 px-2 py-0.5 text-[11px]">
-                Próxima: {formatDateBR(upcomingVacation.start_date)}
-              </span>
+            {loadingPayroll && (
+              <div className="text-[11px] text-neutral-500">Carregando...</div>
             )}
           </div>
 
           {!myColId && (
             <div className="text-xs text-neutral-500">
-              Vincule um colaborador ao seu usuário para visualizar as férias.
+              Vincule um colaborador ao seu usuário para visualizar o histórico de remunerações e holerites.
             </div>
           )}
 
-          {myColId && vacations.length === 0 && (
-            <div className="text-xs text-neutral-500">Nenhum registro de férias para o ano corrente.</div>
+          {myColId && !loadingPayroll && payHistory.length === 0 && (
+            <div className="text-xs text-neutral-500">Nenhuma folha encontrada com lançamentos para você.</div>
           )}
 
-          {myColId && vacations.length > 0 && (
-            <div className="space-y-2 text-xs">
-              {vacations.map(v => (
-                <div
-                  key={v.id}
-                  className="rounded-lg border border-neutral-200 px-3 py-2 flex flex-col gap-1 bg-white"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="font-medium text-neutral-800">
-                      {formatDateBR(v.start_date)} → {formatDateBR(v.end_date)} ({v.days} dias)
-                    </div>
-                  </div>
-                  <div className="text-[11px] text-neutral-500">
-                    Período aquisitivo: {v.period || '-'}
-                  </div>
-                  <div className="text-[11px] text-neutral-500">
-                    Remuneração: {formatBRL(v.remuneration)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-neutral-200 p-4 space-y-3 bg-white">
-        <div className="flex items-center justify-between gap-2">
-          <div>
-            <div className="text-sm font-semibold">Últimas remunerações e holerites</div>
-            <div className="text-xs text-neutral-500">Até as últimas 12 folhas em que você aparece, com total líquido e acesso rápido ao holerite.</div>
-          </div>
-          {loadingPayroll && (
-            <div className="text-[11px] text-neutral-500">Carregando...</div>
-          )}
-        </div>
-
-        {!myColId && (
-          <div className="text-xs text-neutral-500">
-            Vincule um colaborador ao seu usuário para visualizar o histórico de remunerações e holerites.
-          </div>
-        )}
-
-        {myColId && !loadingPayroll && payHistory.length === 0 && (
-          <div className="text-xs text-neutral-500">Nenhuma folha encontrada com lançamentos para você.</div>
-        )}
-
-        {myColId && payHistory.length > 0 && (
-          <>
-            {/* Desktop/large screens: tabela com rolagem horizontal se necessário */}
-            <div className="hidden md:block overflow-x-auto rounded-xl border border-neutral-200">
-              <table className="w-full text-xs">
-                <thead className="bg-neutral-300 text-neutral-700">
-                  <tr>
-                    <th className="py-2 px-2 text-left">Competência</th>
-                    <th className="py-2 px-2 text-left">Folha</th>
-                    <th className="py-2 px-2 text-right">Recebimentos</th>
-                    <th className="py-2 px-2 text-right">Descontos</th>
-                    <th className="py-2 px-2 text-right">Total líquido</th>
-                    <th className="py-2 px-2 text-center">Holerite</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {payHistory.map(row => (
-                    <>
-                      <tr
-                        key={row.sheetId}
-                        className={`border-t border-neutral-100 cursor-pointer ${selectedSheetId === row.sheetId ? 'bg-neutral-200' : 'bg-neutral-100'}`}
-                        onClick={() => setSelectedSheetId(prev => (prev === row.sheetId ? null : row.sheetId))}
-                      >
-                        <td className="py-1.5 px-2 text-sm">{row.year_month}</td>
-                        <td className="py-1.5 px-2 text-sm">{row.name}</td>
-                        <td className="py-1.5 px-2 text-sm text-right text-emerald-600">{formatBRL(row.inc)}</td>
-                        <td className="py-1.5 px-2 text-sm text-right text-red-600">{formatBRL(row.out)}</td>
-                        <td className="py-1.5 px-2 text-sm text-right font-medium">{formatBRL(row.total)}</td>
-                        <td className="py-1.5 px-2 text-center">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); downloadHolerite(row.sheetId) }}
-                            className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-blue-600 hover:bg-blue-700 text-white"
-                            title="Baixar holerite"
-                          >
-                            <FileDown className="size-4" />
-                          </button>
-                        </td>
-                      </tr>
-                      {selectedSheetId === row.sheetId && row.entries && row.entries.length > 0 && (
-                        <tr>
-                          <td colSpan={6} className="bg-white border-t border-neutral-100 md:pl-[50%] md:pr-3 pl-[10%] pr-3 py-2">
-                            <div className="text-[11px] text-neutral-500 mb-1">Lançamentos desta remuneração</div>
-                            <div className="space-y-1">
-                              {row.entries
-                                .slice()
-                                .sort((a, b) => {
-                                  const ka = a.payroll_entry_types?.kind === 'in' ? 0 : 1
-                                  const kb = b.payroll_entry_types?.kind === 'in' ? 0 : 1
-                                  return ka - kb
-                                })
-                                .map(e => (
-                                  <div
-                                    key={e.id}
-                                    className={`flex items-center justify-between rounded-lg border border-neutral-200 px-2 py-1 ${e.payroll_entry_types?.kind === 'out' ? 'text-red-600 bg-red-50' : 'text-emerald-700 bg-emerald-50'}`}
-                                  >
-                                    <div className="flex flex-col">
-                                      <span className="text-xs font-medium text-neutral-800">{e.payroll_entry_types?.name || '-'}</span>
-                                      {e.note && (
-                                        <span className="text-[11px] text-neutral-500">{e.note}</span>
-                                      )}
-                                    </div>
-                                    <div className={`text-xs font-semibold ${e.payroll_entry_types?.kind === 'out' ? 'text-red-600' : 'text-emerald-700'}`}>
-                                      {e.payroll_entry_types?.kind === 'out' ? '-' : '+'} {formatBRL(e.amount)}
-                                    </div>
-                                  </div>
-                                ))}
-                            </div>
+          {myColId && payHistory.length > 0 && (
+            <>
+              {/* Desktop/large screens: tabela com rolagem horizontal se necessário */}
+              <div className="hidden md:block overflow-x-auto rounded-xl border border-neutral-200">
+                <table className="w-full text-xs">
+                  <thead className="bg-neutral-300 text-neutral-700">
+                    <tr>
+                      <th className="py-2 px-2 text-left">Competência</th>
+                      <th className="py-2 px-2 text-left">Folha</th>
+                      <th className="py-2 px-2 text-right">Recebimentos</th>
+                      <th className="py-2 px-2 text-right">Descontos</th>
+                      <th className="py-2 px-2 text-right">Total líquido</th>
+                      <th className="py-2 px-2 text-center">Holerite</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {payHistory.map(row => (
+                      <>
+                        <tr
+                          key={row.sheetId}
+                          className={`border-t border-neutral-100 cursor-pointer ${selectedSheetId === row.sheetId ? 'bg-neutral-200' : 'bg-neutral-100'}`}
+                          onClick={() => setSelectedSheetId(prev => (prev === row.sheetId ? null : row.sheetId))}
+                        >
+                          <td className="py-1.5 px-2 text-sm">{row.year_month}</td>
+                          <td className="py-1.5 px-2 text-sm">{row.name}</td>
+                          <td className="py-1.5 px-2 text-sm text-right text-emerald-600">{formatBRL(row.inc)}</td>
+                          <td className="py-1.5 px-2 text-sm text-right text-red-600">{formatBRL(row.out)}</td>
+                          <td className="py-1.5 px-2 text-sm text-right font-medium">{formatBRL(row.total)}</td>
+                          <td className="py-1.5 px-2 text-center">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); downloadHolerite(row.sheetId) }}
+                              className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-blue-600 hover:bg-blue-700 text-white"
+                              title="Baixar holerite"
+                            >
+                              <FileDown className="size-4" />
+                            </button>
                           </td>
                         </tr>
-                      )}
-                    </>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                        {selectedSheetId === row.sheetId && row.entries && row.entries.length > 0 && (
+                          <tr>
+                            <td colSpan={6} className="bg-white border-t border-neutral-100 md:pl-[50%] md:pr-3 pl-[10%] pr-3 py-2">
+                              <div className="text-[11px] text-neutral-500 mb-1">Lançamentos desta remuneração</div>
+                              <div className="space-y-1">
+                                {row.entries
+                                  .slice()
+                                  .sort((a, b) => {
+                                    const ka = a.payroll_entry_types?.kind === 'in' ? 0 : 1
+                                    const kb = b.payroll_entry_types?.kind === 'in' ? 0 : 1
+                                    return ka - kb
+                                  })
+                                  .map(e => (
+                                    <div
+                                      key={e.id}
+                                      className={`flex items-center justify-between rounded-lg border border-neutral-200 px-2 py-1 ${e.payroll_entry_types?.kind === 'out' ? 'text-red-600 bg-red-50' : 'text-emerald-700 bg-emerald-50'}`}
+                                    >
+                                      <div className="flex flex-col">
+                                        <span className="text-xs font-medium text-neutral-800">{e.payroll_entry_types?.name || '-'}</span>
+                                        {e.note && (
+                                          <span className="text-[11px] text-neutral-500">{e.note}</span>
+                                        )}
+                                      </div>
+                                      <div className={`text-xs font-semibold ${e.payroll_entry_types?.kind === 'out' ? 'text-red-600' : 'text-emerald-700'}`}>
+                                        {e.payroll_entry_types?.kind === 'out' ? '-' : '+'} {formatBRL(e.amount)}
+                                      </div>
+                                    </div>
+                                  ))}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
-            {/* Mobile: lista em cartões, sem rolagem lateral */}
-            <div className="space-y-2 md:hidden">
-              {payHistory.map(row => (
-                <div
-                  key={row.sheetId}
-                  className={`rounded-xl border border-neutral-200 bg-neutral-50 ${selectedSheetId === row.sheetId ? 'ring-1 ring-neutral-400' : ''}`}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setSelectedSheetId(prev => (prev === row.sheetId ? null : row.sheetId))}
-                    className="w-full text-left px-3 pt-2 pb-1"
+              {/* Mobile: lista em cartões, sem rolagem lateral */}
+              <div className="space-y-2 md:hidden">
+                {payHistory.map(row => (
+                  <div
+                    key={row.sheetId}
+                    className={`rounded-xl border border-neutral-200 bg-neutral-50 ${selectedSheetId === row.sheetId ? 'ring-1 ring-neutral-400' : ''}`}
                   >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[11px] text-neutral-500">Competência</div>
-                        <div className="text-xs font-medium text-neutral-800 truncate">{row.year_month}</div>
-                        <div className="mt-1 text-[11px] text-neutral-500 truncate">{row.name}</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-[11px] text-neutral-500">Total líquido</div>
-                        <div className="text-sm font-semibold text-neutral-900">{formatBRL(row.total)}</div>
-                      </div>
-                    </div>
-                  </button>
-                  <div className="px-3 pb-2 flex items-center justify-between gap-3">
-                    <div className="text-[11px] text-neutral-600">
-                      <div>Recebimentos: <span className="font-medium text-emerald-700">{formatBRL(row.inc)}</span></div>
-                      <div>Descontos: <span className="font-medium text-red-600">{formatBRL(row.out)}</span></div>
-                    </div>
                     <button
-                      onClick={() => downloadHolerite(row.sheetId)}
-                      className="shrink-0 w-8 h-8 grid place-items-center rounded-md bg-blue-600 hover:bg-blue-700 text-white"
-                      title="Baixar holerite"
+                      type="button"
+                      onClick={() => setSelectedSheetId(prev => (prev === row.sheetId ? null : row.sheetId))}
+                      className="w-full text-left px-3 pt-2 pb-1"
                     >
-                      <FileDown className="size-4" />
-                    </button>
-                  </div>
-                  {selectedSheetId === row.sheetId && row.entries && row.entries.length > 0 && (
-                    <div className="px-3 pb-3 border-t border-neutral-200">
-                      <div className="text-[11px] text-neutral-500 mt-2 mb-1">Lançamentos desta remuneração</div>
-                      <div className="space-y-1">
-                        {row.entries
-                          .slice()
-                          .sort((a, b) => {
-                            const ka = a.payroll_entry_types?.kind === 'in' ? 0 : 1
-                            const kb = b.payroll_entry_types?.kind === 'in' ? 0 : 1
-                            return ka - kb
-                          })
-                          .map(e => (
-                            <div
-                              key={e.id}
-                              className={`flex items-center justify-between rounded-lg border border-neutral-200 px-2 py-1 ${e.payroll_entry_types?.kind === 'out' ? 'text-red-600 bg-red-50' : 'text-emerald-700 bg-emerald-50'}`}
-                            >
-                              <span className="text-[11px] font-medium truncate mr-2">{e.payroll_entry_types?.name || '-'}</span>
-                              <span className={`text-[11px] font-semibold ${e.payroll_entry_types?.kind === 'out' ? 'text-red-600' : 'text-emerald-700'}`}>
-                                {e.payroll_entry_types?.kind === 'out' ? '-' : '+'} {formatBRL(e.amount)}
-                              </span>
-                            </div>
-                          ))}
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[11px] text-neutral-500">Competência</div>
+                          <div className="text-xs font-medium text-neutral-800 truncate">{row.year_month}</div>
+                          <div className="mt-1 text-[11px] text-neutral-500 truncate">{row.name}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-[11px] text-neutral-500">Total líquido</div>
+                          <div className="text-sm font-semibold text-neutral-900">{formatBRL(row.total)}</div>
+                        </div>
                       </div>
+                    </button>
+                    <div className="px-3 pb-2 flex items-center justify-between gap-3">
+                      <div className="text-[11px] text-neutral-600">
+                        <div>Recebimentos: <span className="font-medium text-emerald-700">{formatBRL(row.inc)}</span></div>
+                        <div>Descontos: <span className="font-medium text-red-600">{formatBRL(row.out)}</span></div>
+                      </div>
+                      <button
+                        onClick={() => downloadHolerite(row.sheetId)}
+                        className="shrink-0 w-8 h-8 grid place-items-center rounded-md bg-blue-600 hover:bg-blue-700 text-white"
+                        title="Baixar holerite"
+                      >
+                        <FileDown className="size-4" />
+                      </button>
                     </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </>
-        )}
+                    {selectedSheetId === row.sheetId && row.entries && row.entries.length > 0 && (
+                      <div className="px-3 pb-3 border-t border-neutral-200">
+                        <div className="text-[11px] text-neutral-500 mt-2 mb-1">Lançamentos desta remuneração</div>
+                        <div className="space-y-1">
+                          {row.entries
+                            .slice()
+                            .sort((a, b) => {
+                              const ka = a.payroll_entry_types?.kind === 'in' ? 0 : 1
+                              const kb = b.payroll_entry_types?.kind === 'in' ? 0 : 1
+                              return ka - kb
+                            })
+                            .map(e => (
+                              <div
+                                key={e.id}
+                                className={`flex items-center justify-between rounded-lg border border-neutral-200 px-2 py-1 ${e.payroll_entry_types?.kind === 'out' ? 'text-red-600 bg-red-50' : 'text-emerald-700 bg-emerald-50'}`}
+                              >
+                                <span className="text-[11px] font-medium truncate mr-2">{e.payroll_entry_types?.name || '-'}</span>
+                                <span className={`text-[11px] font-semibold ${e.payroll_entry_types?.kind === 'out' ? 'text-red-600' : 'text-emerald-700'}`}>
+                                  {e.payroll_entry_types?.kind === 'out' ? '-' : '+'} {formatBRL(e.amount)}
+                                </span>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   )

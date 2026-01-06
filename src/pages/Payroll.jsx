@@ -444,8 +444,8 @@ export default function Payroll() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Folha Mensal</h1>
+      <div className="flex pt-2 items-center justify-between">
+        <h1 className="text-sm text-center font-semibold">Folha Mensal</h1>
         {canAdmin && (
           <div className="inline-flex items-center gap-2">
             <button onClick={openCreateSheet} className="text-xs rounded-lg bg-green-600 hover:bg-green-700 text-white px-1 py-1">Criar Folha</button>

@@ -82,7 +82,7 @@ export default function Header({ onToggleSidebar }) {
               <button className="px-2 py-1 text-xs md:text-sm font-semibold rounded-md text-neutral-700 hover:bg-neutral-100">
                 {sec.title}
               </button>
-              <div className="absolute left-1/2 -translate-x-1/2 top-full hidden group-hover:block z-40 mt-1">
+              <div className="absolute left-1/2 -translate-x-1/2 top-full hidden group-hover:block z-40">
                 <div className="min-w-48 rounded-md border shadow-lg p-2 bg-white text-neutral-900 border-neutral-200">
                   <div className="flex flex-col">
                     {items.map(({ to, label }) => (
