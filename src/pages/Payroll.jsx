@@ -1,11 +1,19 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
-import { FileDown, Trash2, UserMinus } from 'lucide-react'
+import { Download, FileDown, Trash2, UserMinus } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext.jsx'
 import { listCollaboratorsSimple, listPayrollEntryTypes, listPayrollSheets, createPayrollSheet, listPayrollSheetItems, listPayrollEntriesForSheet, createPayrollEntry, deletePayrollEntry, updatePayrollSheet, deletePayrollSheet, upsertPlantaoEntry, listShiftFunctions, listShiftAssignments, listShiftRateOverrides, addPayrollSheetItems } from '../lib/db'
 
 function ymOf(date) { return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}` }
 function parseYM(ym) { const [y,m] = String(ym||'').split('-').map(Number); return { y, m } }
 function firstLastOfYM(ym) { const { y, m } = parseYM(ym); if (!y || !m) return { from: null, to: null }; const from = new Date(y, m-1, 1); const to = new Date(y, m, 0); const pad = (n)=>String(n).padStart(2,'0'); return { from: `${y}-${pad(m)}-01`, to: `${y}-${pad(m)}-${pad(to.getDate())}` } }
+function formatDateBR(d) { const dt = d instanceof Date ? d : new Date(d); const dd = String(dt.getDate()).padStart(2,'0'); const mm = String(dt.getMonth()+1).padStart(2,'0'); const yyyy = dt.getFullYear(); return `${dd}/${mm}/${yyyy}` }
+function csvEscape(value) {
+  const str = value === null || value === undefined ? '' : String(value)
+  if (str.includes(';') || str.includes('"') || str.includes('\n')) {
+    return '"' + str.replace(/"/g, '""') + '"'
+  }
+  return str
+}
 
 export default function Payroll() {
   const { role, profile, user } = useAuth()
@@ -40,6 +48,13 @@ export default function Payroll() {
   const [importSel, setImportSel] = useState({}) // { item_id: bool }
   const [importLoading, setImportLoading] = useState(false)
   const [importYearMonth, setImportYearMonth] = useState(ymOf(new Date()))
+
+  // Export modal state
+  const [openExport, setOpenExport] = useState(false)
+  const [exportNrDocto, setExportNrDocto] = useState('')
+  const [exportIssueDate, setExportIssueDate] = useState(formatDateBR(new Date()))
+  const [exportMoveDate, setExportMoveDate] = useState(formatDateBR(new Date()))
+  const [exportDueDate, setExportDueDate] = useState(formatDateBR(new Date()))
 
   // Holerites import
   const [openSlip, setOpenSlip] = useState(false)
@@ -322,6 +337,73 @@ export default function Payroll() {
     else { setOrderBy(key); setOrderDir('asc') }
   }
 
+  function openExportSheet() {
+    if (!selectedSheetId) {
+      alert('Selecione uma folha para exportar.')
+      return
+    }
+    const today = formatDateBR(new Date())
+    setExportNrDocto('')
+    setExportIssueDate(today)
+    setExportMoveDate(today)
+    setExportDueDate(today)
+    setOpenExport(true)
+  }
+
+  function onConfirmExport() {
+    if (!selectedSheetId || !selectedSheet) {
+      alert('Selecione uma folha para exportar.')
+      return
+    }
+    if (!exportNrDocto.trim() || !exportIssueDate.trim() || !exportMoveDate.trim() || !exportDueDate.trim()) {
+      alert('Preencha todos os campos para exportar a folha.')
+      return
+    }
+
+    const header = 'Empresa;Filial;Emitente;Esp. Docto;Série;Nr. Docto;Parcela;Dt. Emissão;Dt. Movimento;Valor do Saldo;Dt. Vencto;Tipo Rec/Desp;Portador;Carteira;Histórico'
+    const lines = [header]
+
+    ;(items || []).forEach(it => {
+      const col = it.collaborators
+      const totals = totalsByItem[it.id] || { total: 0 }
+      const total = Number(totals.total || 0)
+      const saldo = total.toFixed(2) // 2 casas decimais, ponto como separador
+
+      const row = [
+        '1', // Empresa
+        '1', // Filial
+        col?.concent_id || '', // Emitente (ID Concent)
+        'FP', // Esp. Docto
+        'M', // Série (em branco)
+        exportNrDocto.trim(), // Nr. Docto
+        '1', // Parcela
+        exportIssueDate.trim(), // Dt. Emissão
+        exportMoveDate.trim(), // Dt. Movimento
+        saldo, // Valor do Saldo
+        exportDueDate.trim(), // Dt. Vencto
+        '301', // Tipo Rec/Desp
+        '', // Portador
+        '', // Carteira
+        '', // Histórico
+      ].map(csvEscape).join(';')
+
+      lines.push(row)
+    })
+
+    const csv = lines.join('\r\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `folha_${selectedSheet.year_month || 'export'}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+
+    setOpenExport(false)
+  }
+
   async function addEntry(itemId, form, setForm) {
     try {
       if (isClosed) { alert('Folha encerrada: não é possível lançar.'); return }
@@ -451,6 +533,14 @@ export default function Payroll() {
             <button onClick={openCreateSheet} className="text-xs rounded-lg bg-green-600 hover:bg-green-700 text-white px-1 py-1">Criar Folha</button>
             <button onClick={openImportSheet} disabled={!selectedSheetId} className="text-xs rounded-lg bg-blue-600 hover:bg-blue-700 text-white px-1 py-1 disabled:opacity-50">Importar Plantões</button>
             <button onClick={()=>setOpenSlip(true)} disabled={!selectedSheetId} className="text-xs rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white px-1 py-1 disabled:opacity-50">Importar Holerites</button>
+            <button
+              onClick={openExportSheet}
+              disabled={!selectedSheetId}
+              className="text-xs rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-1 py-1 disabled:opacity-50 inline-flex items-center justify-center gap-1"
+            >
+              <span className="hidden sm:inline">Exportar Folha</span>
+              <Download className="size-4" />
+            </button>
           </div>
         )}
       </div>
