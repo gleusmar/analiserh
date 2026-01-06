@@ -44,6 +44,18 @@ export default function Shifts() {
   const totalDays = daysInMonth(current)
   const beforeBlanks = (first.getDay() + 6) % 7 // Monday=0 ... Sunday=6
 
+  const monthLabelShort = useMemo(() => {
+    const m = String(current.getMonth() + 1).padStart(2, '0')
+    const y = current.getFullYear()
+    return `${m}/${y}`
+  }, [current])
+
+  const monthNameShort = useMemo(() => {
+    const name = current.toLocaleDateString('pt-BR', { month: 'long' }).toLowerCase()
+    const yy = String(current.getFullYear()).slice(-2)
+    return `${name}/${yy}`
+  }, [current])
+
   const byDate = useMemo(() => {
     const map = {}
     ;(assignments || []).forEach(a => {
@@ -285,9 +297,9 @@ export default function Shifts() {
         onDrop={onDropOnContainer}
       >
         <div className="flex items-center justify-between" draggable={canManage} onDragStart={onDragStartDay} title="Arraste para copiar este dia">
-          <div className="text-base font-bold text-emerald-800 flex items-center gap-2">
-            <span>{String(day)}</span>
-            <span className="text-xs text-neutral-500">{weekday}</span>
+          <div className="flex items-baseline gap-2">
+            <span className="text-xl md:text-2xl font-extrabold text-emerald-800 leading-none">{String(day)}</span>
+            <span className="text-[10px] text-neutral-500 uppercase">{weekday}</span>
           </div>
           {canManage && (
             <button className="text-red-600 hover:text-red-700 text-xs font-bold px-1" title="Remover todos do dia" onClick={clearDay}>x</button>
@@ -359,16 +371,46 @@ export default function Shifts() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Plantões</h1>
-      </div>
-      <div className="flex items-center gap-2">
-        <button onClick={prevMonth} className="px-3 py-2 text-xs rounded-lg border border-neutral-200">Anterior</button>
-        <div className="text-sm font-medium w-40 text-center">{ptMonthYear(current)}</div>
-        <button onClick={nextMonth} className="px-3 py-2 text-xs rounded-lg border border-neutral-200">Próximo</button>
-        {canManage && (
-          <button onClick={()=>setBulkOpen(true)} className="px-1 md:px-2 py-1 md:py-2 text-xs rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white">Inserção múltipla</button>
-        )}
+      <div className="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-neutral-200">
+        <div className="py-2 px-1 sm:px-2 flex flex-col gap-2 md:flex-row md:items-center">
+          <div className="flex-1">
+            <h1 className="text-lg md:text-2xl font-semibold">Plantões</h1>
+          </div>
+          <div className="flex-1 flex items-center justify-center">
+            <div className="inline-flex items-center gap-3 rounded-full border border-emerald-200 bg-emerald-50/80 px-3 py-1.5 text-xs md:text-sm font-medium text-emerald-900 shadow-sm">
+              <button
+                type="button"
+                onClick={prevMonth}
+                className="px-1"
+                aria-label="Mês anterior"
+              >
+                &lt;
+              </button>
+              <span>{monthLabelShort}</span>
+              <button
+                type="button"
+                onClick={nextMonth}
+                className="px-1"
+                aria-label="Próximo mês"
+              >
+                &gt;
+              </button>
+            </div>
+          </div>
+          <div className="flex-1 flex items-center justify-end">
+            {canManage && (
+              <button
+                onClick={()=>setBulkOpen(true)}
+                className="px-2 md:px-3 py-1.5 md:py-2 text-[11px] md:text-xs rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+              >
+                Inserção múltipla
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="pb-2 text-center text-[11px] md:text-xs text-neutral-600">
+          {monthNameShort}
+        </div>
       </div>
 
       {error && (

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Search } from 'lucide-react'
 import { listShiftAssignments, listShiftFunctions, listCollaboratorsSimple, listShiftRateOverrides } from '../lib/db'
 import { useAuth } from '../contexts/AuthContext.jsx'
 
@@ -30,8 +31,15 @@ export default function ShiftsDashboard() {
   const [orderBy, setOrderBy] = useState('date')
   const [direction, setDirection] = useState('asc')
   const [onlyMine, setOnlyMine] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
 
   const monthKey = ymOf(current)
+
+  const monthLabelShort = useMemo(() => {
+    const m = String(current.getMonth() + 1).padStart(2, '0')
+    const y = current.getFullYear()
+    return `${m}/${y}`
+  }, [current])
 
   async function load() {
     setLoading(true); setError(null)
@@ -139,33 +147,87 @@ export default function ShiftsDashboard() {
   function toggleSort(k) { if (orderBy===k) setDirection(d=>d==='asc'?'desc':'asc'); else { setOrderBy(k); setDirection('asc') } }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Dashboard de Plantões</h1>
-      </div>
-      <div className="flex items-center gap-2">
-        <button onClick={prevMonth} className="px-3 py-2 text-xs rounded-lg border border-neutral-200">Anterior</button>
-        <div className="text-sm font-medium w-40 text-center">{current.toLocaleDateString('pt-BR',{ month:'long', year:'numeric'})}</div>
-        <button onClick={nextMonth} className="px-3 py-2 text-xs rounded-lg border border-neutral-200">Próximo</button>
-      </div>
+    <div className="space-y-4">
+      <div className="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-neutral-200">
+        <div className="py-2 px-1 sm:px-2 flex flex-col gap-2 md:flex-row md:items-center">
+          <div className="flex-1">
+            <h1 className="text-lg md:text-2xl font-semibold">Dashboard de Plantões</h1>
+          </div>
+          <div className="flex-1 flex items-center justify-center">
+            <div className="inline-flex items-center gap-3 rounded-full border border-emerald-200 bg-emerald-50/80 px-3 py-1.5 text-xs md:text-sm font-medium text-emerald-900 shadow-sm">
+              <button
+                type="button"
+                onClick={prevMonth}
+                className="px-1"
+                aria-label="Mês anterior"
+              >
+                &lt;
+              </button>
+              <span>{monthLabelShort}</span>
+              <button
+                type="button"
+                onClick={nextMonth}
+                className="px-1"
+                aria-label="Próximo mês"
+              >
+                &gt;
+              </button>
+            </div>
+          </div>
+          <div className="flex-1 flex items-center justify-end gap-2">
+            {/* Desktop: campo de busca visível e filtro */}
+            <div className="hidden md:flex items-center gap-3">
+              <input
+                value={q}
+                onChange={(e)=>setQ(e.target.value)}
+                placeholder="Buscar (função ou colaborador)"
+                className="rounded-xl border border-neutral-200 px-3 py-2.5 w-64"
+              />
+              {isGestor && myColId && (
+                <label className="inline-flex items-center gap-2 text-xs text-neutral-600">
+                  <input
+                    type="checkbox"
+                    checked={onlyMine}
+                    onChange={(e)=>setOnlyMine(e.target.checked)}
+                  />
+                  <span>Somente meu colaborador</span>
+                </label>
+              )}
+            </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <input
-          value={q}
-          onChange={(e)=>setQ(e.target.value)}
-          placeholder="Buscar (função ou colaborador)"
-          className="rounded-xl border border-neutral-200 px-3 py-2.5"
-        />
-        {isGestor && myColId && (
-          <label className="inline-flex items-center gap-2 text-xs text-neutral-600">
+            {/* Mobile: ícone de busca */}
+            <button
+              type="button"
+              onClick={()=>setSearchOpen(prev => !prev)}
+              className="md:hidden w-8 h-8 grid place-items-center rounded-full border border-neutral-300 text-neutral-600 bg-white"
+              aria-label="Buscar"
+            >
+              <Search className="size-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile: campo de busca expansível e filtro */}
+        <div className="md:hidden px-1 sm:px-2 pb-2 space-y-2">
+          {searchOpen && (
             <input
-              type="checkbox"
-              checked={onlyMine}
-              onChange={(e)=>setOnlyMine(e.target.checked)}
+              value={q}
+              onChange={(e)=>setQ(e.target.value)}
+              placeholder="Buscar (função ou colaborador)"
+              className="w-full rounded-xl border border-neutral-200 px-3 py-2 text-sm"
             />
-            <span>Mostrar apenas plantões do meu colaborador vinculado</span>
-          </label>
-        )}
+          )}
+          {isGestor && myColId && (
+            <label className="inline-flex items-center gap-2 text-[11px] text-neutral-600">
+              <input
+                type="checkbox"
+                checked={onlyMine}
+                onChange={(e)=>setOnlyMine(e.target.checked)}
+              />
+              <span>Mostrar apenas meu colaborador vinculado</span>
+            </label>
+          )}
+        </div>
       </div>
 
       <div className="overflow-x-auto">
