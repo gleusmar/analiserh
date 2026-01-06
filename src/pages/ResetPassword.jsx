@@ -4,7 +4,7 @@ import { clearMustChangePassword } from '../lib/db'
 import { useNavigate } from 'react-router-dom'
 
 export default function ResetPassword() {
-  const { updatePassword } = useAuth()
+  const { updatePassword, signOut } = useAuth()
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [message, setMessage] = useState(null)
@@ -27,10 +27,15 @@ export default function ResetPassword() {
       const { error } = await updatePassword(password)
       if (error) throw error
       try { await clearMustChangePassword() } catch (_) {}
-      setMessage({ type: 'success', text: 'Senha atualizada com sucesso. Redirecionando...' })
+      try { await signOut() } catch (_) {}
+      setMessage({ type: 'success', text: 'Senha atualizada com sucesso. Faça login novamente.' })
       setTimeout(()=>navigate('/login'), 1200)
     } catch (err) {
-      setMessage({ type: 'error', text: err.message || 'Erro ao atualizar senha.' })
+      let text = err?.message || 'Erro ao atualizar senha.'
+      if (typeof text === 'string' && text.toLowerCase().includes('new password should be different')) {
+        text = 'A nova senha deve ser diferente da senha anterior.'
+      }
+      setMessage({ type: 'error', text })
     } finally {
       setLoading(false)
     }
