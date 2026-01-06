@@ -12,7 +12,7 @@ import {
   listAuditLogsPaged,
   listCollaboratorsSimple,
 } from '../lib/db'
-import { createUser, linkProfileCollaborator, updateUserEmail } from '../lib/adminApi'
+import { createUser, linkProfileCollaborator, updateUserEmail, resetUserPassword } from '../lib/adminApi'
 import { CreateUserModal } from '../components/CreateUserModal.jsx'
 
 function classNames(...xs) { return xs.filter(Boolean).join(' ') }
@@ -75,6 +75,19 @@ export default function Users() {
       setError(e.message || 'Erro ao carregar dados')
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function onResetPassword(u) {
+    const next = window.prompt('Nova senha para o usuário:', '')
+    if (!next) return
+    const password = next.trim()
+    if (!password) return
+    try {
+      await resetUserPassword(u.id, password, { id: user?.id, email: user?.email })
+      alert('Senha redefinida com sucesso. O usuário deverá alterá-la no próximo acesso.')
+    } catch (e) {
+      alert(e.message || 'Erro ao redefinir senha')
     }
   }
 
@@ -326,6 +339,13 @@ export default function Users() {
                                   className="px-2 py-1 rounded-lg border border-neutral-200 disabled:opacity-50"
                                 >
                                   Editar
+                                </button>
+                                <button
+                                  disabled={lock}
+                                  onClick={()=>onResetPassword(u)}
+                                  className="px-2 py-1 rounded-lg border border-neutral-200 disabled:opacity-50"
+                                >
+                                  Resetar senha
                                 </button>
                               </div>
                             ) : (

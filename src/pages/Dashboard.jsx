@@ -240,6 +240,11 @@ export default function Dashboard() {
     [monthRef]
   )
 
+  const monthLabelShort = useMemo(
+    () => `${String(monthRef.getMonth() + 1).padStart(2, '0')}/${monthRef.getFullYear()}`,
+    [monthRef]
+  )
+
   const shiftsSorted = useMemo(() => {
     return [...myShifts].sort((a, b) => a.date.localeCompare(b.date))
   }, [myShifts])
@@ -259,19 +264,22 @@ export default function Dashboard() {
             to="/shifts"
             className="px-3 py-1.5 text-xs rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
           >
-            Ver calendário de plantões
+            <span className="hidden md:inline">Ver calendário de plantões</span>
+            <span className="md:hidden">Plantões</span>
           </Link>
           <Link
             to="/payroll/vacations"
             className="px-3 py-1.5 text-xs rounded-lg bg-amber-600 hover:bg-amber-700 text-white shadow-sm"
           >
-            Ver minhas férias
+            <span className="hidden md:inline">Ver minhas férias</span>
+            <span className="md:hidden">Férias</span>
           </Link>
           <Link
             to="/payroll"
             className="px-3 py-1.5 text-xs rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
           >
-            Ir para folhas mensais
+            <span className="hidden md:inline">Ir para folhas mensais</span>
+            <span className="md:hidden">Salários</span>
           </Link>
         </div>
       </div>
@@ -333,23 +341,26 @@ export default function Dashboard() {
           <div className="flex items-center justify-between gap-2">
             <div>
               <div className="text-sm font-semibold">Meus plantões</div>
-              <div className="text-xs text-neutral-500">Listagem dos plantões do colaborador vinculado no mês selecionado.</div>
+              <div className="text-xs hidden md:block text-neutral-500">Listagem dos plantões do colaborador vinculado no mês selecionado.</div>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={prevMonth}
                 className="px-2 py-1 text-xs rounded-lg border border-neutral-200 hover:bg-neutral-50"
               >
-                Anterior
+                <span className="hidden md:inline">Anterior</span>
+                <span className="md:hidden">&lt;</span>
               </button>
-              <div className="text-xs font-medium min-w-[120px] text-center">
-                {monthLabel}
+              <div className="text-xs font-medium min-w-[80px] text-center">
+                <span className="hidden md:inline capitalize">{monthLabel}</span>
+                <span className="md:hidden">{monthLabelShort}</span>
               </div>
               <button
                 onClick={nextMonth}
                 className="px-2 py-1 text-xs rounded-lg border border-neutral-200 hover:bg-neutral-50"
               >
-                Próximo
+                <span className="hidden md:inline">Próximo</span>
+                <span className="md:hidden">&gt;</span>
               </button>
             </div>
           </div>
@@ -476,78 +487,147 @@ export default function Dashboard() {
         )}
 
         {myColId && payHistory.length > 0 && (
-          <div className="overflow-x-auto rounded-xl border border-neutral-200">
-            <table className="w-full text-xs">
-              <thead className="bg-neutral-300 text-neutral-700">
-                <tr>
-                  <th className="py-2 px-2 text-left">Competência</th>
-                  <th className="py-2 px-2 text-left">Folha</th>
-                  <th className="py-2 px-2 text-right">Recebimentos</th>
-                  <th className="py-2 px-2 text-right">Descontos</th>
-                  <th className="py-2 px-2 text-right">Total líquido</th>
-                  <th className="py-2 px-2 text-center">Holerite</th>
-                </tr>
-              </thead>
-              <tbody>
-                {payHistory.map(row => (
-                  <>
-                    <tr
-                      key={row.sheetId}
-                      className={`border-t border-neutral-100 cursor-pointer ${selectedSheetId === row.sheetId ? 'bg-neutral-200' : 'bg-neutral-100'}`}
-                      onClick={() => setSelectedSheetId(prev => (prev === row.sheetId ? null : row.sheetId))}
-                    >
-                      <td className="py-1.5 px-2 text-sm">{row.year_month}</td>
-                      <td className="py-1.5 px-2 text-sm">{row.name}</td>
-                      <td className="py-1.5 px-2 text-sm text-right text-emerald-600">{formatBRL(row.inc)}</td>
-                      <td className="py-1.5 px-2 text-sm text-right text-red-600">{formatBRL(row.out)}</td>
-                      <td className="py-1.5 px-2 text-sm text-right font-medium">{formatBRL(row.total)}</td>
-                      <td className="py-1.5 px-2 text-center">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); downloadHolerite(row.sheetId) }}
-                          className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-blue-600 hover:bg-blue-700 text-white"
-                          title="Baixar holerite"
-                        >
-                          <FileDown className="size-4" />
-                        </button>
-                      </td>
-                    </tr>
-                    {selectedSheetId === row.sheetId && row.entries && row.entries.length > 0 && (
-                      <tr>
-                        <td colSpan={6} className="bg-amber-50 border-t border-neutral-100 md:pl-[50%] md:pr-3 pl-[10%] pr-3 py-2">
-                          <div className="text-[11px] text-neutral-500 mb-1">Lançamentos desta remuneração</div>
-                          <div className="space-y-1">
-                            {row.entries
-                              .slice()
-                              .sort((a, b) => {
-                                const ka = a.payroll_entry_types?.kind === 'in' ? 0 : 1
-                                const kb = b.payroll_entry_types?.kind === 'in' ? 0 : 1
-                                return ka - kb
-                              })
-                              .map(e => (
-                                <div
-                                  key={e.id}
-                                  className={`flex items-center justify-between rounded-lg border border-neutral-200 px-2 py-1 ${e.payroll_entry_types?.kind === 'out' ? 'text-red-600 bg-red-50' : 'text-emerald-700 bg-emerald-50'}`}
-                                >
-                                  <div className="flex flex-col">
-                                    <span className="text-xs font-medium text-neutral-800">{e.payroll_entry_types?.name || '-'}</span>
-                                    {e.note && (
-                                      <span className="text-[11px] text-neutral-500">{e.note}</span>
-                                    )}
-                                  </div>
-                                  <div className={`text-xs font-semibold ${e.payroll_entry_types?.kind === 'out' ? 'text-red-600' : 'text-emerald-700'}`}>
-                                    {e.payroll_entry_types?.kind === 'out' ? '-' : '+'} {formatBRL(e.amount)}
-                                  </div>
-                                </div>
-                              ))}
-                          </div>
+          <>
+            {/* Desktop/large screens: tabela com rolagem horizontal se necessário */}
+            <div className="hidden md:block overflow-x-auto rounded-xl border border-neutral-200">
+              <table className="w-full text-xs">
+                <thead className="bg-neutral-300 text-neutral-700">
+                  <tr>
+                    <th className="py-2 px-2 text-left">Competência</th>
+                    <th className="py-2 px-2 text-left">Folha</th>
+                    <th className="py-2 px-2 text-right">Recebimentos</th>
+                    <th className="py-2 px-2 text-right">Descontos</th>
+                    <th className="py-2 px-2 text-right">Total líquido</th>
+                    <th className="py-2 px-2 text-center">Holerite</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {payHistory.map(row => (
+                    <>
+                      <tr
+                        key={row.sheetId}
+                        className={`border-t border-neutral-100 cursor-pointer ${selectedSheetId === row.sheetId ? 'bg-neutral-200' : 'bg-neutral-100'}`}
+                        onClick={() => setSelectedSheetId(prev => (prev === row.sheetId ? null : row.sheetId))}
+                      >
+                        <td className="py-1.5 px-2 text-sm">{row.year_month}</td>
+                        <td className="py-1.5 px-2 text-sm">{row.name}</td>
+                        <td className="py-1.5 px-2 text-sm text-right text-emerald-600">{formatBRL(row.inc)}</td>
+                        <td className="py-1.5 px-2 text-sm text-right text-red-600">{formatBRL(row.out)}</td>
+                        <td className="py-1.5 px-2 text-sm text-right font-medium">{formatBRL(row.total)}</td>
+                        <td className="py-1.5 px-2 text-center">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); downloadHolerite(row.sheetId) }}
+                            className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-blue-600 hover:bg-blue-700 text-white"
+                            title="Baixar holerite"
+                          >
+                            <FileDown className="size-4" />
+                          </button>
                         </td>
                       </tr>
-                    )}
-                  </>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      {selectedSheetId === row.sheetId && row.entries && row.entries.length > 0 && (
+                        <tr>
+                          <td colSpan={6} className="bg-white border-t border-neutral-100 md:pl-[50%] md:pr-3 pl-[10%] pr-3 py-2">
+                            <div className="text-[11px] text-neutral-500 mb-1">Lançamentos desta remuneração</div>
+                            <div className="space-y-1">
+                              {row.entries
+                                .slice()
+                                .sort((a, b) => {
+                                  const ka = a.payroll_entry_types?.kind === 'in' ? 0 : 1
+                                  const kb = b.payroll_entry_types?.kind === 'in' ? 0 : 1
+                                  return ka - kb
+                                })
+                                .map(e => (
+                                  <div
+                                    key={e.id}
+                                    className={`flex items-center justify-between rounded-lg border border-neutral-200 px-2 py-1 ${e.payroll_entry_types?.kind === 'out' ? 'text-red-600 bg-red-50' : 'text-emerald-700 bg-emerald-50'}`}
+                                  >
+                                    <div className="flex flex-col">
+                                      <span className="text-xs font-medium text-neutral-800">{e.payroll_entry_types?.name || '-'}</span>
+                                      {e.note && (
+                                        <span className="text-[11px] text-neutral-500">{e.note}</span>
+                                      )}
+                                    </div>
+                                    <div className={`text-xs font-semibold ${e.payroll_entry_types?.kind === 'out' ? 'text-red-600' : 'text-emerald-700'}`}>
+                                      {e.payroll_entry_types?.kind === 'out' ? '-' : '+'} {formatBRL(e.amount)}
+                                    </div>
+                                  </div>
+                                ))}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile: lista em cartões, sem rolagem lateral */}
+            <div className="space-y-2 md:hidden">
+              {payHistory.map(row => (
+                <div
+                  key={row.sheetId}
+                  className={`rounded-xl border border-neutral-200 bg-neutral-50 ${selectedSheetId === row.sheetId ? 'ring-1 ring-neutral-400' : ''}`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSheetId(prev => (prev === row.sheetId ? null : row.sheetId))}
+                    className="w-full text-left px-3 pt-2 pb-1"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[11px] text-neutral-500">Competência</div>
+                        <div className="text-xs font-medium text-neutral-800 truncate">{row.year_month}</div>
+                        <div className="mt-1 text-[11px] text-neutral-500 truncate">{row.name}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-[11px] text-neutral-500">Total líquido</div>
+                        <div className="text-sm font-semibold text-neutral-900">{formatBRL(row.total)}</div>
+                      </div>
+                    </div>
+                  </button>
+                  <div className="px-3 pb-2 flex items-center justify-between gap-3">
+                    <div className="text-[11px] text-neutral-600">
+                      <div>Recebimentos: <span className="font-medium text-emerald-700">{formatBRL(row.inc)}</span></div>
+                      <div>Descontos: <span className="font-medium text-red-600">{formatBRL(row.out)}</span></div>
+                    </div>
+                    <button
+                      onClick={() => downloadHolerite(row.sheetId)}
+                      className="shrink-0 w-8 h-8 grid place-items-center rounded-md bg-blue-600 hover:bg-blue-700 text-white"
+                      title="Baixar holerite"
+                    >
+                      <FileDown className="size-4" />
+                    </button>
+                  </div>
+                  {selectedSheetId === row.sheetId && row.entries && row.entries.length > 0 && (
+                    <div className="px-3 pb-3 border-t border-neutral-200">
+                      <div className="text-[11px] text-neutral-500 mt-2 mb-1">Lançamentos desta remuneração</div>
+                      <div className="space-y-1">
+                        {row.entries
+                          .slice()
+                          .sort((a, b) => {
+                            const ka = a.payroll_entry_types?.kind === 'in' ? 0 : 1
+                            const kb = b.payroll_entry_types?.kind === 'in' ? 0 : 1
+                            return ka - kb
+                          })
+                          .map(e => (
+                            <div
+                              key={e.id}
+                              className={`flex items-center justify-between rounded-lg border border-neutral-200 px-2 py-1 ${e.payroll_entry_types?.kind === 'out' ? 'text-red-600 bg-red-50' : 'text-emerald-700 bg-emerald-50'}`}
+                            >
+                              <span className="text-[11px] font-medium truncate mr-2">{e.payroll_entry_types?.name || '-'}</span>
+                              <span className={`text-[11px] font-semibold ${e.payroll_entry_types?.kind === 'out' ? 'text-red-600' : 'text-emerald-700'}`}>
+                                {e.payroll_entry_types?.kind === 'out' ? '-' : '+'} {formatBRL(e.amount)}
+                              </span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>

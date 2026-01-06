@@ -245,6 +245,54 @@ app.post('/api/admin/profiles/update-email', async (req, res) => {
   }
 })
 
+// Reset user password (admin only; service role bypasses RLS)
+app.post('/api/admin/profiles/reset-password', async (req, res) => {
+  try {
+    const { profile_id, password } = req.body || {}
+    if (!profile_id || !password) {
+      return res.status(400).json({ error: 'profile_id e password são obrigatórios' })
+    }
+
+    const { data: before, error: selErr } = await admin
+      .from('profiles')
+      .select('id, email')
+      .eq('id', profile_id)
+      .maybeSingle()
+    if (selErr) throw selErr
+    if (!before) return res.status(404).json({ error: 'perfil não encontrado' })
+
+    const { error: updErr } = await admin.auth.admin.updateUserById(profile_id, { password })
+    if (updErr) throw updErr
+
+    const { data, error: profErr } = await admin
+      .from('profiles')
+      .update({ must_change_password: true })
+      .eq('id', profile_id)
+      .select('id, email')
+      .single()
+    if (profErr) throw profErr
+
+    try {
+      const actorId = req.header('x-actor-id') || null
+      const actorEmail = req.header('x-actor-email') || null
+      await admin.from('audit_logs').insert({
+        action: 'user:password:reset',
+        actor_id: actorId,
+        actor_email: actorEmail,
+        target_id: data.id,
+        target_email: data.email,
+      })
+    } catch (logErr) {
+      console.warn('audit log failed', logErr)
+    }
+
+    res.json({ ok: true, id: data.id })
+  } catch (e) {
+    console.error(e)
+    res.status(500).json({ error: e.message || 'falha ao resetar senha do usuário' })
+  }
+})
+
 // Create user (admin only; for now we trust local dev). In production, add auth/checks.
 app.post('/api/admin/users', async (req, res) => {
   try {

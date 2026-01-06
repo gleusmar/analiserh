@@ -60,3 +60,21 @@ export async function linkProfileCollaborator(profileId, collaboratorId, actor) 
   }
   return data
 }
+
+export async function resetUserPassword(profileId, password, actor) {
+  const body = { profile_id: profileId, password }
+  const res = await fetch(adminUrl('/admin/profiles/reset-password'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(actor?.id ? { 'x-actor-id': actor.id } : {}),
+      ...(actor?.email ? { 'x-actor-email': actor.email } : {}),
+    },
+    body: JSON.stringify(body),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    throw new Error(data?.error || data?.message || 'Falha ao resetar senha do usuário')
+  }
+  return data
+}

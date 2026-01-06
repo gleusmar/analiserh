@@ -486,92 +486,181 @@ export default function Payroll() {
       )}
 
       {selectedSheetId && (
-        <div className="overflow-x-auto rounded-xl bg-white text-neutral-900">
-          <table className="w-full text-sm">
-            <thead className="text-left text-neutral-500">
-              <tr>
-                <th className="py-2 cursor-pointer" onClick={()=>toggleOrder('concent_id')}>ID</th>
-                {canAdmin && (
-                  <th className="py-2 cursor-pointer" onClick={()=>toggleOrder('name')}>Nome</th>
-                )}
-                <th className="py-2 cursor-pointer" onClick={()=>toggleOrder('inc')}>Recebimentos</th>
-                <th className="py-2 cursor-pointer" onClick={()=>toggleOrder('out')}>Descontos</th>
-                <th className="py-2 cursor-pointer" onClick={()=>toggleOrder('total')}>Total</th>
-                <th className="py-2">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredItems.map(it => {
-                const col = it.collaborators
-                const totals = totalsByItem[it.id] || { inc:0, out:0, total:0 }
-                const isBB = (col?.bank_code || '').trim() === '001'
-                const rowColor = isBB ? 'bg-amber-50 hover:bg-amber-100' : 'bg-green-50 hover:bg-green-100'
-                return (
-                  <Fragment key={it.id}>
-                    <tr onClick={()=>toggleExpanded(it.id)} className={`border-t border-neutral-200 cursor-pointer ${rowColor} text-neutral-900`}>
-                      <td className="py-1 px-1">{col?.concent_id || '-'}</td>
-                      {canAdmin && (
-                        <td className="py-2 px-1 font-medium">{col?.name || '-'}</td>
-                      )}
-                      <td className="py-2 px-1">{formatBRL(totals.inc)}</td>
-                      <td className="py-2 px-1">{formatBRL(totals.out)}</td>
-                      <td className="py-2 px-1 font-semibold">{formatBRL(totals.total)}</td>
-                      <td className="py-2 px-1">
-                        <div className="inline-flex items-center gap-2">
-                          <button onClick={(e)=>{ e.stopPropagation(); onDownloadHolerite(it.collaborator_id) }} className="w-7 h-7 grid place-items-center rounded-md bg-blue-600 hover:bg-blue-700 text-white" title="Holerite">
-                            <FileDown className="size-4" />
-                          </button>
-                          {canAdmin && (
-                            <>
-                              <button onClick={(e)=>{ e.stopPropagation(); onRemoveHolerite(it.collaborator_id) }} className="w-7 h-7 grid place-items-center rounded-md bg-red-600 hover:bg-red-700 text-white" title="Remover Holerite">
-                                <Trash2 className="size-4" />
-                              </button>
-                              <button onClick={(e)=>{ e.stopPropagation(); onRemoveItemFromSheet(it.collaborator_id) }} className="w-7 h-7 grid place-items-center rounded-md bg-amber-500 hover:bg-amber-600 text-white" title="Retirar da Folha">
-                                <UserMinus className="size-4" />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                    {expanded[it.id] && (
-                      <tr>
-                        <td colSpan={detailColSpan} className="bg-neutral-50 p-3 text-neutral-900">
-                          <div className="space-y-3">
-                            <div className="text-sm text-neutral-500">Lançamentos</div>
-                            <div className="space-y-1 pl-[10%] md:pl-[40%]">
-                              {(entriesByItem[it.id]||[]).slice().sort((a,b)=>{
-                                const ka = a.payroll_entry_types?.kind === 'in' ? 0 : 1
-                                const kb = b.payroll_entry_types?.kind === 'in' ? 0 : 1
-                                return ka - kb
-                              }).map(en => (
-                                <div key={en.id} className={"flex items-center justify-between rounded-lg border border-neutral-200 text-neutral-900 px-2 py-1" + (en.payroll_entry_types?.kind==='out' ? 'text-red-600 bg-red-50' : 'text-emerald-600 bg-emerald-50')}>
-                                  <div className="text-xs">
-                                    <span className="font-medium">{en.payroll_entry_types?.name || '-'}</span>
-                                    <span className="ml-2 text-neutral-500">{en.note || ''}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <div className={"text-xs " + (en.payroll_entry_types?.kind==='out' ? 'text-red-600' : 'text-emerald-600')}>
-                                      {en.payroll_entry_types?.kind==='out' ? '-' : '+'} {formatBRL(en.amount)}
-                                    </div>
-                                    {canAdmin && !isClosed && (
-                                      <button onClick={()=>removeEntry(it.id, en.id)} className="px-2 py-1 text-xs rounded-lg border border-red-200 text-red-600">X</button>
-                                    )}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                            {canAdmin && !isClosed && <AddEntryForm types={types} onSubmit={(f)=>addEntry(it.id, f.form, f.setForm)} />}
+        <>
+          {/* Desktop: tabela com possível rolagem horizontal */}
+          <div className="hidden md:block overflow-x-auto rounded-xl bg-white text-neutral-900">
+            <table className="w-full text-sm">
+              <thead className="text-left text-neutral-500">
+                <tr>
+                  <th className="py-2 cursor-pointer" onClick={()=>toggleOrder('concent_id')}>ID</th>
+                  {canAdmin && (
+                    <th className="py-2 cursor-pointer" onClick={()=>toggleOrder('name')}>Nome</th>
+                  )}
+                  <th className="py-2 cursor-pointer" onClick={()=>toggleOrder('inc')}>Recebimentos</th>
+                  <th className="py-2 cursor-pointer" onClick={()=>toggleOrder('out')}>Descontos</th>
+                  <th className="py-2 cursor-pointer" onClick={()=>toggleOrder('total')}>Total</th>
+                  <th className="py-2">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredItems.map(it => {
+                  const col = it.collaborators
+                  const totals = totalsByItem[it.id] || { inc:0, out:0, total:0 }
+                  const isBB = (col?.bank_code || '').trim() === '001'
+                  const rowColor = isBB ? 'bg-amber-50 hover:bg-amber-100' : 'bg-green-50 hover:bg-green-100'
+                  return (
+                    <Fragment key={it.id}>
+                      <tr onClick={()=>toggleExpanded(it.id)} className={`border-t border-neutral-200 cursor-pointer ${rowColor} text-neutral-900`}>
+                        <td className="py-1 px-1">{col?.concent_id || '-'}</td>
+                        {canAdmin && (
+                          <td className="py-2 px-1 font-medium">{col?.name || '-'}</td>
+                        )}
+                        <td className="py-2 px-1">{formatBRL(totals.inc)}</td>
+                        <td className="py-2 px-1">{formatBRL(totals.out)}</td>
+                        <td className="py-2 px-1 font-semibold">{formatBRL(totals.total)}</td>
+                        <td className="py-2 px-1">
+                          <div className="inline-flex items-center gap-2">
+                            <button onClick={(e)=>{ e.stopPropagation(); onDownloadHolerite(it.collaborator_id) }} className="w-7 h-7 grid place-items-center rounded-md bg-blue-600 hover:bg-blue-700 text-white" title="Holerite">
+                              <FileDown className="size-4" />
+                            </button>
+                            {canAdmin && (
+                              <>
+                                <button onClick={(e)=>{ e.stopPropagation(); onRemoveHolerite(it.collaborator_id) }} className="w-7 h-7 grid place-items-center rounded-md bg-red-600 hover:bg-red-700 text-white" title="Remover Holerite">
+                                  <Trash2 className="size-4" />
+                                </button>
+                                <button onClick={(e)=>{ e.stopPropagation(); onRemoveItemFromSheet(it.collaborator_id) }} className="w-7 h-7 grid place-items-center rounded-md bg-amber-500 hover:bg-amber-600 text-white" title="Retirar da Folha">
+                                  <UserMinus className="size-4" />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>
-                    )}
-                  </Fragment>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+                      {expanded[it.id] && (
+                        <tr>
+                          <td colSpan={detailColSpan} className="bg-neutral-50 p-3 text-neutral-900">
+                            <div className="space-y-3">
+                              <div className="text-sm text-neutral-500">Lançamentos</div>
+                              <div className="space-y-1 pl-[10%] md:pl-[40%]">
+                                {(entriesByItem[it.id]||[]).slice().sort((a,b)=>{
+                                  const ka = a.payroll_entry_types?.kind === 'in' ? 0 : 1
+                                  const kb = b.payroll_entry_types?.kind === 'in' ? 0 : 1
+                                  return ka - kb
+                                }).map(en => (
+                                  <div key={en.id} className={"flex items-center justify-between rounded-lg border border-neutral-200 text-neutral-900 px-2 py-1" + (en.payroll_entry_types?.kind==='out' ? 'text-red-600 bg-red-50' : 'text-emerald-600 bg-emerald-50')}>
+                                    <div className="text-xs">
+                                      <span className="font-medium">{en.payroll_entry_types?.name || '-'}</span>
+                                      <span className="ml-2 text-neutral-500">{en.note || ''}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <div className={"text-xs " + (en.payroll_entry_types?.kind==='out' ? 'text-red-600' : 'text-emerald-600')}>
+                                        {en.payroll_entry_types?.kind==='out' ? '-' : '+'} {formatBRL(en.amount)}
+                                      </div>
+                                      {canAdmin && !isClosed && (
+                                        <button onClick={()=>removeEntry(it.id, en.id)} className="px-2 py-1 text-xs rounded-lg border border-red-200 text-red-600">X</button>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                              {canAdmin && !isClosed && <AddEntryForm types={types} onSubmit={(f)=>addEntry(it.id, f.form, f.setForm)} />}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile: cartões por colaborador, sem rolagem lateral */}
+          <div className="md:hidden space-y-3">
+            {filteredItems.map(it => {
+              const col = it.collaborators
+              const totals = totalsByItem[it.id] || { inc:0, out:0, total:0 }
+              const isBB = (col?.bank_code || '').trim() === '001'
+              const baseColor = isBB ? 'bg-amber-50' : 'bg-green-50'
+              return (
+                <div
+                  key={it.id}
+                  className={`rounded-xl border border-neutral-200 ${baseColor} text-neutral-900`}
+                >
+                  <button
+                    type="button"
+                    onClick={()=>toggleExpanded(it.id)}
+                    className="w-full text-left px-3 pt-2 pb-1"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-semibold truncate">{col?.name || '-'}</div>
+                        <div className="text-[11px] text-neutral-600">ID: {col?.concent_id || '-'}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-[11px] text-neutral-600">Total</div>
+                        <div className="text-sm font-semibold">{formatBRL(totals.total)}</div>
+                      </div>
+                    </div>
+                  </button>
+                  <div className="px-3 pb-2 flex items-center justify-between gap-3">
+                    <div className="text-[11px] text-neutral-700">
+                      <div>Recebimentos: <span className="font-medium text-emerald-700">{formatBRL(totals.inc)}</span></div>
+                      <div>Descontos: <span className="font-medium text-red-600">{formatBRL(totals.out)}</span></div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button onClick={()=>onDownloadHolerite(it.collaborator_id)} className="w-8 h-8 grid place-items-center rounded-md bg-blue-600 hover:bg-blue-700 text-white" title="Holerite">
+                        <FileDown className="size-4" />
+                      </button>
+                      {canAdmin && (
+                        <>
+                          <button onClick={()=>onRemoveHolerite(it.collaborator_id)} className="w-8 h-8 grid place-items-center rounded-md bg-red-600 hover:bg-red-700 text-white" title="Remover Holerite">
+                            <Trash2 className="size-4" />
+                          </button>
+                          <button onClick={()=>onRemoveItemFromSheet(it.collaborator_id)} className="w-8 h-8 grid place-items-center rounded-md bg-amber-500 hover:bg-amber-600 text-white" title="Retirar da Folha">
+                            <UserMinus className="size-4" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  {expanded[it.id] && (
+                    <div className="px-3 pb-3 border-t border-neutral-200 bg-neutral-50">
+                      <div className="text-[11px] text-neutral-500 mt-2 mb-1">Lançamentos</div>
+                      <div className="space-y-1">
+                        {(entriesByItem[it.id]||[]).slice().sort((a,b)=>{
+                          const ka = a.payroll_entry_types?.kind === 'in' ? 0 : 1
+                          const kb = b.payroll_entry_types?.kind === 'in' ? 0 : 1
+                          return ka - kb
+                        }).map(en => (
+                          <div
+                            key={en.id}
+                            className={"flex items-center justify-between rounded-lg border border-neutral-200 px-2 py-1 " + (en.payroll_entry_types?.kind==='out' ? 'text-red-600 bg-red-50' : 'text-emerald-700 bg-emerald-50')}
+                          >
+                            <span className="text-[11px] font-medium truncate mr-2">{en.payroll_entry_types?.name || '-'}</span>
+                            <div className="flex items-center gap-2">
+                              <span className={"text-[11px] font-semibold " + (en.payroll_entry_types?.kind==='out' ? 'text-red-600' : 'text-emerald-700')}>
+                                {en.payroll_entry_types?.kind==='out' ? '-' : '+'} {formatBRL(en.amount)}
+                              </span>
+                              {canAdmin && !isClosed && (
+                                <button onClick={()=>removeEntry(it.id, en.id)} className="px-2 py-1 text-[10px] rounded-lg border border-red-200 text-red-600">X</button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {canAdmin && !isClosed && (
+                        <div className="mt-2">
+                          <AddEntryForm types={types} onSubmit={(f)=>addEntry(it.id, f.form, f.setForm)} />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </>
       )}
 
       {openCreate && (
@@ -731,14 +820,39 @@ export default function Payroll() {
 function AddEntryForm({ types, onSubmit }) {
   const [form, setForm] = useState({ entry_type_id: '', amount: '', note: '' })
   return (
-    <form onSubmit={(e)=>{ e.preventDefault(); onSubmit({ form, setForm }) }} className="flex flex-wrap items-center gap-2">
-      <select value={form.entry_type_id} onChange={(e)=>setForm(f=>({ ...f, entry_type_id: e.target.value }))} className="rounded-xl border border-neutral-200 px-3 py-2.5">
+    <form
+      onSubmit={(e)=>{ e.preventDefault(); onSubmit({ form, setForm }) }}
+      className="flex flex-wrap items-center gap-2"
+    >
+      <select
+        value={form.entry_type_id}
+        onChange={(e)=>setForm(f=>({ ...f, entry_type_id: e.target.value }))}
+        className="rounded-xl border border-neutral-200 px-3 py-2.5 w-full sm:w-auto"
+      >
         <option value="">Tipo</option>
-        {types.map(t => <option key={t.id} value={t.id}>{t.name} ({t.kind==='out'?'desconto':'recebimento'})</option>)}
+        {types.map(t => (
+          <option key={t.id} value={t.id}>{t.name} ({t.kind==='out'?'desconto':'recebimento'})</option>
+        ))}
       </select>
-      <input placeholder="Valor" value={form.amount} onChange={(e)=>setForm(f=>({ ...f, amount: e.target.value }))} className="rounded-xl border border-neutral-200 px-3 py-2.5 w-40" inputMode="decimal"/>
-      <input placeholder="Observação" value={form.note} onChange={(e)=>setForm(f=>({ ...f, note: e.target.value }))} className="rounded-xl border border-neutral-200 px-3 py-2.5 flex-1"/>
-      <button type="submit" className="text-xs rounded-lg border border-neutral-200 px-3 py-2">Adicionar</button>
+      <input
+        placeholder="Observação"
+        value={form.note}
+        onChange={(e)=>setForm(f=>({ ...f, note: e.target.value }))}
+        className="rounded-xl border border-neutral-200 px-3 py-2.5 flex-1 min-w-[120px]"
+      />
+      <input
+        placeholder="Valor"
+        value={form.amount}
+        onChange={(e)=>setForm(f=>({ ...f, amount: e.target.value }))}
+        className="rounded-xl border border-neutral-200 px-3 py-2.5 w-28 sm:w-32"
+        inputMode="decimal"
+      />
+      <button
+        type="submit"
+        className="text-xs rounded-lg border border-neutral-200 px-3 py-2"
+      >
+        Adicionar
+      </button>
     </form>
   )
 }

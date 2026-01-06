@@ -220,7 +220,9 @@ export default function Vacations() {
           {filtered.map(v => (
             <div key={v.id} className="rounded-xl border border-neutral-200 p-3 flex items-center justify-between hover:bg-neutral-50 transition-colors">
               <div className="space-y-1">
-                <div className="text-sm font-semibold">{formatDateBR(v.start_date)} → {formatDateBR(v.end_date)} ({v.days} dias)</div>
+                <div className="text-sm font-semibold">
+                  De {formatDateBR(v.start_date)} a {formatDateBR(v.end_date)} ({computeVacationDays(v)} dias)
+                </div>
                 <div className="text-xs text-neutral-500">Período: {v.period || '-'} | Remuneração: {formatBRL(v.remuneration)}</div>
               </div>
               <div className="flex items-center gap-2">
@@ -267,9 +269,14 @@ export default function Vacations() {
                       </span>
                     </div>
                     <div className="md:col-span-3 px-2 text-sm">{v.collaborators?.name || '-'}</div>
-                    <div className="md:col-span-1 px-2 text-sm">{computeVacationDays(v)}</div>
-                    <div className="md:col-span-2 px-2 text-sm">{formatDateBR(v.start_date)}</div>
-                    <div className="md:col-span-2 px-2 text-sm">{formatDateBR(v.end_date)}</div>
+                    <div className="md:col-span-1 px-2 text-sm">{computeVacationDays(v)} dias</div>
+                    {/* Desktop: datas em colunas separadas */}
+                    <div className="hidden md:block md:col-span-2 px-2 text-sm">{formatDateBR(v.start_date)}</div>
+                    <div className="hidden md:block md:col-span-2 px-2 text-sm">{formatDateBR(v.end_date)}</div>
+                    {/* Mobile: datas combinadas em uma linha */}
+                    <div className="md:hidden px-2 text-xs text-neutral-700">
+                      De {formatDateBR(v.start_date)} a {formatDateBR(v.end_date)}
+                    </div>
                     <div className="md:col-span-1 px-2 text-sm">{formatBRL(v.remuneration)}</div>
                     <div className="md:col-span-1 px-2 hidden md:flex items-center gap-2 justify-end">
                       <button className="w-7 h-7 grid place-items-center rounded-md bg-blue-600 hover:bg-blue-700 text-white" onClick={()=>downloadReceipt(v.id)} title="Recibo">
