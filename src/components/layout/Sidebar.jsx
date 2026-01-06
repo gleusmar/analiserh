@@ -18,7 +18,7 @@ export default function Sidebar({ open = false, onClose = () => {} }) {
       title: 'Plantões',
       items: [
         { to: '/shifts', label: 'Calendário', icon: Calendar, show: canAdmin || canGestor || isUser },
-        { to: '/shifts/dashboard', label: 'Por mês', icon: BarChart, show: canAdmin || canGestor },
+        { to: '/shifts/dashboard', label: 'Por mês', icon: BarChart, show: canAdmin || canGestor || isUser },
       ],
     },
     {

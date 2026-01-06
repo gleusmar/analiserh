@@ -26,7 +26,17 @@ export default function ResetPassword() {
     try {
       const { error } = await updatePassword(password)
       if (error) throw error
-      try { await clearMustChangePassword() } catch (_) {}
+
+      let updatedProfile = null
+      try {
+        updatedProfile = await clearMustChangePassword()
+      } catch (_e) {
+        throw new Error('Senha alterada, mas não foi possível finalizar a troca obrigatória. Tente novamente ou contate o suporte.')
+      }
+      if (!updatedProfile || updatedProfile.must_change_password) {
+        throw new Error('Senha alterada, mas não foi possível finalizar a troca obrigatória. Tente novamente ou contate o suporte.')
+      }
+
       try { window.localStorage.setItem('skip-must-change-password', '1') } catch (_) {}
       try { await signOut() } catch (_) {}
       setMessage({ type: 'success', text: 'Senha atualizada com sucesso. Faça login novamente.' })

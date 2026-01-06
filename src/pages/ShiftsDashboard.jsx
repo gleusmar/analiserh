@@ -258,7 +258,9 @@ export default function ShiftsDashboard() {
               <div>
                 <div className="font-semibold text-xs text-neutral-900">{formatBRfromYMD(r.date)}</div>
                 <div className="mt-1">
-                  <div className="text-xs font-semibold text-neutral-900 truncate">{r.collaborator_name}</div>
+                  {!isUser && (
+                    <div className="text-xs font-semibold text-neutral-900 truncate">{r.collaborator_name}</div>
+                  )}
                   <div className="text-xs text-neutral-600 truncate">{r.function_name}</div>
                 </div>
               </div>
@@ -282,7 +284,9 @@ export default function ShiftsDashboard() {
             <tr>
               <th className="py-2"><button className="hover:underline inline-flex items-center gap-1" onClick={()=>toggleSort('date')}>Data {orderBy==='date' ? (direction==='asc'?'↑':'↓') : ''}</button></th>
               <th className="py-2"><button className="hover:underline inline-flex items-center gap-1" onClick={()=>toggleSort('function_name')}>Função {orderBy==='function_name' ? (direction==='asc'?'↑':'↓') : ''}</button></th>
-              <th className="py-2"><button className="hover:underline inline-flex items-center gap-1" onClick={()=>toggleSort('collaborator_name')}>Colaborador {orderBy==='collaborator_name' ? (direction==='asc'?'↑':'↓') : ''}</button></th>
+              {!isUser && (
+                <th className="py-2"><button className="hover:underline inline-flex items-center gap-1" onClick={()=>toggleSort('collaborator_name')}>Colaborador {orderBy==='collaborator_name' ? (direction==='asc'?'↑':'↓') : ''}</button></th>
+              )}
               <th className="py-2">Remun.</th>
               <th className="py-2"><button className="hover:underline inline-flex items-center gap-1" onClick={()=>toggleSort('value')}>Valor {orderBy==='value' ? (direction==='asc'?'↑':'↓') : ''}</button></th>
             </tr>
@@ -292,7 +296,9 @@ export default function ShiftsDashboard() {
               <tr key={r.id} className="border-t border-neutral-200">
                 <td className="py-2 px-2">{formatBRfromYMD(r.date)}</td>
                 <td className="py-2 px-2">{r.function_name}</td>
-                <td className="py-2 px-2">{r.collaborator_name}</td>
+                {!isUser && (
+                  <td className="py-2 px-2">{r.collaborator_name}</td>
+                )}
                 <td className="py-2 px-2">{r.remunerated ? '✓' : ''}</td>
                 <td className="py-2 px-2">{r.value.toLocaleString('pt-BR',{ style:'currency', currency:'BRL'})}</td>
               </tr>

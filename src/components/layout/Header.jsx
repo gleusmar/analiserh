@@ -20,7 +20,7 @@ export default function Header({ onToggleSidebar }) {
       title: 'Plantões',
       items: [
         { to: '/shifts', label: 'Calendário', show: canAdmin || canGestor || isUser },
-        { to: '/shifts/dashboard', label: 'Por mês', show: canAdmin || canGestor },
+        { to: '/shifts/dashboard', label: 'Por mês', show: canAdmin || canGestor || isUser },
       ],
     },
     {
