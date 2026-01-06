@@ -25,10 +25,14 @@ export default function ProtectedRoute({ children }) {
   }
 
   // Force password change flow
-  if (skipMustChange && profile?.must_change_password) {
-    try {
-      window.localStorage.removeItem('skip-must-change-password')
-    } catch (_) {}
+  // If we have the skip flag (set right after redefinir a senha), sempre deixar passar
+  // e só limpar a flag quando o perfil já refletir must_change_password === false.
+  if (skipMustChange) {
+    if (profile && profile.must_change_password === false) {
+      try {
+        window.localStorage.removeItem('skip-must-change-password')
+      } catch (_) {}
+    }
     return children
   }
 

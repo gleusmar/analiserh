@@ -149,9 +149,9 @@ export default function ShiftsDashboard() {
   return (
     <div className="space-y-4">
       <div className="sticky pt-2 top-14 z-20 bg-white/95 backdrop-blur border-b border-neutral-200">
-        <div className="py-2 px-1 sm:px-2 flex flex-row gap-2 md:flex-row md:items-center">
+        <div className="py-2 px-1 items-center sm:px-2 flex flex-row gap-2 md:flex-row md:items-center">
           <div className="flex-1">
-            <h1 className="text-lg md:text-2xl font-semibold">Plantões do mês</h1>
+            <h1 className="text-sm md:text-2xl font-semibold">Plantões do mês</h1>
           </div>
           <div className="flex-1 flex items-center justify-center">
             <div className="inline-flex items-center gap-3 rounded-full border border-emerald-200 bg-emerald-50/80 px-3 py-1.5 text-sm md:text-base font-medium text-emerald-900 shadow-sm">
@@ -238,7 +238,13 @@ export default function ShiftsDashboard() {
             className="rounded-xl border border-neutral-200 bg-white px-3 py-2 shadow-sm text-xs flex flex-col gap-1"
           >
             <div className="flex items-baseline justify-between gap-2">
-              <div className="font-semibold text-neutral-900">{formatBRfromYMD(r.date)}</div>
+              <div>
+                <div className="font-semibold text-neutral-900">{formatBRfromYMD(r.date)}</div>
+                <div className="mt-1">
+                  <div className="text-sm font-semibold text-neutral-900 truncate">{r.collaborator_name}</div>
+                  <div className="text-sm text-neutral-600 truncate">{r.function_name}</div>
+                </div>
+              </div>
               <div className="text-right">
                 <div className="text-sm font-semibold text-emerald-700">
                   {r.value.toLocaleString('pt-BR',{ style:'currency', currency:'BRL'})}
@@ -247,10 +253,6 @@ export default function ShiftsDashboard() {
                   {r.remunerated ? 'Remunerado' : 'Não remunerado'}
                 </div>
               </div>
-            </div>
-            <div className="mt-1">
-              <div className="text-[11px] font-semibold text-neutral-900 truncate">{r.collaborator_name}</div>
-              <div className="text-[11px] text-neutral-600 truncate">{r.function_name}</div>
             </div>
           </div>
         ))}
