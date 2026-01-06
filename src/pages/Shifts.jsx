@@ -371,13 +371,13 @@ export default function Shifts() {
 
   return (
     <div className="space-y-4">
-      <div className="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-neutral-200">
+      <div className="sticky top-16 z-20 bg-white/95 backdrop-blur border-b border-neutral-200">
         <div className="py-2 px-1 sm:px-2 flex flex-col gap-2 md:flex-row md:items-center">
           <div className="flex-1">
-            <h1 className="text-lg md:text-2xl font-semibold">Plantões</h1>
+            <h1 className="text-sm md:text-2xl font-semibold">Plantões</h1>
           </div>
           <div className="flex-1 flex items-center justify-center">
-            <div className="inline-flex items-center gap-3 rounded-full border border-emerald-200 bg-emerald-50/80 px-3 py-1.5 text-xs md:text-sm font-medium text-emerald-900 shadow-sm">
+            <div className="inline-flex items-center gap-3 rounded-full border border-emerald-200 bg-emerald-50/80 px-3 py-1.5 text-sm md:text-base font-medium text-emerald-900 shadow-sm">
               <button
                 type="button"
                 onClick={prevMonth}
@@ -403,14 +403,14 @@ export default function Shifts() {
                 onClick={()=>setBulkOpen(true)}
                 className="px-2 md:px-3 py-1.5 md:py-2 text-[11px] md:text-xs rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
               >
-                Inserção múltipla
+                Múltiplo
               </button>
             )}
           </div>
         </div>
-        <div className="pb-2 text-center text-[11px] md:text-xs text-neutral-600">
+        {/*<div className="pb-2 text-center text-[11px] md:text-xs text-neutral-600">
           {monthNameShort}
-        </div>
+        </div>*/}
       </div>
 
       {error && (

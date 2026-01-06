@@ -151,10 +151,10 @@ export default function ShiftsDashboard() {
       <div className="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-neutral-200">
         <div className="py-2 px-1 sm:px-2 flex flex-col gap-2 md:flex-row md:items-center">
           <div className="flex-1">
-            <h1 className="text-lg md:text-2xl font-semibold">Dashboard de Plantões</h1>
+            <h1 className="text-lg md:text-2xl font-semibold">Plantões do mês</h1>
           </div>
           <div className="flex-1 flex items-center justify-center">
-            <div className="inline-flex items-center gap-3 rounded-full border border-emerald-200 bg-emerald-50/80 px-3 py-1.5 text-xs md:text-sm font-medium text-emerald-900 shadow-sm">
+            <div className="inline-flex items-center gap-3 rounded-full border border-emerald-200 bg-emerald-50/80 px-3 py-1.5 text-sm md:text-base font-medium text-emerald-900 shadow-sm">
               <button
                 type="button"
                 onClick={prevMonth}
@@ -230,7 +230,34 @@ export default function ShiftsDashboard() {
         </div>
       </div>
 
-      <div className="overflow-x-auto">
+      {/* Mobile: cards legíveis */}
+      <div className="space-y-2 md:hidden">
+        {filtered.map(r => (
+          <div
+            key={r.id}
+            className="rounded-xl border border-neutral-200 bg-white px-3 py-2 shadow-sm text-xs flex flex-col gap-1"
+          >
+            <div className="flex items-baseline justify-between gap-2">
+              <div className="font-semibold text-neutral-900">{formatBRfromYMD(r.date)}</div>
+              <div className="text-right">
+                <div className="text-sm font-semibold text-emerald-700">
+                  {r.value.toLocaleString('pt-BR',{ style:'currency', currency:'BRL'})}
+                </div>
+                <div className={`mt-0.5 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] ${r.remunerated ? 'bg-emerald-50 text-emerald-700' : 'bg-neutral-100 text-neutral-600'}`}>
+                  {r.remunerated ? 'Remunerado' : 'Não remunerado'}
+                </div>
+              </div>
+            </div>
+            <div className="mt-1">
+              <div className="text-[11px] font-semibold text-neutral-900 truncate">{r.collaborator_name}</div>
+              <div className="text-[11px] text-neutral-600 truncate">{r.function_name}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop: tabela completa */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="text-left text-neutral-500">
             <tr>

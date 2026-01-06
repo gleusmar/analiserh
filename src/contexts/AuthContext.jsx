@@ -35,10 +35,12 @@ export function AuthProvider({ children }) {
     let cancelled = false
     async function load() {
       if (!user) {
+        setProfile(null)
         setRole('anonymous')
         return
       }
       try {
+        setProfile(null)
         await ensureProfile(user)
         const profile = await fetchMyProfile()
         setProfile(profile)
