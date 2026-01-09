@@ -319,7 +319,10 @@ export default function Payroll() {
       return (av - bv) * dir
     })
   }
-  const selectedSheet = useMemo(() => sheets.find(s=>s.id===selectedSheetId) || null, [sheets, selectedSheetId])
+  const selectedSheet = useMemo(
+    () => sheets.find(s => String(s.id) === String(selectedSheetId)) || null,
+    [sheets, selectedSheetId],
+  )
   const isClosed = !!selectedSheet?.closed_at
   const detailColSpan = canAdmin ? 6 : 5
   const filteredItems = useMemo(() => {
@@ -360,48 +363,59 @@ export default function Payroll() {
       return
     }
 
-    const header = 'Empresa;Filial;Emitente;Esp. Docto;Série;Nr. Docto;Parcela;Dt. Emissão;Dt. Movimento;Valor do Saldo;Dt. Vencto;Tipo Rec/Desp;Portador;Carteira;Histórico'
-    const lines = [header]
+    try {
+      const baseItems = filteredItems || []
+      if (!baseItems.length) {
+        alert('Não há colaboradores na folha (ou no filtro atual) para exportar.')
+        return
+      }
 
-    ;(items || []).forEach(it => {
-      const col = it.collaborators
-      const totals = totalsByItem[it.id] || { total: 0 }
-      const total = Number(totals.total || 0)
-      const saldo = total.toFixed(2) // 2 casas decimais, ponto como separador
+      const header = 'Empresa;Filial;Emitente;Esp. Docto;Série;Nr. Docto;Parcela;Dt. Emissão;Dt. Movimento;Valor do Saldo;Dt. Vencto;Tipo Rec/Desp;Portador;Carteira;Histórico'
+      const lines = [header]
 
-      const row = [
-        '1', // Empresa
-        '1', // Filial
-        col?.concent_id || '', // Emitente (ID Concent)
-        'FP', // Esp. Docto
-        'M', // Série (em branco)
-        exportNrDocto.trim(), // Nr. Docto
-        '1', // Parcela
-        exportIssueDate.trim(), // Dt. Emissão
-        exportMoveDate.trim(), // Dt. Movimento
-        saldo, // Valor do Saldo
-        exportDueDate.trim(), // Dt. Vencto
-        '301', // Tipo Rec/Desp
-        '', // Portador
-        '', // Carteira
-        '', // Histórico
-      ].map(csvEscape).join(';')
+      baseItems.forEach(it => {
+        const col = it.collaborators
+        const totals = totalsByItem[it.id] || { total: 0 }
+        const total = Number(totals.total || 0)
+        const saldo = total.toFixed(2) // 2 casas decimais, ponto como separador
 
-      lines.push(row)
-    })
+        const row = [
+          '1', // Empresa
+          '1', // Filial
+          col?.concent_id || '', // Emitente (ID Concent)
+          'FP', // Esp. Docto
+          'M', // Série
+          exportNrDocto.trim(), // Nr. Docto
+          '1', // Parcela
+          exportIssueDate.trim(), // Dt. Emissão
+          exportMoveDate.trim(), // Dt. Movimento
+          saldo, // Valor do Saldo
+          exportDueDate.trim(), // Dt. Vencto
+          '301', // Tipo Rec/Desp
+          '', // Portador
+          '', // Carteira
+          '', // Histórico
+        ].map(csvEscape).join(';')
 
-    const csv = lines.join('\r\n')
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `folha_${selectedSheet.year_month || 'export'}.csv`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+        lines.push(row)
+      })
 
-    setOpenExport(false)
+      const csv = lines.join('\r\n')
+      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `folha_${selectedSheet.year_month || 'export'}.csv`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+
+      setOpenExport(false)
+    } catch (e) {
+      console.error('Erro ao exportar folha', e)
+      alert(e.message || 'Falha ao exportar a folha')
+    }
   }
 
   async function addEntry(itemId, form, setForm) {
