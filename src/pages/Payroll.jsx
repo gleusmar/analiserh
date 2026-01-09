@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { Download, FileDown, Trash2, UserMinus } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext.jsx'
-import { listCollaboratorsSimple, listPayrollEntryTypes, listPayrollSheets, createPayrollSheet, listPayrollSheetItems, listPayrollEntriesForSheet, createPayrollEntry, deletePayrollEntry, updatePayrollSheet, deletePayrollSheet, upsertPlantaoEntry, listShiftFunctions, listShiftAssignments, listShiftRateOverrides, addPayrollSheetItems } from '../lib/db'
+import { listCollaboratorsSimple, listPayrollEntryTypes, listPayrollSheets, createPayrollSheet, listPayrollSheetItems, listPayrollEntriesForSheet, createPayrollEntry, deletePayrollEntry, updatePayrollSheet, deletePayrollSheet, upsertPlantaoEntry, listShiftFunctions, listShiftAssignments, listShiftRateOverrides, addPayrollSheetItems, getHoleriteUrl, deleteHolerite } from '../lib/db'
 
 function ymOf(date) { return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}` }
 function parseYM(ym) { const [y,m] = String(ym||'').split('-').map(Number); return { y, m } }
@@ -214,9 +214,7 @@ export default function Payroll() {
 
   async function onDownloadHolerite(collaboratorId) {
     try {
-      const r = await fetch('/api/holerites/url', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(user?.id ? { 'x-actor-id': user.id } : {}), ...(user?.email ? { 'x-actor-email': user.email } : {}) }, body: JSON.stringify({ sheetId: selectedSheetId, collaborator_id: collaboratorId }) })
-      if (!r.ok) { const t = await r.text(); throw new Error(t || 'Holerite não encontrado') }
-      const { url } = await r.json()
+      const url = await getHoleriteUrl(selectedSheetId, collaboratorId)
       if (!url) { alert('Holerite não encontrado'); return }
       window.open(url, '_blank')
     } catch (e) { alert(e.message || 'Falha ao baixar holerite') }
@@ -226,8 +224,7 @@ export default function Payroll() {
     if (!selectedSheetId) return
     if (!confirm('Remover o holerite deste colaborador?')) return
     try {
-      const r = await fetch('/api/holerites/remove', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(user?.id ? { 'x-actor-id': user.id } : {}), ...(user?.email ? { 'x-actor-email': user.email } : {}) }, body: JSON.stringify({ sheetId: selectedSheetId, collaborator_id: collaboratorId }) })
-      if (!r.ok) throw new Error(await r.text())
+      await deleteHolerite(selectedSheetId, collaboratorId)
       alert('Holerite removido')
     } catch (e) { alert(e.message || 'Falha ao remover holerite') }
   }

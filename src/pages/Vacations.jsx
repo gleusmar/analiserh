@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext.jsx'
-import { listVacations, createVacation, updateVacation, deleteVacation, listCollaboratorsSimple } from '../lib/db'
+import { listVacations, createVacation, updateVacation, deleteVacation, listCollaboratorsSimple, uploadVacationReceipt, getVacationReceiptUrl, deleteVacationReceipt } from '../lib/db'
 import { FileDown, Pencil, Trash2 } from 'lucide-react'
 
 function ymdParts(s) {
@@ -151,13 +151,7 @@ export default function Vacations() {
         rec = await createVacation(payload)
       }
       if (file) {
-        const b64 = await readAsBase64(file)
-        const r = await fetch('/api/vacations/upload', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ vacationId: rec.id, fileData: b64, contentType: file.type || 'application/pdf' }),
-        })
-        if (!r.ok) throw new Error(await r.text())
+        await uploadVacationReceipt(rec.id, file)
         setHasReceipt(true)
       }
       setModalOpen(false)
@@ -185,10 +179,8 @@ export default function Vacations() {
 
   async function downloadReceipt(vacationId) {
     try {
-      const r = await fetch(`/api/vacations/url?vacationId=${vacationId}`)
-      if (!r.ok) throw new Error('Falha ao gerar link')
-      const j = await r.json()
-      if (j?.url) window.open(j.url, '_blank')
+      const url = await getVacationReceiptUrl(vacationId)
+      if (url) window.open(url, '_blank')
       else alert('Recibo não disponível')
     } catch (e) {
       alert(e.message || 'Falha ao baixar recibo')
@@ -199,12 +191,7 @@ export default function Vacations() {
     if (!editing) return
     if (!confirm('Remover o recibo anexado a estas férias?')) return
     try {
-      const r = await fetch('/api/vacations/delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vacationId: editing.id }),
-      })
-      if (!r.ok) throw new Error(await r.text())
+      await deleteVacationReceipt(editing.id)
       setHasReceipt(false)
       setFile(null)
       alert('Recibo removido')

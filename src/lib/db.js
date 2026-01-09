@@ -126,6 +126,14 @@ export async function getVacationReceiptUrl(vacationId, expiresInSeconds = 3600)
   return data?.signedUrl || null
 }
 
+export async function deleteVacationReceipt(vacationId) {
+  const bucket = supabase.storage.from('ferias')
+  const path = `${vacationId}.pdf`
+  const { error } = await bucket.remove([path])
+  if (error) throw error
+  return true
+}
+
 export async function clearMustChangePassword() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Não autenticado')
@@ -175,6 +183,14 @@ export async function getHoleriteUrl(sheetId, collaboratorId, expiresInSeconds =
   const { data, error } = await bucket.createSignedUrl(path, expiresInSeconds)
   if (error) return null
   return data?.signedUrl || null
+}
+
+export async function deleteHolerite(sheetId, collaboratorId) {
+  const bucket = supabase.storage.from('holerites')
+  const path = `${sheetId}/${collaboratorId}.pdf`
+  const { error } = await bucket.remove([path])
+  if (error) throw error
+  return true
 }
 
 // Shift (Plantões) helpers
