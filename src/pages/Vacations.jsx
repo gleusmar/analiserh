@@ -64,6 +64,7 @@ export default function Vacations() {
 
   const [form, setForm] = useState({ collaborator_id: '', start_date: '', end_date: '', period: '', remuneration: '' })
   const [file, setFile] = useState(null)
+  const [hasReceipt, setHasReceipt] = useState(false)
 
   const onlyMine = role === 'user'
   const myColId = profile?.collaborator_id || null
@@ -102,9 +103,10 @@ export default function Vacations() {
     setEditing(null)
     setForm({ collaborator_id: '', start_date: '', end_date: '', period: '', remuneration: '' })
     setFile(null)
+    setHasReceipt(false)
     setModalOpen(true)
   }
-  function openEdit(v) {
+  async function openEdit(v) {
     setEditing(v)
     setForm({
       collaborator_id: v.collaborator_id,
@@ -115,6 +117,14 @@ export default function Vacations() {
     })
     setFile(null)
     setModalOpen(true)
+    setHasReceipt(false)
+    try {
+      const r = await fetch(`/api/vacations/url?vacationId=${v.id}`)
+      if (r.ok) {
+        const j = await r.json()
+        setHasReceipt(!!j?.url)
+      }
+    } catch (_) {}
   }
 
   const days = useMemo(() => {
@@ -148,6 +158,7 @@ export default function Vacations() {
           body: JSON.stringify({ vacationId: rec.id, fileData: b64, contentType: file.type || 'application/pdf' }),
         })
         if (!r.ok) throw new Error(await r.text())
+        setHasReceipt(true)
       }
       setModalOpen(false)
       setEditing(null)
@@ -181,6 +192,24 @@ export default function Vacations() {
       else alert('Recibo não disponível')
     } catch (e) {
       alert(e.message || 'Falha ao baixar recibo')
+    }
+  }
+
+  async function removeReceipt() {
+    if (!editing) return
+    if (!confirm('Remover o recibo anexado a estas férias?')) return
+    try {
+      const r = await fetch('/api/vacations/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vacationId: editing.id }),
+      })
+      if (!r.ok) throw new Error(await r.text())
+      setHasReceipt(false)
+      setFile(null)
+      alert('Recibo removido')
+    } catch (e) {
+      alert(e.message || 'Falha ao remover recibo')
     }
   }
 
@@ -346,9 +375,17 @@ export default function Vacations() {
                   className="w-full rounded-xl border border-neutral-200 px-2 py-1 text-sm"
                 />
               </div>
-              <div className="col-span-2">
+              <div className="col-span-2 space-y-1">
                 <label className="block text-xs mb-1">Recibo (PDF)</label>
                 <input type="file" accept="application/pdf" onChange={(e)=>setFile(e.target.files?.[0] || null)} className="w-full text-sm" />
+                {editing && hasReceipt && (
+                  <div className="flex items-center justify-between text-[11px] text-neutral-600">
+                    <span>Um recibo já está anexado a este registro.</span>
+                    <button type="button" onClick={removeReceipt} className="text-red-600 hover:underline">
+                      Remover recibo
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex items-center justify-end gap-2 pt-1">

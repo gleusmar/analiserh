@@ -830,6 +830,70 @@ export default function Payroll() {
         </div>
       )}
 
+      {openExport && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4">
+          <div className="w-full max-w-md rounded-2xl p-6 border bg-neutral-50 text-neutral-900 border-neutral-200">
+            <h2 className="text-lg font-semibold mb-4">Exportar Folha (CSV)</h2>
+            <div className="space-y-3 text-sm">
+              <div>
+                <label className="block mb-1 text-neutral-600">Nr. Docto</label>
+                <input
+                  value={exportNrDocto}
+                  onChange={(e)=>setExportNrDocto(e.target.value)}
+                  className="w-full rounded-xl border border-neutral-200 px-3 py-2.5"
+                  placeholder="Número do documento"
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="block mb-1 text-neutral-600">Dt. Emissão</label>
+                  <input
+                    value={exportIssueDate}
+                    onChange={(e)=>setExportIssueDate(e.target.value)}
+                    className="w-full rounded-xl border border-neutral-200 px-3 py-2.5"
+                    placeholder="dd/mm/aaaa"
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1 text-neutral-600">Dt. Movimento</label>
+                  <input
+                    value={exportMoveDate}
+                    onChange={(e)=>setExportMoveDate(e.target.value)}
+                    className="w-full rounded-xl border border-neutral-200 px-3 py-2.5"
+                    placeholder="dd/mm/aaaa"
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1 text-neutral-600">Dt. Vencto</label>
+                  <input
+                    value={exportDueDate}
+                    onChange={(e)=>setExportDueDate(e.target.value)}
+                    className="w-full rounded-xl border border-neutral-200 px-3 py-2.5"
+                    placeholder="dd/mm/aaaa"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={()=>setOpenExport(false)}
+                  className="px-3 py-2 text-xs rounded-lg border border-neutral-200"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={onConfirmExport}
+                  className="px-3 py-2 text-xs rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white"
+                >
+                  Exportar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {openSlip && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4">
           <div className="w-full max-w-5xl rounded-2xl p-6 border bg-neutral-50 text-neutral-900 border-neutral-200">
