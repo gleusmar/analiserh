@@ -47,6 +47,43 @@ export async function createVacation(payload) {
   return data
 }
 
+async function createOrUpdateOvertimePayrollEntry({
+  overtimeId,
+  collaborator_id,
+  sheet_id,
+  minutes,
+  hour_value,
+  existingEntryId = null,
+}) {
+  if (!sheet_id || !collaborator_id) throw new Error('sheet_id e collaborator_id são obrigatórios para remuneração de horas extras')
+  const entryType = await getOrCreateEntryType('Hora Extra', 'in')
+  const sheet_item_id = await ensurePayrollSheetItem(sheet_id, collaborator_id)
+
+  const hours = minutes / 60
+  const amount = Number.isFinite(hours * hour_value) ? hours * hour_value : 0
+
+  if (existingEntryId) {
+    const { data, error } = await supabase
+      .from('payroll_entries')
+      .update({ amount, note: `Horas extras ${hours.toFixed(2)}h` })
+      .eq('id', existingEntryId)
+      .select('id')
+      .single()
+    if (error) throw error
+    try { await logAudit('entry:update:overtime', { target_id: data.id, details: { overtime_id: overtimeId, amount } }) } catch (_) {}
+    return { entryId: data.id, amount }
+  }
+
+  const { data, error } = await supabase
+    .from('payroll_entries')
+    .insert({ sheet_item_id, entry_type_id: entryType.id, amount, note: `Horas extras ${hours.toFixed(2)}h` })
+    .select('id')
+    .single()
+  if (error) throw error
+  try { await logAudit('entry:create:overtime', { target_id: data.id, details: { overtime_id: overtimeId, sheet_item_id, amount } }) } catch (_) {}
+  return { entryId: data.id, amount }
+}
+
 export async function updateVacation(id, payload) {
   let patch = { ...payload }
   if (payload.start_date && payload.end_date) {
@@ -294,6 +331,29 @@ export async function deletePayrollEntry(id) {
   return true
 }
 
+async function ensurePayrollSheetItem(sheetId, collaboratorId) {
+  if (!sheetId || !collaboratorId) {
+    throw new Error('sheetId e collaboratorId são obrigatórios para vincular horas extras à folha')
+  }
+  const { data: existing, error: selErr } = await supabase
+    .from('payroll_sheet_items')
+    .select('id')
+    .eq('sheet_id', sheetId)
+    .eq('collaborator_id', collaboratorId)
+    .maybeSingle()
+  if (selErr) throw selErr
+  if (existing) return existing.id
+
+  const { data, error } = await supabase
+    .from('payroll_sheet_items')
+    .insert({ sheet_id: sheetId, collaborator_id: collaboratorId })
+    .select('id')
+    .single()
+  if (error) throw error
+  try { await logAudit('sheet:item:overtime:add', { target_id: data.id, details: { sheet_id: sheetId, collaborator_id: collaboratorId } }) } catch (_) {}
+  return data.id
+}
+
 // Payroll: manage sheets and consolidated 'Plantões' entries
 export async function updatePayrollSheet(id, patch) {
   const { data, error } = await supabase
@@ -363,6 +423,155 @@ export async function upsertPlantaoEntry(sheet_item_id, amount) {
   if (error) throw error
   try { await logAudit('plantao:upsert', { target_id: data.id, details: { sheet_item_id, amount } }) } catch (_) {}
   return data
+}
+
+// Overtime (banco de horas)
+export async function listOvertimeEntries({ collaboratorId, from, to } = {}) {
+  const q = supabase
+    .from('overtime_entries')
+    .select('id, collaborator_id, date, kind, minutes, sheet_id, hour_value, amount, note, payroll_entry_id, collaborators(name, concent_id), payroll_sheets(name, year_month)')
+  if (collaboratorId) q.eq('collaborator_id', collaboratorId)
+  if (from) q.gte('date', from)
+  if (to) q.lte('date', to)
+  q.order('date', { ascending: true }).order('id', { ascending: true })
+  const { data, error } = await q
+  if (error) throw error
+  return data || []
+}
+
+export async function getOvertimeBalance(collaboratorId, upToDate = null) {
+  if (!collaboratorId) return { minutes: 0 }
+  const q = supabase
+    .from('overtime_entries')
+    .select('kind, minutes')
+    .eq('collaborator_id', collaboratorId)
+  if (upToDate) q.lte('date', upToDate)
+  const { data, error } = await q
+  if (error) throw error
+  let total = 0
+  for (const row of data || []) {
+    const m = Number(row.minutes || 0)
+    if (row.kind === 'worked') total += m
+    else total -= m
+  }
+  return { minutes: total }
+}
+
+export async function createOvertimeEntry(payload) {
+  const { collaborator_id, date, kind, minutes, sheet_id, hour_value, note } = payload || {}
+  if (!collaborator_id || !date || !kind || !minutes) {
+    throw new Error('collaborator_id, date, kind e minutes são obrigatórios')
+  }
+
+  let payroll_entry_id = null
+  let amount = null
+  if (kind === 'paid') {
+    if (!sheet_id) throw new Error('Selecione uma folha para remunerar as horas extras')
+    if (!hour_value || hour_value <= 0) throw new Error('Informe um valor de hora válido')
+    const { entryId, amount: amt } = await createOrUpdateOvertimePayrollEntry({
+      overtimeId: null,
+      collaborator_id,
+      sheet_id,
+      minutes,
+      hour_value,
+      existingEntryId: null,
+    })
+    payroll_entry_id = entryId
+    amount = amt
+  }
+
+  const { data, error } = await supabase
+    .from('overtime_entries')
+    .insert({ collaborator_id, date, kind, minutes, sheet_id: kind === 'paid' ? sheet_id : null, hour_value: kind === 'paid' ? hour_value : null, amount, payroll_entry_id, note })
+    .select('id, collaborator_id, date, kind, minutes, sheet_id, hour_value, amount, note, payroll_entry_id')
+    .single()
+  if (error) throw error
+  try { await logAudit('overtime:create', { target_id: data.id, details: { ...payload, amount } }) } catch (_) {}
+  return data
+}
+
+export async function updateOvertimeEntry(id, payload) {
+  const { collaborator_id, date, kind, minutes, sheet_id, hour_value, note } = payload || {}
+  if (!id) throw new Error('id é obrigatório')
+
+  const { data: existing, error: selErr } = await supabase
+    .from('overtime_entries')
+    .select('id, collaborator_id, kind, minutes, sheet_id, hour_value, amount, payroll_entry_id')
+    .eq('id', id)
+    .maybeSingle()
+  if (selErr) throw selErr
+  if (!existing) throw new Error('Registro de horas extras não encontrado')
+
+  const finalCollaboratorId = collaborator_id || existing.collaborator_id
+  const finalKind = kind || existing.kind
+  const finalMinutes = minutes != null ? minutes : existing.minutes
+  const finalSheetId = sheet_id != null ? sheet_id : existing.sheet_id
+  const finalHourValue = hour_value != null ? hour_value : existing.hour_value
+
+  let payroll_entry_id = existing.payroll_entry_id || null
+  let amount = existing.amount || null
+
+  if (existing.payroll_entry_id && finalKind !== 'paid') {
+    // Leaving paid state: remove linked payroll entry
+    await deletePayrollEntry(existing.payroll_entry_id)
+    payroll_entry_id = null
+    amount = null
+  }
+
+  if (finalKind === 'paid') {
+    if (!finalSheetId) throw new Error('Selecione uma folha para remunerar as horas extras')
+    if (!finalHourValue || finalHourValue <= 0) throw new Error('Informe um valor de hora válido')
+    const { entryId, amount: amt } = await createOrUpdateOvertimePayrollEntry({
+      overtimeId: id,
+      collaborator_id: finalCollaboratorId,
+      sheet_id: finalSheetId,
+      minutes: finalMinutes,
+      hour_value: finalHourValue,
+      existingEntryId: payroll_entry_id,
+    })
+    payroll_entry_id = entryId
+    amount = amt
+  }
+
+  const { data, error } = await supabase
+    .from('overtime_entries')
+    .update({
+      collaborator_id: finalCollaboratorId,
+      date: date || existing.date,
+      kind: finalKind,
+      minutes: finalMinutes,
+      sheet_id: finalKind === 'paid' ? finalSheetId : null,
+      hour_value: finalKind === 'paid' ? finalHourValue : null,
+      amount,
+      payroll_entry_id,
+      note: note != null ? note : existing.note,
+    })
+    .eq('id', id)
+    .select('id, collaborator_id, date, kind, minutes, sheet_id, hour_value, amount, note, payroll_entry_id')
+    .single()
+  if (error) throw error
+  try { await logAudit('overtime:update', { target_id: id, details: { ...payload, amount } }) } catch (_) {}
+  return data
+}
+
+export async function deleteOvertimeEntry(id) {
+  if (!id) return true
+  const { data: existing, error: selErr } = await supabase
+    .from('overtime_entries')
+    .select('id, payroll_entry_id')
+    .eq('id', id)
+    .maybeSingle()
+  if (selErr) throw selErr
+  if (!existing) return true
+
+  if (existing.payroll_entry_id) {
+    await deletePayrollEntry(existing.payroll_entry_id)
+  }
+
+  const { error } = await supabase.from('overtime_entries').delete().eq('id', id)
+  if (error) throw error
+  try { await logAudit('overtime:delete', { target_id: id }) } catch (_) {}
+  return true
 }
 
 export async function updateShiftFunction(id, payload) {

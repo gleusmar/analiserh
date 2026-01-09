@@ -20,6 +20,7 @@ import ShiftsDashboard from './pages/ShiftsDashboard.jsx'
 import Payroll from './pages/Payroll.jsx'
 import Vacations from './pages/Vacations.jsx'
 import PayrollEntries from './pages/PayrollEntries.jsx'
+import Overtime from './pages/Overtime.jsx'
 import Logs from './pages/Logs.jsx'
 
 function App() {
@@ -140,6 +141,19 @@ function App() {
             <RoleRoute allow={["admin", "super", "gestor-plantoes", "user"]}>
               <DashboardLayout>
                 <Vacations />
+              </DashboardLayout>
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/payroll/overtime"
+        element={
+          <ProtectedRoute>
+            <RoleRoute allow={["admin", "super", "gestor-plantoes"]}>
+              <DashboardLayout>
+                <Overtime />
               </DashboardLayout>
             </RoleRoute>
           </ProtectedRoute>
