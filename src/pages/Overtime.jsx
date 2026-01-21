@@ -26,7 +26,16 @@ function firstLastOfYM(ym) {
 
 function formatDateBR(s) {
   if (!s) return ''
-  const d = new Date(s)
+  const str = String(s)
+  // Se vier como YYYY-MM-DD (date do banco), tratamos como data "pura" sem fuso horário
+  const m = str.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (m) {
+    const [, yyyy, mm, dd] = m
+    return `${dd}/${mm}/${yyyy}`
+  }
+
+  // Fallback para outros formatos válidos entendidos pelo Date
+  const d = new Date(str)
   if (Number.isNaN(d.getTime())) return ''
   const dd = String(d.getDate()).padStart(2, '0')
   const mm = String(d.getMonth() + 1).padStart(2, '0')
@@ -156,12 +165,18 @@ export default function Overtime() {
       setError(null)
       try {
         const { from, to } = firstLastOfYM(yearMonth)
-        const [es, bal] = await Promise.all([
-          listOvertimeEntries({ collaboratorId: selectedCollaboratorId, from, to }),
-          getOvertimeBalance(selectedCollaboratorId, to),
-        ])
-        setEntries(es || [])
-        setBalance(bal || { minutes: 0 })
+        if (!isUser && selectedCollaboratorId === '__all__') {
+          const es = await listOvertimeEntries({ from, to })
+          setEntries(es || [])
+          setBalance({ minutes: 0 })
+        } else {
+          const [es, bal] = await Promise.all([
+            listOvertimeEntries({ collaboratorId: selectedCollaboratorId, from, to }),
+            getOvertimeBalance(selectedCollaboratorId, to),
+          ])
+          setEntries(es || [])
+          setBalance(bal || { minutes: 0 })
+        }
       } catch (e) {
         setError(e.message || 'Erro ao carregar banco de horas')
       } finally {
@@ -171,32 +186,81 @@ export default function Overtime() {
     loadData()
   }, [selectedCollaboratorId, yearMonth])
 
+  const isAllSelection = !isUser && selectedCollaboratorId === '__all__'
+
   const balanceLabel = useMemo(() => {
+    if (isAllSelection) return 'Visão geral: todos os colaboradores'
     const m = balance?.minutes || 0
     const hStr = minutesToHHMM(m)
     if (m > 0) return `Saldo: ${hStr} (positivo)`
     if (m < 0) return `Saldo: ${hStr} (negativo)`
     return 'Saldo: 00:00'
-  }, [balance])
+  }, [balance, isAllSelection])
 
   const balanceColor = useMemo(() => {
+    if (isAllSelection) return 'text-neutral-700 bg-neutral-50'
     const m = balance?.minutes || 0
     if (m > 0) return 'text-emerald-700 bg-emerald-50'
     if (m < 0) return 'text-red-700 bg-red-50'
     return 'text-neutral-700 bg-neutral-50'
-  }, [balance])
+  }, [balance, isAllSelection])
 
   const selectedCollaborator = useMemo(
     () => (collabs || []).find(c => String(c.id) === String(selectedCollaboratorId)) || null,
     [collabs, selectedCollaboratorId],
   )
 
+  const monthlySummary = useMemo(() => {
+    const acc = { worked: 0, time_off: 0, paid: 0 }
+    if (!Array.isArray(entries)) return acc
+    for (const e of entries) {
+      const m = Math.abs(e.minutes || 0)
+      if (e.kind === 'worked') acc.worked += m
+      else if (e.kind === 'time_off') acc.time_off += m
+      else if (e.kind === 'paid') acc.paid += m
+    }
+    return acc
+  }, [entries])
+
+  const perCollaboratorSummary = useMemo(() => {
+    if (!isAllSelection || !Array.isArray(entries)) return []
+    const map = new Map()
+    for (const e of entries) {
+      const id = e.collaborator_id
+      if (!id) continue
+      let item = map.get(id)
+      if (!item) {
+        item = {
+          collaborator_id: id,
+          name: e.collaborators?.name || 'Sem nome',
+          concent_id: e.collaborators?.concent_id || '',
+          worked: 0,
+          time_off: 0,
+          paid: 0,
+        }
+        map.set(id, item)
+      }
+      const m = Math.abs(e.minutes || 0)
+      if (e.kind === 'worked') item.worked += m
+      else if (e.kind === 'time_off') item.time_off += m
+      else if (e.kind === 'paid') item.paid += m
+    }
+    return Array.from(map.values()).sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+  }, [entries, isAllSelection])
+
   function openCreate() {
     const baseColId = isUser && myColId ? String(myColId) : (selectedCollaboratorId || (collabs[0] && String(collabs[0].id)) || '')
     setEditing(null)
     setForm({
       collaborator_id: baseColId,
-      date: new Date().toISOString().slice(0, 10),
+      // Data de hoje em formato local YYYY-MM-DD, sem depender de fuso horário/UTC
+      date: (() => {
+        const today = new Date()
+        const yyyy = today.getFullYear()
+        const mm = String(today.getMonth() + 1).padStart(2, '0')
+        const dd = String(today.getDate()).padStart(2, '0')
+        return `${yyyy}-${mm}-${dd}`
+      })(),
       kind: 'worked',
       hours: '',
       sheet_id: '',
@@ -323,6 +387,7 @@ export default function Overtime() {
             className="rounded-xl border border-neutral-200 px-3 py-2.5 min-w-64"
           >
             <option value="">Selecione um colaborador</option>
+            <option value="__all__">Todos os colaboradores</option>
             {collabs.map(c => (
               <option key={c.id} value={c.id}>
                 {c.name} — {c.concent_id}
@@ -341,83 +406,176 @@ export default function Overtime() {
           onChange={e => setYearMonth(e.target.value)}
           className="rounded-xl border border-neutral-200 px-3 py-2.5"
         />
-        {selectedCollaboratorId && (
-          <div className={`text-xs md:text-sm px-3 py-1 rounded-xl ${balanceColor}`}>
-            {balanceLabel}
-          </div>
-        )}
       </div>
 
-      {loading && <div className="text-sm text-neutral-500">Carregando...</div>}
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,7fr)_minmax(0,3fr)] gap-4 items-start">
+        <div className="space-y-4">
+          {loading && <div className="text-sm text-neutral-500">Carregando...</div>}
 
-      {!loading && selectedCollaboratorId && (
-        <div className="overflow-x-auto rounded-xl bg-white text-neutral-900">
-          <table className="w-full text-sm">
-            <thead className="text-left text-neutral-500">
-              <tr>
-                <th className="py-2 px-2">Data</th>
-                <th className="py-2 px-2">Tipo</th>
-                <th className="py-2 px-2">Horas</th>
-                <th className="py-2 px-2">Folha</th>
-                <th className="py-2 px-2">Valor</th>
-                <th className="py-2 px-2">Observação</th>
-                {canManage && <th className="py-2 px-2">Ações</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {entries.length === 0 && (
-                <tr>
-                  <td colSpan={canManage ? 7 : 6} className="py-4 px-2 text-center text-sm text-neutral-500">
-                    Nenhum lançamento de horas extras neste período.
-                  </td>
-                </tr>
-              )}
-              {entries.map(e => {
-                const kindLabel = e.kind === 'worked' ? 'Trabalhadas' : e.kind === 'time_off' ? 'Folga' : 'Remuneração'
-                const kindColor = e.kind === 'worked' ? 'text-emerald-700 bg-emerald-50' : e.kind === 'time_off' ? 'text-amber-700 bg-amber-50' : 'text-blue-700 bg-blue-50'
-                const sheetLabel = e.payroll_sheets ? `${e.payroll_sheets.name} (${e.payroll_sheets.year_month})` : '-'
-                const hoursStr = minutesToHHMM(e.minutes)
-                return (
-                  <tr key={e.id} className="border-t border-neutral-200">
-                    <td className="py-1.5 px-2 text-xs">{formatDateBR(e.date)}</td>
-                    <td className="py-1.5 px-2">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] ${kindColor}`}>
-                        {kindLabel}
-                      </span>
-                    </td>
-                    <td className="py-1.5 px-2 text-sm font-semibold">{hoursStr}h</td>
-                    <td className="py-1.5 px-2 text-xs truncate max-w-[180px]">{e.kind === 'paid' ? sheetLabel : '-'}</td>
-                    <td className="py-1.5 px-2 text-xs">{e.kind === 'paid' ? formatBRL(e.amount) : '-'}</td>
-                    <td className="py-1.5 px-2 text-xs text-neutral-700 truncate max-w-[220px]">{e.note || ''}</td>
-                    {canManage && (
-                      <td className="py-1.5 px-2">
-                        <div className="inline-flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => openEdit(e)}
-                            className="w-7 h-7 grid place-items-center rounded-md border border-neutral-200 hover:bg-neutral-100"
-                            title="Editar"
-                          >
-                            <Pencil className="size-3" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onDelete(e)}
-                            className="w-7 h-7 grid place-items-center rounded-md border border-red-200 text-red-600 hover:bg-red-50"
-                            title="Excluir"
-                          >
-                            <Trash2 className="size-3" />
-                          </button>
-                        </div>
-                      </td>
-                    )}
+          {!loading && selectedCollaboratorId && (
+            <div className="overflow-x-auto rounded-xl bg-white text-neutral-900">
+              <table className="w-full text-sm">
+                <thead className="text-left text-neutral-500">
+                  <tr>
+                    <th className="py-2 px-2">Data</th>
+                    {isAllSelection && <th className="py-2 px-2">Colaborador</th>}
+                    <th className="py-2 px-2">Tipo</th>
+                    <th className="py-2 px-2">Horas</th>
+                    <th className="py-2 px-2">Folha</th>
+                    <th className="py-2 px-2">Valor</th>
+                    <th className="py-2 px-2">Observação</th>
+                    {canManage && <th className="py-2 px-2">Ações</th>}
                   </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                </thead>
+                <tbody>
+                  {entries.length === 0 && (
+                    <tr>
+                      <td colSpan={(canManage ? 7 : 6) + (isAllSelection ? 1 : 0)} className="py-4 px-2 text-center text-sm text-neutral-500">
+                        Nenhum lançamento de horas extras neste período.
+                      </td>
+                    </tr>
+                  )}
+                  {entries.map(e => {
+                    const kindLabel = e.kind === 'worked' ? 'Trabalhadas' : e.kind === 'time_off' ? 'Folga' : 'Remuneração'
+                    const kindColor =
+                      e.kind === 'worked'
+                        ? 'text-emerald-700 bg-emerald-50'
+                        : e.kind === 'time_off'
+                          ? 'text-amber-700 bg-amber-50'
+                          : 'text-blue-700 bg-blue-50'
+                    const sheetLabel = e.payroll_sheets ? `${e.payroll_sheets.name} (${e.payroll_sheets.year_month})` : '-'
+                    const hoursStr = minutesToHHMM(e.minutes)
+                    return (
+                      <tr key={e.id} className="border-t border-neutral-200">
+                        <td className="py-1.5 px-2 text-xs">{formatDateBR(e.date)}</td>
+                        {isAllSelection && (
+                          <td className="py-1.5 px-2 text-xs truncate max-w-[180px]">
+                            {e.collaborators?.name || 'Sem nome'}
+                            {e.collaborators?.concent_id ? ` — ${e.collaborators.concent_id}` : ''}
+                          </td>
+                        )}
+                        <td className="py-1.5 px-2">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] ${kindColor}`}>
+                            {kindLabel}
+                          </span>
+                        </td>
+                        <td className="py-1.5 px-2 text-sm font-semibold">{hoursStr}h</td>
+                        <td className="py-1.5 px-2 text-xs truncate max-w-[180px]">{e.kind === 'paid' ? sheetLabel : '-'}</td>
+                        <td className="py-1.5 px-2 text-xs">{e.kind === 'paid' ? formatBRL(e.amount) : '-'}</td>
+                        <td className="py-1.5 px-2 text-xs text-neutral-700 truncate max-w-[220px]">{e.note || ''}</td>
+                        {canManage && (
+                          <td className="py-1.5 px-2">
+                            <div className="inline-flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => openEdit(e)}
+                                className="w-7 h-7 grid place-items-center rounded-md border border-neutral-200 hover:bg-neutral-100"
+                                title="Editar"
+                              >
+                                <Pencil className="size-3" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => onDelete(e)}
+                                className="w-7 h-7 grid place-items-center rounded-md border border-red-200 text-red-600 hover:bg-red-50"
+                                title="Excluir"
+                              >
+                                <Trash2 className="size-3" />
+                              </button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
-      )}
+
+        <div className="lg:sticky lg:top-20">
+          <div className="rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 shadow-sm">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-2">Resumo do banco de horas</h2>
+            {!isUser && !selectedCollaboratorId && !isAllSelection && (
+              <p className="text-xs text-neutral-500">Selecione um colaborador para visualizar o resumo.</p>
+            )}
+
+            {isAllSelection && (
+              <div className="space-y-3">
+                <div className={`text-xs px-3 py-1 rounded-xl inline-flex items-center ${balanceColor}`}>
+                  {balanceLabel}
+                </div>
+                <div className="border-t border-neutral-100 pt-3 mt-1 space-y-2">
+                  <div className="text-[11px] font-semibold text-neutral-500 uppercase">Colaboradores no mês selecionado</div>
+                  {perCollaboratorSummary.length === 0 && (
+                    <p className="text-xs text-neutral-500">Nenhum lançamento neste período.</p>
+                  )}
+                  {perCollaboratorSummary.length > 0 && (
+                    <div className="mt-1 space-y-1 max-h-72 overflow-auto pr-1">
+                      {perCollaboratorSummary.map(row => (
+                        <div key={row.collaborator_id} className="flex flex-col border border-neutral-100 rounded-xl px-2 py-1.5 bg-neutral-50">
+                          <div className="flex items-center justify-between gap-2 text-xs">
+                            <span className="font-medium text-neutral-800 truncate">{row.name}</span>
+                            {row.concent_id && (
+                              <span className="text-[10px] text-neutral-500">{row.concent_id}</span>
+                            )}
+                          </div>
+                          <div className="mt-1 grid grid-cols-3 gap-1 text-[11px]">
+                            <div className="flex flex-col">
+                              <span className="text-neutral-500">Trabalhadas</span>
+                              <span className="font-mono text-emerald-700">{minutesToHHMM(row.worked)}h</span>
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-neutral-500">Folga</span>
+                              <span className="font-mono text-amber-700">{minutesToHHMM(row.time_off)}h</span>
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-neutral-500">Remuneração</span>
+                              <span className="font-mono text-blue-700">{minutesToHHMM(row.paid)}h</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {!isAllSelection && selectedCollaboratorId && selectedCollaborator && (
+              <div className="space-y-3">
+                <div>
+                  <div className="text-sm font-medium">{selectedCollaborator.name}</div>
+                  <div className="text-[11px] text-neutral-500">ID: {selectedCollaborator.concent_id}</div>
+                </div>
+
+                <div className={`text-xs px-3 py-1 rounded-xl inline-flex items-center ${balanceColor}`}>
+                  {balanceLabel}
+                </div>
+
+                <div className="border-t border-neutral-100 pt-3 mt-1 space-y-2">
+                  <div className="text-[11px] font-semibold text-neutral-500 uppercase">Mês selecionado</div>
+                  <div className="flex flex-col gap-1.5 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-neutral-600">Trabalhadas (crédito)</span>
+                      <span className="font-mono text-emerald-700">{minutesToHHMM(monthlySummary.worked)}h</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-neutral-600">Folga (débito)</span>
+                      <span className="font-mono text-amber-700">{minutesToHHMM(monthlySummary.time_off)}h</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-neutral-600">Remuneração (débito)</span>
+                      <span className="font-mono text-blue-700">{minutesToHHMM(monthlySummary.paid)}h</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       {modalOpen && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4">
