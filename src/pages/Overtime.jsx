@@ -121,6 +121,7 @@ export default function Overtime() {
     hour_value: '',
     note: '',
   })
+  const [summaryOrder, setSummaryOrder] = useState('name') // 'name' | 'balance'
 
   useEffect(() => {
     async function loadBase() {
@@ -142,8 +143,9 @@ export default function Overtime() {
 
         if (isUser && myColId) {
           setSelectedCollaboratorId(String(myColId))
-        } else if (!isUser && cs.length && !selectedCollaboratorId) {
-          setSelectedCollaboratorId(String(cs[0].id))
+        } else if (canManage && !selectedCollaboratorId) {
+          // Para gestores/admin/super, começar na visão de todos os colaboradores
+          setSelectedCollaboratorId('__all__')
         }
       } catch (e) {
         setError(e.message || 'Erro ao carregar dados')
@@ -164,15 +166,16 @@ export default function Overtime() {
       setLoading(true)
       setError(null)
       try {
-        const { from, to } = firstLastOfYM(yearMonth)
         if (!isUser && selectedCollaboratorId === '__all__') {
-          const es = await listOvertimeEntries({ from, to })
+          // Visão global: todos os lançamentos, sem filtro de mês
+          const es = await listOvertimeEntries()
           setEntries(es || [])
           setBalance({ minutes: 0 })
         } else {
           const [es, bal] = await Promise.all([
-            listOvertimeEntries({ collaboratorId: selectedCollaboratorId, from, to }),
-            getOvertimeBalance(selectedCollaboratorId, to),
+            // Histórico completo do colaborador, sem filtro de mês
+            listOvertimeEntries({ collaboratorId: selectedCollaboratorId }),
+            getOvertimeBalance(selectedCollaboratorId),
           ])
           setEntries(es || [])
           setBalance(bal || { minutes: 0 })
@@ -245,11 +248,26 @@ export default function Overtime() {
       else if (e.kind === 'time_off') item.time_off += m
       else if (e.kind === 'paid') item.paid += m
     }
-    return Array.from(map.values()).sort((a, b) => (a.name || '').localeCompare(b.name || ''))
-  }, [entries, isAllSelection])
+    const arr = Array.from(map.values())
+    if (summaryOrder === 'balance') {
+      return arr.sort((a, b) => {
+        const sa = a.worked - a.time_off - a.paid
+        const sb = b.worked - b.time_off - b.paid
+        return sb - sa
+      })
+    }
+    return arr.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+  }, [entries, isAllSelection, summaryOrder])
 
   function openCreate() {
-    const baseColId = isUser && myColId ? String(myColId) : (selectedCollaboratorId || (collabs[0] && String(collabs[0].id)) || '')
+    let baseColId = ''
+    if (isUser && myColId) {
+      baseColId = String(myColId)
+    } else if (!isAllSelection && selectedCollaboratorId) {
+      baseColId = String(selectedCollaboratorId)
+    } else if (collabs[0]) {
+      baseColId = String(collabs[0].id)
+    }
     setEditing(null)
     setForm({
       collaborator_id: baseColId,
@@ -289,13 +307,18 @@ export default function Overtime() {
     if (!window.confirm('Remover este lançamento de horas extras? Isso também removerá o lançamento correspondente na folha, se houver.')) return
     try {
       await deleteOvertimeEntry(entry.id)
-      const { from, to } = firstLastOfYM(yearMonth)
-      const [es, bal] = await Promise.all([
-        listOvertimeEntries({ collaboratorId: selectedCollaboratorId, from, to }),
-        getOvertimeBalance(selectedCollaboratorId, to),
-      ])
-      setEntries(es || [])
-      setBalance(bal || { minutes: 0 })
+      if (!isUser && selectedCollaboratorId === '__all__') {
+        const es = await listOvertimeEntries()
+        setEntries(es || [])
+        setBalance({ minutes: 0 })
+      } else {
+        const [es, bal] = await Promise.all([
+          listOvertimeEntries({ collaboratorId: selectedCollaboratorId }),
+          getOvertimeBalance(selectedCollaboratorId),
+        ])
+        setEntries(es || [])
+        setBalance(bal || { minutes: 0 })
+      }
     } catch (e) {
       alert(e.message || 'Falha ao remover horas extras')
     }
@@ -305,6 +328,10 @@ export default function Overtime() {
     if (!canManage) return
     if (!form.collaborator_id || !form.date || !form.kind) {
       alert('Preencha colaborador, data e tipo.')
+      return
+    }
+    if (!isUser && form.collaborator_id === '__all__') {
+      alert('Selecione um colaborador específico para lançar horas.')
       return
     }
     const minutes = parseHoursToMinutes(form.hours)
@@ -348,13 +375,18 @@ export default function Overtime() {
       }
       setModalOpen(false)
       setEditing(null)
-      const { from, to } = firstLastOfYM(yearMonth)
-      const [es, bal] = await Promise.all([
-        listOvertimeEntries({ collaboratorId: selectedCollaboratorId, from, to }),
-        getOvertimeBalance(selectedCollaboratorId, to),
-      ])
-      setEntries(es || [])
-      setBalance(bal || { minutes: 0 })
+      if (!isUser && selectedCollaboratorId === '__all__') {
+        const es = await listOvertimeEntries()
+        setEntries(es || [])
+        setBalance({ minutes: 0 })
+      } else {
+        const [es, bal] = await Promise.all([
+          listOvertimeEntries({ collaboratorId: selectedCollaboratorId }),
+          getOvertimeBalance(selectedCollaboratorId),
+        ])
+        setEntries(es || [])
+        setBalance(bal || { minutes: 0 })
+      }
     } catch (e) {
       alert(e.message || 'Falha ao salvar horas extras')
     } finally {
@@ -496,7 +528,28 @@ export default function Overtime() {
 
         <div className="lg:sticky lg:top-20">
           <div className="rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 shadow-sm">
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-2">Resumo do banco de horas</h2>
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Resumo do banco de horas</h2>
+              {isAllSelection && (
+                <div className="inline-flex items-center gap-1 text-[10px] text-neutral-500">
+                  <span>Ordenar por:</span>
+                  <button
+                    type="button"
+                    onClick={() => setSummaryOrder('name')}
+                    className={`px-2 py-0.5 rounded-full border text-[10px] ${summaryOrder === 'name' ? 'border-emerald-500 text-emerald-700 bg-emerald-50' : 'border-neutral-200 bg-white'}`}
+                  >
+                    Nome
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSummaryOrder('balance')}
+                    className={`px-2 py-0.5 rounded-full border text-[10px] ${summaryOrder === 'balance' ? 'border-emerald-500 text-emerald-700 bg-emerald-50' : 'border-neutral-200 bg-white'}`}
+                  >
+                    Saldo
+                  </button>
+                </div>
+              )}
+            </div>
             {!isUser && !selectedCollaboratorId && !isAllSelection && (
               <p className="text-xs text-neutral-500">Selecione um colaborador para visualizar o resumo.</p>
             )}
@@ -507,19 +560,28 @@ export default function Overtime() {
                   {balanceLabel}
                 </div>
                 <div className="border-t border-neutral-100 pt-3 mt-1 space-y-2">
-                  <div className="text-[11px] font-semibold text-neutral-500 uppercase">Colaboradores no mês selecionado</div>
+                  <div className="text-[11px] font-semibold text-neutral-500 uppercase">Colaboradores (histórico completo)</div>
                   {perCollaboratorSummary.length === 0 && (
                     <p className="text-xs text-neutral-500">Nenhum lançamento neste período.</p>
                   )}
                   {perCollaboratorSummary.length > 0 && (
                     <div className="mt-1 space-y-1 max-h-72 overflow-auto pr-1">
                       {perCollaboratorSummary.map(row => (
+                        (() => {
+                          const saldoMin = (row.worked || 0) - (row.time_off || 0) - (row.paid || 0)
+                          const saldoStr = minutesToHHMM(saldoMin)
+                          const saldoColor = saldoMin > 0 ? 'text-emerald-700' : saldoMin < 0 ? 'text-red-700' : 'text-neutral-700'
+                          return (
                         <div key={row.collaborator_id} className="flex flex-col border border-neutral-100 rounded-xl px-2 py-1.5 bg-neutral-50">
                           <div className="flex items-center justify-between gap-2 text-xs">
                             <span className="font-medium text-neutral-800 truncate">{row.name}</span>
                             {row.concent_id && (
                               <span className="text-[10px] text-neutral-500">{row.concent_id}</span>
                             )}
+                          </div>
+                          <div className="mt-1 flex items-center justify-between text-[11px]">
+                            <span className="text-neutral-500">Saldo</span>
+                            <span className={`font-mono font-semibold ${saldoColor}`}>{saldoStr}h</span>
                           </div>
                           <div className="mt-1 grid grid-cols-3 gap-1 text-[11px]">
                             <div className="flex flex-col">
@@ -531,11 +593,13 @@ export default function Overtime() {
                               <span className="font-mono text-amber-700">{minutesToHHMM(row.time_off)}h</span>
                             </div>
                             <div className="flex flex-col">
-                              <span className="text-neutral-500">Remuneração</span>
+                              <span className="text-neutral-500">Remuneradas</span>
                               <span className="font-mono text-blue-700">{minutesToHHMM(row.paid)}h</span>
                             </div>
                           </div>
                         </div>
+                          )
+                        })()
                       ))}
                     </div>
                   )}
@@ -555,7 +619,7 @@ export default function Overtime() {
                 </div>
 
                 <div className="border-t border-neutral-100 pt-3 mt-1 space-y-2">
-                  <div className="text-[11px] font-semibold text-neutral-500 uppercase">Mês selecionado</div>
+                  <div className="text-[11px] font-semibold text-neutral-500 uppercase">Histórico completo</div>
                   <div className="flex flex-col gap-1.5 text-xs">
                     <div className="flex items-center justify-between">
                       <span className="text-neutral-600">Trabalhadas (crédito)</span>
@@ -566,7 +630,7 @@ export default function Overtime() {
                       <span className="font-mono text-amber-700">{minutesToHHMM(monthlySummary.time_off)}h</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-neutral-600">Remuneração (débito)</span>
+                      <span className="text-neutral-600">Remuneradas (débito)</span>
                       <span className="font-mono text-blue-700">{minutesToHHMM(monthlySummary.paid)}h</span>
                     </div>
                   </div>
