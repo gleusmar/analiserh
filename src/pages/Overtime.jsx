@@ -592,31 +592,35 @@ export default function Overtime() {
                           const saldoStr = formatMinutesShort(saldoMin)
                           const saldoColor = saldoMin > 0 ? 'text-emerald-700' : saldoMin < 0 ? 'text-red-700' : 'text-neutral-700'
                           return (
-                        <div key={row.collaborator_id} className="flex flex-col border border-neutral-100 rounded-xl px-2 py-1.5 bg-neutral-50">
-                          <div className="flex items-center justify-between gap-2 text-xs">
-                            <span className="font-medium text-neutral-800 truncate">{row.name}</span>
-                            {row.concent_id && (
-                              <span className="text-[10px] text-neutral-500">{row.concent_id}</span>
-                            )}
-                          </div>
-                          <div className="mt-1 flex items-center justify-between text-[11px]">
-                            <span className="text-neutral-500">Saldo</span>
-                            <span className={`font-mono font-semibold ${saldoColor}`}>{saldoStr}h</span>
-                          </div>
-                          <div className="mt-1 grid grid-cols-3 gap-1 text-[11px]">
-                            <div className="flex flex-col">
-                              <span className="text-neutral-500">Trabalhadas</span>
-                              <span className="font-mono text-emerald-700">{formatMinutesShort(row.worked)}</span>
+                        <div key={row.collaborator_id} className="grid grid-col-2 border border-neutral-100 rounded-xl px-2 py-1.5 bg-neutral-50">
+                          <div>
+                            <div className="flex items-center justify-between gap-2 text-xs">
+                              <span className="font-medium text-neutral-800 truncate">{row.name}</span>
+                              {row.concent_id && (
+                                <span className="text-[10px] text-neutral-500">{row.concent_id}</span>
+                              )}
                             </div>
-                            <div className="flex flex-col">
-                              <span className="text-neutral-500">Folga</span>
-                              <span className="font-mono text-amber-700">{formatMinutesShort(row.time_off)}</span>
-                            </div>
-                            <div className="flex flex-col">
-                              <span className="text-neutral-500">Remuneradas</span>
-                              <span className="font-mono text-blue-700">{formatMinutesShort(row.paid)}</span>
+                            <div className="mt-1 grid grid-cols-3 gap-1 text-[11px]">
+                              <div className="flex flex-col">
+                                <span className="text-neutral-500">Trabalhadas</span>
+                                <span className="font-mono text-emerald-700">{formatMinutesShort(row.worked)}</span>
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-neutral-500">Folga</span>
+                                <span className="font-mono text-amber-700">{formatMinutesShort(row.time_off)}</span>
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-neutral-500">Remuneradas</span>
+                                <span className="font-mono text-blue-700">{formatMinutesShort(row.paid)}</span>
+                              </div>
                             </div>
                           </div>
+                          <div>
+                            <div className="mt-1 flex items-center justify-between text-[11px]">
+                              <span className="text-neutral-500">Saldo</span>
+                              <span className={`font-mono font-semibold text-2xl ${saldoColor}`}>{saldoStr}h</span>
+                            </div>
+                          </div>  
                         </div>
                           )
                         })()
