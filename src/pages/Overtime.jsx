@@ -52,6 +52,16 @@ function minutesToHHMM(minutes) {
   return `${sign}${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`
 }
 
+function formatMinutesShort(minutes) {
+  const m = Number(minutes || 0)
+  const sign = m < 0 ? '-' : ''
+  const abs = Math.abs(m)
+  const h = Math.floor(abs / 60)
+  const min = abs % 60
+  if (min === 0) return `${sign}${h}h`
+  return `${sign}${h}h ${String(min).padStart(2, '0')}min`
+}
+
 function parseHoursToMinutes(text) {
   if (!text) return null
   const s = String(text).trim()
@@ -101,7 +111,7 @@ export default function Overtime() {
   const [sheets, setSheets] = useState([])
 
   const [selectedCollaboratorId, setSelectedCollaboratorId] = useState('')
-  const [yearMonth, setYearMonth] = useState(ymOf(new Date()))
+  const [yearMonth, setYearMonth] = useState('')
 
   const [entries, setEntries] = useState([])
   const [balance, setBalance] = useState({ minutes: 0 })
@@ -187,14 +197,14 @@ export default function Overtime() {
       }
     }
     loadData()
-  }, [selectedCollaboratorId, yearMonth])
+  }, [selectedCollaboratorId])
 
   const isAllSelection = !isUser && selectedCollaboratorId === '__all__'
 
   const balanceLabel = useMemo(() => {
     if (isAllSelection) return 'Visão geral: todos os colaboradores'
     const m = balance?.minutes || 0
-    const hStr = minutesToHHMM(m)
+    const hStr = formatMinutesShort(m)
     if (m > 0) return `Saldo: ${hStr} (positivo)`
     if (m < 0) return `Saldo: ${hStr} (negativo)`
     return 'Saldo: 00:00'
@@ -258,6 +268,16 @@ export default function Overtime() {
     }
     return arr.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
   }, [entries, isAllSelection, summaryOrder])
+
+  const tableEntries = useMemo(() => {
+    if (!yearMonth) return entries
+    const { from, to } = firstLastOfYM(yearMonth)
+    if (!from || !to) return entries
+    return (entries || []).filter(e => {
+      const d = String(e.date || '')
+      return d >= from && d <= to
+    })
+  }, [entries, yearMonth])
 
   function openCreate() {
     let baseColId = ''
@@ -460,14 +480,14 @@ export default function Overtime() {
                   </tr>
                 </thead>
                 <tbody>
-                  {entries.length === 0 && (
+                  {tableEntries.length === 0 && (
                     <tr>
                       <td colSpan={(canManage ? 7 : 6) + (isAllSelection ? 1 : 0)} className="py-4 px-2 text-center text-sm text-neutral-500">
                         Nenhum lançamento de horas extras neste período.
                       </td>
                     </tr>
                   )}
-                  {entries.map(e => {
+                  {tableEntries.map(e => {
                     const kindLabel = e.kind === 'worked' ? 'Trabalhadas' : e.kind === 'time_off' ? 'Folga' : 'Remuneração'
                     const kindColor =
                       e.kind === 'worked'
@@ -476,7 +496,7 @@ export default function Overtime() {
                           ? 'text-amber-700 bg-amber-50'
                           : 'text-blue-700 bg-blue-50'
                     const sheetLabel = e.payroll_sheets ? `${e.payroll_sheets.name} (${e.payroll_sheets.year_month})` : '-'
-                    const hoursStr = minutesToHHMM(e.minutes)
+                    const hoursStr = formatMinutesShort(e.minutes)
                     return (
                       <tr key={e.id} className="border-t border-neutral-200">
                         <td className="py-1.5 px-2 text-xs">{formatDateBR(e.date)}</td>
@@ -491,7 +511,7 @@ export default function Overtime() {
                             {kindLabel}
                           </span>
                         </td>
-                        <td className="py-1.5 px-2 text-sm font-semibold">{hoursStr}h</td>
+                        <td className="py-1.5 px-2 text-sm font-semibold">{hoursStr}</td>
                         <td className="py-1.5 px-2 text-xs truncate max-w-[180px]">{e.kind === 'paid' ? sheetLabel : '-'}</td>
                         <td className="py-1.5 px-2 text-xs">{e.kind === 'paid' ? formatBRL(e.amount) : '-'}</td>
                         <td className="py-1.5 px-2 text-xs text-neutral-700 truncate max-w-[220px]">{e.note || ''}</td>
@@ -527,7 +547,7 @@ export default function Overtime() {
         </div>
 
         <div className="lg:sticky lg:top-20">
-          <div className="rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 shadow-sm">
+          <div className="rounded-2xl border border-neutral-200 bg-white px-4 py-4 text-sm text-neutral-900 shadow-sm min-h-[260px] lg:min-h-[320px]">
             <div className="flex items-center justify-between gap-2 mb-2">
               <h2 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">Resumo do banco de horas</h2>
               {isAllSelection && (
@@ -556,7 +576,7 @@ export default function Overtime() {
 
             {isAllSelection && (
               <div className="space-y-3">
-                <div className={`text-xs px-3 py-1 rounded-xl inline-flex items-center ${balanceColor}`}>
+                <div className={`text-sm md:text-xl px-3 py-2 rounded-xl inline-flex items-center font-semibold ${balanceColor}`}>
                   {balanceLabel}
                 </div>
                 <div className="border-t border-neutral-100 pt-3 mt-1 space-y-2">
@@ -569,7 +589,7 @@ export default function Overtime() {
                       {perCollaboratorSummary.map(row => (
                         (() => {
                           const saldoMin = (row.worked || 0) - (row.time_off || 0) - (row.paid || 0)
-                          const saldoStr = minutesToHHMM(saldoMin)
+                          const saldoStr = formatMinutesShort(saldoMin)
                           const saldoColor = saldoMin > 0 ? 'text-emerald-700' : saldoMin < 0 ? 'text-red-700' : 'text-neutral-700'
                           return (
                         <div key={row.collaborator_id} className="flex flex-col border border-neutral-100 rounded-xl px-2 py-1.5 bg-neutral-50">
@@ -586,15 +606,15 @@ export default function Overtime() {
                           <div className="mt-1 grid grid-cols-3 gap-1 text-[11px]">
                             <div className="flex flex-col">
                               <span className="text-neutral-500">Trabalhadas</span>
-                              <span className="font-mono text-emerald-700">{minutesToHHMM(row.worked)}h</span>
+                              <span className="font-mono text-emerald-700">{formatMinutesShort(row.worked)}</span>
                             </div>
                             <div className="flex flex-col">
                               <span className="text-neutral-500">Folga</span>
-                              <span className="font-mono text-amber-700">{minutesToHHMM(row.time_off)}h</span>
+                              <span className="font-mono text-amber-700">{formatMinutesShort(row.time_off)}</span>
                             </div>
                             <div className="flex flex-col">
                               <span className="text-neutral-500">Remuneradas</span>
-                              <span className="font-mono text-blue-700">{minutesToHHMM(row.paid)}h</span>
+                              <span className="font-mono text-blue-700">{formatMinutesShort(row.paid)}</span>
                             </div>
                           </div>
                         </div>
@@ -614,7 +634,7 @@ export default function Overtime() {
                   <div className="text-[11px] text-neutral-500">ID: {selectedCollaborator.concent_id}</div>
                 </div>
 
-                <div className={`text-xs px-3 py-1 rounded-xl inline-flex items-center ${balanceColor}`}>
+                <div className={`text-sm md:text-xl px-3 py-2 rounded-xl inline-flex items-center font-semibold ${balanceColor}`}>
                   {balanceLabel}
                 </div>
 
@@ -623,15 +643,15 @@ export default function Overtime() {
                   <div className="flex flex-col gap-1.5 text-xs">
                     <div className="flex items-center justify-between">
                       <span className="text-neutral-600">Trabalhadas (crédito)</span>
-                      <span className="font-mono text-emerald-700">{minutesToHHMM(monthlySummary.worked)}h</span>
+                      <span className="font-mono text-emerald-700">{formatMinutesShort(monthlySummary.worked)}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-neutral-600">Folga (débito)</span>
-                      <span className="font-mono text-amber-700">{minutesToHHMM(monthlySummary.time_off)}h</span>
+                      <span className="font-mono text-amber-700">{formatMinutesShort(monthlySummary.time_off)}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-neutral-600">Remuneradas (débito)</span>
-                      <span className="font-mono text-blue-700">{minutesToHHMM(monthlySummary.paid)}h</span>
+                      <span className="font-mono text-blue-700">{formatMinutesShort(monthlySummary.paid)}</span>
                     </div>
                   </div>
                 </div>
