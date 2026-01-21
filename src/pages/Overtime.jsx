@@ -592,7 +592,7 @@ export default function Overtime() {
                           const saldoStr = formatMinutesShort(saldoMin)
                           const saldoColor = saldoMin > 0 ? 'text-emerald-700' : saldoMin < 0 ? 'text-red-700' : 'text-neutral-700'
                           return (
-                        <div key={row.collaborator_id} className="grid grid-col-2 border border-neutral-100 rounded-xl px-2 py-1.5 bg-neutral-50">
+                        <div key={row.collaborator_id} className="grid grid-cols-[minmax(0,3fr)_minmax(0,2fr)] border border-neutral-100 rounded-xl px-2 py-1.5 bg-neutral-50">
                           <div>
                             <div className="flex items-center justify-between gap-2 text-xs">
                               <span className="font-medium text-neutral-800 truncate">{row.name}</span>
@@ -616,9 +616,9 @@ export default function Overtime() {
                             </div>
                           </div>
                           <div>
-                            <div className="mt-1 flex items-center justify-between text-[11px]">
+                            <div className="mt-1 flex flex-col items-end justify-between text-[11px]">
                               <span className="text-neutral-500">Saldo</span>
-                              <span className={`font-mono font-semibold text-2xl ${saldoColor}`}>{saldoStr}h</span>
+                              <span className={`font-mono font-semibold text-2xl ${saldoColor}`}>{saldoStr}</span>
                             </div>
                           </div>  
                         </div>
