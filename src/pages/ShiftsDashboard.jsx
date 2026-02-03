@@ -243,31 +243,32 @@ export default function ShiftsDashboard() {
         {filtered.map(r => {
           const isMine = isUser && myColId && r.collaborator_id === myColId
           return (
-          <div
-            key={r.id}
-            className={`rounded-xl px-3 py-2 shadow-sm text-xs flex flex-col gap-1 border ${isMine ? 'border-neutral-400 bg-neutral-100' : 'border-neutral-200 bg-white'}`}
-          >
-            <div className="flex items-baseline justify-between gap-2">
-              <div>
-                <div className="font-semibold text-xs text-neutral-900">{formatBRfromYMD(r.date)}</div>
-                <div className="mt-1">
-                  <div className={isMine ? "text-xs font-bold text-purple-700 truncate border border-purple-300 rounded px-1" : "text-xs font-semibold text-neutral-900 truncate"}>
-                    {r.collaborator_name}
+            <div
+              key={r.id}
+              className={`rounded-xl px-3 py-2 shadow-sm text-xs flex flex-col gap-1 border ${isMine ? 'border-neutral-400 bg-neutral-100' : 'border-neutral-200 bg-white'}`}
+            >
+              <div className="flex items-baseline justify-between gap-2">
+                <div>
+                  <div className="font-semibold text-xs text-neutral-900">{formatBRfromYMD(r.date)}</div>
+                  <div className="mt-1">
+                    <div className={isMine ? "text-xs font-bold text-purple-700 truncate border border-purple-300 rounded px-1" : "text-xs font-semibold text-neutral-900 truncate"}>
+                      {r.collaborator_name}
+                    </div>
+                    <div className="text-xs text-neutral-600 truncate">{r.function_name}</div>
                   </div>
-                  <div className="text-xs text-neutral-600 truncate">{r.function_name}</div>
                 </div>
-              </div>
-              <div className="text-right">
-                <div className="text-sm font-semibold text-emerald-700">
-                  {r.value.toLocaleString('pt-BR',{ style:'currency', currency:'BRL'})}
-                </div>
-                <div className={`mt-0.5 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] ${r.remunerated ? 'bg-emerald-50 text-emerald-700' : 'bg-neutral-100 text-neutral-600'}`}>
-                  {r.remunerated ? 'Remunerado' : 'Não remunerado'}
+                <div className="text-right">
+                  <div className="text-sm font-semibold text-emerald-700">
+                    {r.value.toLocaleString('pt-BR',{ style:'currency', currency:'BRL'})}
+                  </div>
+                  <div className={`mt-0.5 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] ${r.remunerated ? 'bg-emerald-50 text-emerald-700' : 'bg-neutral-100 text-neutral-600'}`}>
+                    {r.remunerated ? 'Remunerado' : 'Não remunerado'}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       {/* Desktop: tabela completa */}
