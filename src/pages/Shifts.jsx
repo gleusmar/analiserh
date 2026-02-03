@@ -41,6 +41,14 @@ export default function Shifts() {
   const [bulkDays, setBulkDays] = useState(new Set())
 
   const activeCollaborators = useMemo(() => (collaborators || []).filter(c => c.status !== 'inactive'), [collaborators])
+  const colMap = useMemo(() => {
+    const map = {}
+    ;(collaborators || []).forEach(c => {
+      map[c.id] = c
+      map[String(c.id)] = c
+    })
+    return map
+  }, [collaborators])
 
   const first = startOfMonth(current)
   const totalDays = daysInMonth(current)
@@ -295,7 +303,8 @@ export default function Shifts() {
     return (
       <div
         className={
-          `flex flex-col rounded-xl p-2 gap-2 text-[11px] min-h-14 md:h-145 ` +
+          `flex flex-col rounded-xl p-2 gap-2 text-[11px] min-h-14 ` +
+          (role === 'user' ? 'min-110 ' : 'md:h-145 ') +
           (hasMyAssignment && isUser ? 'border-2 border-neutral-400 bg-neutral-200' : 'border border-neutral-200 bg-white')
         }
         onDragOver={(e)=>{ if (canManage) e.preventDefault() }}
@@ -314,7 +323,7 @@ export default function Shifts() {
           {orderedItems.map(a => {
             const fnName = (functions.find(f => f.id === a.shift_function_id)?.name) || 'Função'
             const colName = (() => {
-              const col = collaborators.find(c => String(c.id) === String(a.collaborator_id))
+              const col = colMap[a.collaborator_id] || colMap[String(a.collaborator_id)] || null
               return col?.name || 'Colaborador'
             })()
             const isMine = isUser && myColId && a.collaborator_id === myColId
@@ -440,7 +449,10 @@ export default function Shifts() {
         ))}
         {cells.map((c, idx) => (
           c === null ? (
-            <div key={`b-${idx}`} className={"h-145 rounded-xl border border-dashed border-neutral-200"} />
+            <div
+              key={`b-${idx}`}
+              className={(role === 'user' ? 'min-110' : 'h-145') + " rounded-xl border border-dashed border-neutral-200"}
+            />
           ) : (
             <DayCell key={`d-${c}`} day={c} />
           )
