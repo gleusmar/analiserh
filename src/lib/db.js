@@ -713,7 +713,7 @@ export async function deleteShiftRateOverride(yearMonth, shift_function_id) {
 
 export async function listCollaboratorsSimple() {
   const { data, error } = await supabase
-    .from('collaborators')
+    .from('calendar_collaborators')
     .select('id, name, status, concent_id')
     .order('name', { ascending: true })
   if (error) throw error
