@@ -295,8 +295,8 @@ export default function Shifts() {
     return (
       <div
         className={
-          `flex flex-col rounded-xl p-2 gap-2 text-[11px] min-h-14 ${role==='user' ? 'md:h-35' : 'md:h-145'} ` +
-          (hasMyAssignment && isUser ? 'border-3 border-neutral-500 bg-neutral-200' : 'border border-neutral-200 bg-white')
+          `flex flex-col rounded-xl p-2 gap-2 text-[11px] min-h-14 md:h-145 ` +
+          (hasMyAssignment && isUser ? 'border-2 border-neutral-400 bg-neutral-200' : 'border border-neutral-200 bg-white')
         }
         onDragOver={(e)=>{ if (canManage) e.preventDefault() }}
         onDrop={onDropOnContainer}
@@ -313,7 +313,10 @@ export default function Shifts() {
         <div className="space-y-1 md:flex-1 md:overflow-y-auto">
           {orderedItems.map(a => {
             const fnName = (functions.find(f => f.id === a.shift_function_id)?.name) || 'Função'
-            const colName = (collaborators.find(c => c.id === a.collaborator_id)?.name) || 'Colaborador'
+            const colName = (() => {
+              const col = collaborators.find(c => String(c.id) === String(a.collaborator_id))
+              return col?.name || 'Colaborador'
+            })()
             const isMine = isUser && myColId && a.collaborator_id === myColId
             return (
               <div
@@ -323,16 +326,16 @@ export default function Shifts() {
                 onDragOver={(e)=>{ if (canManage) { e.preventDefault(); e.stopPropagation(); } }}
                 onDrop={(e)=>onDropOnItem(e, a.id)}
                 className={
-                  "flex items-center justify-between gap-2 rounded-lg border border-neutral-200 px-2 py-0.5 " +
-                  (fnName.includes('Bio LAB') ? ' bg-blue-100' :
-                   fnName.includes('Téc Apoio') ? ' bg-yellow-100' :
-                   fnName.includes('Téc LAB') ? ' bg-green-100' :
-                   fnName.includes('Téc UPA') ? ' bg-red-100' : '')
+                  "flex items-center justify-between gap-2 rounded-lg border px-2 py-0.5 " +
+                  (fnName.includes('Bio LAB') ? ' bg-blue-100 border-blue-300' :
+                   fnName.includes('Téc Apoio') ? ' bg-yellow-100 border-yellow-300' :
+                   fnName.includes('Téc LAB') ? ' bg-green-100 border-green-300' :
+                   fnName.includes('Téc UPA') ? ' bg-red-100 border-red-300' : '')
                 }
               >
                 <div className="min-w-0">
                   <div className="truncate text-xs text-neutral-500">{fnName}</div>
-                  <div className={isMine ? "truncate text-xs font-bold text-purple-700 border border-purple-300 rounded px-1" : "truncate text-xs text-black font-black"}>{colName}</div>
+                  <div className={isMine ? "truncate text-xs font-bold underline text-purple-700 border border-purple-300 rounded px-1" : "truncate text-xs text-black font-black"}>{colName}</div>
                 </div>
                 <div className="flex items-center gap-2">
                   <input type="checkbox" checked={!!a.remunerated} onChange={()=>canManage && toggleRemunerated(a)} title="Remunerado" disabled={!canManage} />
@@ -437,7 +440,7 @@ export default function Shifts() {
         ))}
         {cells.map((c, idx) => (
           c === null ? (
-            <div key={`b-${idx}`} className={(role === 'user' ? 'h-35' : 'h-145') + " rounded-xl border border-dashed border-neutral-200"} />
+            <div key={`b-${idx}`} className={"h-145 rounded-xl border border-dashed border-neutral-200"} />
           ) : (
             <DayCell key={`d-${c}`} day={c} />
           )
