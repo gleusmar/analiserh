@@ -631,11 +631,19 @@ export default function Overtime() {
               </div>
             )}
 
-            {!isAllSelection && selectedCollaboratorId && selectedCollaborator && (
+            {!isAllSelection && selectedCollaboratorId && (
               <div className="space-y-3">
                 <div>
-                  <div className="text-sm font-medium">{selectedCollaborator.name}</div>
-                  <div className="text-[11px] text-neutral-500">ID: {selectedCollaborator.concent_id}</div>
+                  {selectedCollaborator ? (
+                    <>
+                      <div className="text-sm font-medium">{selectedCollaborator.name}</div>
+                      <div className="text-[11px] text-neutral-500">ID: {selectedCollaborator.concent_id}</div>
+                    </>
+                  ) : (
+                    isUser && (
+                      <div className="text-sm font-medium">Meu banco de horas</div>
+                    )
+                  )}
                 </div>
 
                 <div className={`text-sm md:text-xl px-3 py-2 rounded-xl inline-flex items-center font-semibold ${balanceColor}`}>

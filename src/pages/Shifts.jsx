@@ -26,6 +26,8 @@ function ptMonthYear(date) {
 export default function Shifts() {
   const { role, profile } = useAuth()
   const canManage = role === 'admin' || role === 'super' || role === 'gestor-plantoes'
+  const isUser = role === 'user'
+  const myColId = profile?.collaborator_id || null
   const [current, setCurrent] = useState(() => new Date())
   const [functions, setFunctions] = useState([])
   const [collaborators, setCollaborators] = useState([])
@@ -151,11 +153,11 @@ export default function Shifts() {
       const d = new Date(current.getFullYear(), current.getMonth(), day)
       return d.toLocaleDateString('pt-BR', { weekday: 'short' })
     }, [current, day])
-    const visibleItems = useMemo(() => {
-      if (canManage) return items
-      const myId = profile?.collaborator_id || null
-      return (items || []).filter(a => a.collaborator_id === myId)
-    }, [items, canManage, profile])
+    const visibleItems = useMemo(() => items || [], [items])
+    const hasMyAssignment = useMemo(() => {
+      if (!isUser || !myColId) return false
+      return (items || []).some(a => a.collaborator_id === myColId)
+    }, [items, isUser, myColId])
     const [selFn, setSelFn] = useState('')
     const [selCol, setSelCol] = useState('')
     const [rem, setRem] = useState(true)
@@ -292,7 +294,10 @@ export default function Shifts() {
     }
     return (
       <div
-        className={`flex flex-col rounded-xl border border-neutral-200 p-2 gap-2 text-[11px] ${role==='user' ? 'md:h-35' : 'md:h-145'} min-h-14`}
+        className={
+          `flex flex-col rounded-xl p-2 gap-2 text-[11px] min-h-14 ${role==='user' ? 'md:h-35' : 'md:h-145'} ` +
+          (hasMyAssignment && isUser ? 'border-3 border-neutral-500 bg-neutral-200' : 'border border-neutral-200 bg-white')
+        }
         onDragOver={(e)=>{ if (canManage) e.preventDefault() }}
         onDrop={onDropOnContainer}
       >
@@ -309,6 +314,7 @@ export default function Shifts() {
           {orderedItems.map(a => {
             const fnName = (functions.find(f => f.id === a.shift_function_id)?.name) || 'Função'
             const colName = (collaborators.find(c => c.id === a.collaborator_id)?.name) || 'Colaborador'
+            const isMine = isUser && myColId && a.collaborator_id === myColId
             return (
               <div
                 key={a.id}
@@ -326,7 +332,7 @@ export default function Shifts() {
               >
                 <div className="min-w-0">
                   <div className="truncate text-xs text-neutral-500">{fnName}</div>
-                  <div className="truncate text-xs text-black font-black">{colName}</div>
+                  <div className={isMine ? "truncate text-xs font-bold text-purple-700 border border-purple-300 rounded px-1" : "truncate text-xs text-black font-black"}>{colName}</div>
                 </div>
                 <div className="flex items-center gap-2">
                   <input type="checkbox" checked={!!a.remunerated} onChange={()=>canManage && toggleRemunerated(a)} title="Remunerado" disabled={!canManage} />

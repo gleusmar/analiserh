@@ -113,6 +113,16 @@ export default function ShiftsDashboard() {
   const filtered = useMemo(() => {
     let list = rows
 
+    // Para usuários finais, sempre limitar ao colaborador vinculado.
+    if (isUser) {
+      if (myColId) {
+        list = list.filter(r => r.collaborator_id === myColId)
+      } else {
+        // Sem colaborador vinculado: não mostrar registros.
+        list = []
+      }
+    }
+
     if (q) {
       const k = q.toLowerCase()
       list = list.filter(r => r.function_name.toLowerCase().includes(k) || r.collaborator_name.toLowerCase().includes(k))
