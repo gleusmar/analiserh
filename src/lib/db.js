@@ -825,7 +825,7 @@ export async function fetchMyProfile() {
   if (!user) return null
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, email, role, status, created_at, collaborator_id, must_change_password')
+    .select('id, email, role, status, created_at, collaborator_id, must_change_password, collaborators:collaborator_id(id, name, concent_id)')
     .eq('id', user.id)
     .maybeSingle()
   if (error) throw error
