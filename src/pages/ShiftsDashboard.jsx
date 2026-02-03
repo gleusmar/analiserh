@@ -261,7 +261,7 @@ export default function ShiftsDashboard() {
                 <div>
                   <div className="font-semibold text-xs text-neutral-900">{formatBRfromYMD(r.date)}</div>
                   <div className="mt-1">
-                    <div className={isMine ? "text-xs font-bold text-purple-700 truncate border border-purple-300 rounded px-1" : "text-xs font-semibold text-neutral-900 truncate"}>
+                    <div className={isMine ? "text-xs font-bold text-neutral-900 truncate" : "text-xs font-semibold text-neutral-600 truncate"}>
                       {r.collaborator_name}
                     </div>
                     <div className="text-xs text-neutral-600 truncate">{r.function_name}</div>

@@ -344,7 +344,7 @@ export default function Shifts() {
               >
                 <div className="min-w-0">
                   <div className="truncate text-xs text-neutral-500">{fnName}</div>
-                  <div className={isMine ? "truncate text-xs font-bold underline text-purple-700 border border-purple-300 rounded px-1" : "truncate text-xs text-black font-black"}>{colName}</div>
+                  <div className={isMine ? "truncate text-xs font-bold decoration-4 border border-orange-600 bg-orange-400 rounded px-1" : "truncate text-xs text-black font-black"}>{colName}</div>
                 </div>
                 <div className="flex items-center gap-2">
                   <input type="checkbox" checked={!!a.remunerated} onChange={()=>canManage && toggleRemunerated(a)} title="Remunerado" disabled={!canManage} />
