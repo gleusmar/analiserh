@@ -113,15 +113,6 @@ export default function ShiftsDashboard() {
   const filtered = useMemo(() => {
     let list = rows
 
-    // Para usuários finais, sempre limitar ao colaborador vinculado.
-    if (isUser) {
-      if (myColId) {
-        list = list.filter(r => r.collaborator_id === myColId)
-      } else {
-        // Sem colaborador vinculado: não mostrar registros.
-        list = []
-      }
-    }
     if (q) {
       const k = q.toLowerCase()
       list = list.filter(r => r.function_name.toLowerCase().includes(k) || r.collaborator_name.toLowerCase().includes(k))
@@ -249,18 +240,20 @@ export default function ShiftsDashboard() {
 
       {/* Mobile: cards legíveis */}
       <div className="space-y-2 md:hidden">
-        {filtered.map(r => (
+        {filtered.map(r => {
+          const isMine = isUser && myColId && r.collaborator_id === myColId
+          return (
           <div
             key={r.id}
-            className="rounded-xl border border-neutral-200 bg-white px-3 py-2 shadow-sm text-xs flex flex-col gap-1"
+            className={`rounded-xl px-3 py-2 shadow-sm text-xs flex flex-col gap-1 border ${isMine ? 'border-neutral-400 bg-neutral-100' : 'border-neutral-200 bg-white'}`}
           >
             <div className="flex items-baseline justify-between gap-2">
               <div>
                 <div className="font-semibold text-xs text-neutral-900">{formatBRfromYMD(r.date)}</div>
                 <div className="mt-1">
-                  {!isUser && (
-                    <div className="text-xs font-semibold text-neutral-900 truncate">{r.collaborator_name}</div>
-                  )}
+                  <div className={isMine ? "text-xs font-bold text-purple-700 truncate border border-purple-300 rounded px-1" : "text-xs font-semibold text-neutral-900 truncate"}>
+                    {r.collaborator_name}
+                  </div>
                   <div className="text-xs text-neutral-600 truncate">{r.function_name}</div>
                 </div>
               </div>
@@ -284,25 +277,24 @@ export default function ShiftsDashboard() {
             <tr>
               <th className="py-2"><button className="hover:underline inline-flex items-center gap-1" onClick={()=>toggleSort('date')}>Data {orderBy==='date' ? (direction==='asc'?'↑':'↓') : ''}</button></th>
               <th className="py-2"><button className="hover:underline inline-flex items-center gap-1" onClick={()=>toggleSort('function_name')}>Função {orderBy==='function_name' ? (direction==='asc'?'↑':'↓') : ''}</button></th>
-              {!isUser && (
-                <th className="py-2"><button className="hover:underline inline-flex items-center gap-1" onClick={()=>toggleSort('collaborator_name')}>Colaborador {orderBy==='collaborator_name' ? (direction==='asc'?'↑':'↓') : ''}</button></th>
-              )}
+              <th className="py-2"><button className="hover:underline inline-flex items-center gap-1" onClick={()=>toggleSort('collaborator_name')}>Colaborador {orderBy==='collaborator_name' ? (direction==='asc'?'↑':'↓') : ''}</button></th>
               <th className="py-2">Remun.</th>
               <th className="py-2"><button className="hover:underline inline-flex items-center gap-1" onClick={()=>toggleSort('value')}>Valor {orderBy==='value' ? (direction==='asc'?'↑':'↓') : ''}</button></th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map(r => (
-              <tr key={r.id} className="border-t border-neutral-200">
+            {filtered.map(r => {
+              const isMine = isUser && myColId && r.collaborator_id === myColId
+              return (
+              <tr key={r.id} className={isMine ? "border-t border-neutral-300 bg-neutral-50" : "border-t border-neutral-200"}>
                 <td className="py-2 px-2">{formatBRfromYMD(r.date)}</td>
                 <td className="py-2 px-2">{r.function_name}</td>
-                {!isUser && (
-                  <td className="py-2 px-2">{r.collaborator_name}</td>
-                )}
+                <td className={isMine ? "py-2 px-2 font-bold text-purple-700 border border-purple-300 rounded-md" : "py-2 px-2"}>{r.collaborator_name}</td>
                 <td className="py-2 px-2">{r.remunerated ? '✓' : ''}</td>
                 <td className="py-2 px-2">{r.value.toLocaleString('pt-BR',{ style:'currency', currency:'BRL'})}</td>
               </tr>
-            ))}
+              )
+            })}
           </tbody>
         </table>
       </div>

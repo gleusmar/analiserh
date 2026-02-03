@@ -151,7 +151,7 @@ function App() {
         path="/payroll/overtime"
         element={
           <ProtectedRoute>
-            <RoleRoute allow={["admin", "super", "gestor-plantoes"]}>
+            <RoleRoute allow={["admin", "super", "gestor-plantoes", "user"]}>
               <DashboardLayout>
                 <Overtime />
               </DashboardLayout>
