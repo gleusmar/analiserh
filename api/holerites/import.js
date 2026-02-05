@@ -66,6 +66,7 @@ function extractMappedValues(text) {
     inss_ferias: 0,
     plantoes: 0,
     atestado: 0,
+    faltas_injustificadas: 0,
     emprestimo_consignado: 0,
     diferenca_salario: 0,
     decimo_1_in: 0,
@@ -111,6 +112,7 @@ function extractMappedValues(text) {
       case '110': out.gratificacao += amount; break
       case '002': out.salario_familia += amount; break
       case '038': out.atestado += amount; break
+      case '059': out.faltas_injustificadas += amount; break
       case '060': out.trienio_3 += amount; break
       case '551': out.emprestimo_consignado += amount; break
       case '028': out.ferias += amount; break
@@ -174,6 +176,7 @@ export default async function handler(req, res) {
     const tINSSFer = await getOrCreateEntryType(admin, 'INSS Férias', 'out')
     const tPlant = await getOrCreateEntryType(admin, 'Plantões', 'in')
     const tAtest = await getOrCreateEntryType(admin, 'Atestado', 'in')
+    const tFaltasInj = await getOrCreateEntryType(admin, 'Faltas Injustificadas', 'out')
     const tTrienio3 = await getOrCreateEntryType(admin, 'Triênio (3%)', 'in')
     const tEmpConsig = await getOrCreateEntryType(admin, 'Empréstimo Consignado', 'out')
     const tDifSal = await getOrCreateEntryType(admin, 'Diferença de Salário', 'in')
@@ -228,6 +231,7 @@ export default async function handler(req, res) {
         { type: tINSSFer, amount: vals.inss_ferias, note: 'Holerite' },
         { type: tPlant, amount: vals.plantoes, note: 'Holerite' },
         { type: tAtest, amount: vals.atestado, note: 'Holerite' },
+        { type: tFaltasInj, amount: vals.faltas_injustificadas, note: 'Holerite' },
         { type: tEmpConsig, amount: vals.emprestimo_consignado, note: 'Holerite' },
         { type: tDifSal, amount: vals.diferenca_salario, note: 'Holerite' },
         { type: t13p1, amount: vals.decimo_1_in, note: 'Holerite' },
