@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
-import { Download, FileDown, Trash2, UserMinus } from 'lucide-react'
+import { Download, FileDown, Trash2, Upload, UserMinus } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext.jsx'
-import { listCollaboratorsSimple, listPayrollEntryTypes, listPayrollSheets, createPayrollSheet, listPayrollSheetItems, listPayrollEntriesForSheet, createPayrollEntry, deletePayrollEntry, updatePayrollSheet, deletePayrollSheet, upsertPlantaoEntry, listShiftFunctions, listShiftAssignments, listShiftRateOverrides, addPayrollSheetItems, getHoleriteUrl, deleteHolerite } from '../lib/db'
+import { listCollaboratorsSimple, listPayrollEntryTypes, listPayrollSheets, createPayrollSheet, listPayrollSheetItems, listPayrollEntriesForSheet, createPayrollEntry, deletePayrollEntry, updatePayrollSheet, deletePayrollSheet, upsertPlantaoEntry, listShiftFunctions, listShiftAssignments, listShiftRateOverrides, addPayrollSheetItems, getHoleriteUrl, deleteHolerite, uploadHolerite } from '../lib/db'
 
 function ymOf(date) { return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}` }
 function parseYM(ym) { const [y,m] = String(ym||'').split('-').map(Number); return { y, m } }
@@ -60,6 +60,12 @@ export default function Payroll() {
   const [openSlip, setOpenSlip] = useState(false)
   const [slipPages, setSlipPages] = useState([]) // [{ idx, blob, collaborator_id, selected }]
   const [slipLoading, setSlipLoading] = useState(false)
+
+  // Upload de holerite individual (perfil user)
+  const [uploadingHolerite, setUploadingHolerite] = useState(false)
+
+  // Presença de holerite por colaborador na folha atual
+  const [hasHolerite, setHasHolerite] = useState({}) // { collaborator_id: bool }
 
   // Add collaborators to existing sheet
   const [openAddCols, setOpenAddCols] = useState(false)
@@ -229,6 +235,19 @@ export default function Payroll() {
     } catch (e) { alert(e.message || 'Falha ao remover holerite') }
   }
 
+  async function onUploadSingleHolerite(collaboratorId, file) {
+    if (!selectedSheetId || !file) return
+    try {
+      setUploadingHolerite(true)
+      await uploadHolerite(selectedSheetId, collaboratorId, file)
+      alert('Holerite enviado')
+    } catch (e) {
+      alert(e.message || 'Falha ao enviar holerite')
+    } finally {
+      setUploadingHolerite(false)
+    }
+  }
+
   async function loadSheet(sheetId) {
     if (!sheetId) { setItems([]); setEntriesByItem({}); return }
     try {
@@ -243,6 +262,19 @@ export default function Payroll() {
         map[e.sheet_item_id].push(e)
       })
       setEntriesByItem(map)
+
+      // Verificar quais colaboradores possuem holerite armazenado para esta folha
+      const checks = await Promise.all((its || []).map(async it => {
+        try {
+          const url = await getHoleriteUrl(sheetId, it.collaborator_id)
+          return { collaborator_id: it.collaborator_id, has: !!url }
+        } catch (_) {
+          return { collaborator_id: it.collaborator_id, has: false }
+        }
+      }))
+      const hasMap = {}
+      checks.forEach(c => { hasMap[c.collaborator_id] = c.has })
+      setHasHolerite(hasMap)
     } catch (e) {
       setError(e.message || 'Erro ao carregar itens da folha')
     }
@@ -609,6 +641,7 @@ export default function Payroll() {
                   const totals = totalsByItem[it.id] || { inc:0, out:0, total:0 }
                   const isBB = (col?.bank_code || '').trim() === '001'
                   const rowColor = isBB ? 'bg-amber-50 hover:bg-amber-100' : 'bg-green-50 hover:bg-green-100'
+                  const hasSlip = !!hasHolerite[it.collaborator_id]
                   return (
                     <Fragment key={it.id}>
                       <tr onClick={()=>toggleExpanded(it.id)} className={`border-t border-neutral-200 cursor-pointer ${rowColor} text-neutral-900`}>
@@ -621,9 +654,38 @@ export default function Payroll() {
                         <td className="py-2 px-1 font-semibold">{formatBRL(totals.total)}</td>
                         <td className="py-2 px-1">
                           <div className="inline-flex items-center gap-2">
-                            <button onClick={(e)=>{ e.stopPropagation(); onDownloadHolerite(it.collaborator_id) }} className="w-7 h-7 grid place-items-center rounded-md bg-blue-600 hover:bg-blue-700 text-white" title="Holerite">
+                            <button
+                              onClick={(e)=>{ e.stopPropagation(); if (hasSlip) onDownloadHolerite(it.collaborator_id) }}
+                              disabled={!hasSlip}
+                              className={
+                                "w-7 h-7 grid place-items-center rounded-md text-white " +
+                                (hasSlip ? 'bg-blue-600 hover:bg-blue-700' : 'bg-neutral-300 cursor-not-allowed')
+                              }
+                              title="Holerite"
+                            >
                               <FileDown className="size-4" />
                             </button>
+                            {canAdmin && (
+                              <label
+                                className={`w-7 h-7 grid place-items-center rounded-md bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer ${uploadingHolerite ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                title="Incluir Holerite"
+                                onClick={(e)=>e.stopPropagation()}
+                              >
+                                <Upload className="size-4" />
+                                <input
+                                  type="file"
+                                  accept="application/pdf"
+                                  className="hidden"
+                                  disabled={uploadingHolerite}
+                                  onChange={async (e) => {
+                                    const file = e.target.files && e.target.files[0]
+                                    if (!file) return
+                                    await onUploadSingleHolerite(it.collaborator_id, file)
+                                    e.target.value = ''
+                                  }}
+                                />
+                              </label>
+                            )}
                             {canAdmin && (
                               <>
                                 <button onClick={(e)=>{ e.stopPropagation(); onRemoveHolerite(it.collaborator_id) }} className="w-7 h-7 grid place-items-center rounded-md bg-red-600 hover:bg-red-700 text-white" title="Remover Holerite">
@@ -710,9 +772,37 @@ export default function Payroll() {
                       <div>Descontos: <span className="font-medium text-red-600">{formatBRL(totals.out)}</span></div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button onClick={()=>onDownloadHolerite(it.collaborator_id)} className="w-8 h-8 grid place-items-center rounded-md bg-blue-600 hover:bg-blue-700 text-white" title="Holerite">
+                      <button
+                        onClick={()=>{ if (hasSlip) onDownloadHolerite(it.collaborator_id) }}
+                        disabled={!hasSlip}
+                        className={
+                          "w-8 h-8 grid place-items-center rounded-md text-white " +
+                          (hasSlip ? 'bg-blue-600 hover:bg-blue-700' : 'bg-neutral-300 cursor-not-allowed')
+                        }
+                        title="Holerite"
+                      >
                         <FileDown className="size-4" />
                       </button>
+                      {canAdmin && (
+                        <label
+                          className={`w-8 h-8 grid place-items-center rounded-md bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer ${uploadingHolerite ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          title="Incluir Holerite"
+                        >
+                          <Upload className="size-4" />
+                          <input
+                            type="file"
+                            accept="application/pdf"
+                            className="hidden"
+                            disabled={uploadingHolerite}
+                            onChange={async (e) => {
+                              const file = e.target.files && e.target.files[0]
+                              if (!file) return
+                              await onUploadSingleHolerite(it.collaborator_id, file)
+                              e.target.value = ''
+                            }}
+                          />
+                        </label>
+                      )}
                       {canAdmin && (
                         <>
                           <button onClick={()=>onRemoveHolerite(it.collaborator_id)} className="w-8 h-8 grid place-items-center rounded-md bg-red-600 hover:bg-red-700 text-white" title="Remover Holerite">
