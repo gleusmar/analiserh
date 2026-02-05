@@ -112,7 +112,10 @@ function extractMappedValues(text) {
       case '110': out.gratificacao += amount; break
       case '002': out.salario_familia += amount; break
       case '038': out.atestado += amount; break
-      case '059': out.faltas_injustificadas += amount; break
+      case '059':
+      case '509':
+        out.faltas_injustificadas += amount;
+        break
       case '060': out.trienio_3 += amount; break
       case '551': out.emprestimo_consignado += amount; break
       case '028': out.ferias += amount; break
