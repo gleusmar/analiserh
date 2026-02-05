@@ -745,6 +745,7 @@ export default function Payroll() {
               const totals = totalsByItem[it.id] || { inc:0, out:0, total:0 }
               const isBB = (col?.bank_code || '').trim() === '001'
               const baseColor = isBB ? 'bg-amber-50' : 'bg-green-50'
+              const hasSlip = !!hasHolerite[it.collaborator_id]
               return (
                 <div
                   key={it.id}
