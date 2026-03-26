@@ -168,6 +168,15 @@ export async function listCollaboratorsPaged({ q = '', page = 1, pageSize = 10, 
   return { data, count }
 }
 
+export async function listAllCollaboratorsSimple() {
+  const { data, error } = await supabase
+    .from('collaborators')
+    .select('id, name, status')
+    .order('name', { ascending: true })
+  if (error) throw error
+  return data || []
+}
+
 // Storage: Holerites (PDFs)
 export async function uploadHolerite(sheetId, collaboratorId, file) {
   const bucket = supabase.storage.from('holerites')
@@ -191,6 +200,57 @@ export async function deleteHolerite(sheetId, collaboratorId) {
   const { error } = await bucket.remove([path])
   if (error) throw error
   return true
+}
+
+// Income reports (Informe de Rendimentos)
+export async function listIncomeReports(params = {}) {
+  const { collaboratorId } = params || {}
+  let q = supabase
+    .from('income_reports')
+    .select('id, year, collaborator_id, collaborators(name, status)')
+  if (collaboratorId) {
+    q = q.eq('collaborator_id', collaboratorId)
+  }
+  const { data, error } = await q
+  if (error) throw error
+  return data || []
+}
+
+export async function createIncomeReports(year, collaboratorIds = []) {
+  if (!year || !Array.isArray(collaboratorIds) || collaboratorIds.length === 0) return []
+  // Avoid duplicates: skip collaborators that already have a record for this year
+  const { data: existing, error: selErr } = await supabase
+    .from('income_reports')
+    .select('id, year, collaborator_id')
+    .eq('year', year)
+    .in('collaborator_id', collaboratorIds)
+  if (selErr) throw selErr
+  const existingIds = new Set((existing || []).map(r => r.collaborator_id))
+  const missing = collaboratorIds.filter(cid => !existingIds.has(cid))
+  if (!missing.length) return []
+  const rows = missing.map(cid => ({ year, collaborator_id: cid }))
+  const { data, error } = await supabase
+    .from('income_reports')
+    .insert(rows)
+    .select('id, year, collaborator_id, collaborators(name, status)')
+  if (error) throw error
+  return data || []
+}
+
+export async function uploadIncomeReport(year, collaboratorId, file) {
+  const bucket = supabase.storage.from('income_reports')
+  const path = `${year}/${collaboratorId}.pdf`
+  const { error } = await bucket.upload(path, file, { contentType: 'application/pdf', upsert: true })
+  if (error) throw error
+  return true
+}
+
+export async function getIncomeReportUrl(year, collaboratorId, expiresInSeconds = 3600) {
+  const bucket = supabase.storage.from('income_reports')
+  const path = `${year}/${collaboratorId}.pdf`
+  const { data, error } = await bucket.createSignedUrl(path, expiresInSeconds)
+  if (error) return null
+  return data?.signedUrl || null
 }
 
 // Shift (Plantões) helpers

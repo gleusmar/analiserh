@@ -27,6 +27,7 @@ export default function Sidebar({ open = false, onClose = () => {} }) {
         { to: '/payroll', label: 'Folha Mensal', icon: BarChart, show: canAdmin || canGestor || isUser },
         { to: '/payroll/vacations', label: 'Férias', icon: BarChart, show: canAdmin || canGestor || isUser },
         { to: '/payroll/overtime', label: 'Horas Extras', icon: BarChart, show: canAdmin || canGestor || isUser },
+        { to: '/payroll/income-reports', label: 'Informe de Rendimentos', icon: BarChart, show: canAdmin || canGestor || isUser },
       ],
     },
     {

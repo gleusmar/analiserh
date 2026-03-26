@@ -22,6 +22,7 @@ import Vacations from './pages/Vacations.jsx'
 import PayrollEntries from './pages/PayrollEntries.jsx'
 import Overtime from './pages/Overtime.jsx'
 import Logs from './pages/Logs.jsx'
+import IncomeReports from './pages/IncomeReports.jsx'
 
 function App() {
   return (
@@ -50,6 +51,19 @@ function App() {
             <RoleRoute allow={["admin", "super"]}>
               <DashboardLayout>
                 <Users />
+              </DashboardLayout>
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/payroll/income-reports"
+        element={
+          <ProtectedRoute>
+            <RoleRoute allow={["admin", "super", "gestor-plantoes", "user"]}>
+              <DashboardLayout>
+                <IncomeReports />
               </DashboardLayout>
             </RoleRoute>
           </ProtectedRoute>

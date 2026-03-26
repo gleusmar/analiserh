@@ -29,6 +29,7 @@ export default function Header({ onToggleSidebar }) {
         { to: '/payroll', label: 'Folha Mensal', show: canAdmin || canGestor || isUser },
         { to: '/payroll/vacations', label: 'Férias', show: canAdmin || canGestor || isUser },
         { to: '/payroll/overtime', label: 'Horas Extras', show: canAdmin || canGestor || isUser },
+        { to: '/payroll/income-reports', label: 'Informe de Rendimentos', show: canAdmin || canGestor || isUser },
       ],
     },
     {
