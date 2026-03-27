@@ -253,6 +253,23 @@ export async function getIncomeReportUrl(year, collaboratorId, expiresInSeconds 
   return data?.signedUrl || null
 }
 
+export async function deleteIncomeReport(id) {
+  const { error } = await supabase
+    .from('income_reports')
+    .delete()
+    .eq('id', id)
+  if (error) throw error
+  return true
+}
+
+export async function deleteIncomeReportFile(year, collaboratorId) {
+  const bucket = supabase.storage.from('income_reports')
+  const path = `${year}/${collaboratorId}.pdf`
+  const { error } = await bucket.remove([path])
+  if (error) throw error
+  return true
+}
+
 // Shift (Plantões) helpers
 export async function listShiftFunctions() {
   const { data, error } = await supabase
