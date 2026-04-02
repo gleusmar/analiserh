@@ -356,7 +356,7 @@ export async function createPayrollSheet(name, yearMonth, collaboratorIds = []) 
 export async function listPayrollSheetItems(sheetId) {
   const { data, error } = await supabase
     .from('payroll_sheet_items')
-    .select('id, sheet_id, collaborator_id, collaborators(name, concent_id, bank_code)')
+    .select('id, sheet_id, collaborator_id, collaborators(name, concent_id, bank_code, cpf)')
     .eq('sheet_id', sheetId)
     .order('id', { ascending: true })
   if (error) throw error

@@ -364,6 +364,46 @@ export default function Payroll() {
   }, [items, q, orderBy, orderDir, totalsByItem, canAdmin, profile])
   const grandTotal = useMemo(() => (items||[]).reduce((s, it) => s + (totalsByItem[it.id]?.total || 0), 0), [items, totalsByItem])
 
+  function onExportBB() {
+    if (!selectedSheetId || !selectedSheet) {
+      alert('Selecione uma folha para exportar.')
+      return
+    }
+    const bbItems = (items || []).filter(it => (it.collaborators?.bank_code || '').trim() === '001')
+    if (!bbItems.length) {
+      alert('Não há colaboradores com Banco 001 nesta folha.')
+      return
+    }
+
+    try {
+      const header = ['CPF', '', '', 'VALOR']
+      const lines = [header.join('\t')]
+
+      bbItems.forEach(it => {
+        const cpf = it.collaborators?.cpf || ''
+        const totals = totalsByItem[it.id] || { total: 0 }
+        const total = Number(totals.total || 0)
+        const valor = total.toFixed(2) // 2 casas decimais
+        const row = [cpf, '', '', valor].join('\t')
+        lines.push(row)
+      })
+
+      const content = lines.join('\r\n')
+      const blob = new Blob(['\uFEFF' + content], { type: 'application/vnd.ms-excel;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `bb_${selectedSheet.year_month || 'folha'}.xls`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      console.error('Erro ao exportar BB', e)
+      alert(e.message || 'Falha ao exportar arquivo para o Banco do Brasil')
+    }
+  }
+
   function toggleOrder(key) {
     if (orderBy === key) setOrderDir(d => d==='asc'?'desc':'asc')
     else { setOrderBy(key); setOrderDir('asc') }
@@ -582,6 +622,14 @@ export default function Payroll() {
               className="text-xs rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-1 py-1 disabled:opacity-50 inline-flex items-center justify-center gap-1"
             >
               <span className="hidden sm:inline">Exportar Folha</span>
+              <Download className="size-4" />
+            </button>
+            <button
+              onClick={onExportBB}
+              disabled={!selectedSheetId}
+              className="text-xs rounded-lg bg-yellow-500 hover:bg-yellow-600 text-white px-1 py-1 disabled:opacity-50 inline-flex items-center justify-center gap-1"
+            >
+              <span className="hidden sm:inline">Exportar BB</span>
               <Download className="size-4" />
             </button>
           </div>
