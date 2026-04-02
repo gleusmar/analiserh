@@ -377,14 +377,14 @@ export default function Payroll() {
 
     try {
       const header = ['CPF', '', '', 'VALOR']
-      const lines = [header.join(',')]
+      const lines = [header.join(';')]
 
       bbItems.forEach(it => {
         const cpf = it.collaborators?.cpf || ''
         const totals = totalsByItem[it.id] || { total: 0 }
         const total = Number(totals.total || 0)
         const valor = total.toFixed(2) // 2 casas decimais
-        const row = [cpf, '', '', valor].join(',')
+        const row = [cpf, '', '', valor].join(';')
         lines.push(row)
       })
 
