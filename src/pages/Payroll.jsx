@@ -388,6 +388,12 @@ export default function Payroll() {
         lines.push(row)
       })
 
+      // Duplicar a última linha de dados para contornar problema de leitura no sistema de destino
+      if (lines.length > 1) {
+        const lastDataRow = lines[lines.length - 1]
+        lines.push(lastDataRow)
+      }
+
       const content = lines.join('\r\n')
       const blob = new Blob(['\uFEFF' + content], { type: 'text/csv;charset=utf-8;' })
       const url = URL.createObjectURL(blob)
