@@ -377,23 +377,23 @@ export default function Payroll() {
 
     try {
       const header = ['CPF', '', '', 'VALOR']
-      const lines = [header.join('\t')]
+      const lines = [header.join(',')]
 
       bbItems.forEach(it => {
         const cpf = it.collaborators?.cpf || ''
         const totals = totalsByItem[it.id] || { total: 0 }
         const total = Number(totals.total || 0)
         const valor = total.toFixed(2) // 2 casas decimais
-        const row = [cpf, '', '', valor].join('\t')
+        const row = [cpf, '', '', valor].join(',')
         lines.push(row)
       })
 
       const content = lines.join('\r\n')
-      const blob = new Blob(['\uFEFF' + content], { type: 'application/vnd.ms-excel;charset=utf-8;' })
+      const blob = new Blob(['\uFEFF' + content], { type: 'text/csv;charset=utf-8;' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `bb_${selectedSheet.year_month || 'folha'}.xls`
+      a.download = `bb_${selectedSheet.year_month || 'folha'}.csv`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
