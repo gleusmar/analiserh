@@ -11,6 +11,7 @@ import {
   listProfilesPaged,
   listAuditLogsPaged,
   listCollaboratorsSimple,
+  updateProfileSulamericaAccess,
 } from '../lib/db'
 import { createUser, linkProfileCollaborator, updateUserEmail, resetUserPassword } from '../lib/adminApi'
 import { CreateUserModal } from '../components/CreateUserModal.jsx'
@@ -53,7 +54,7 @@ export default function Users() {
 
   // Modal de criação de usuário
   const [openCreate, setOpenCreate] = useState(false)
-  const [createData, setCreateData] = useState({ email: '', password: '', role: 'user' })
+  const [createData, setCreateData] = useState({ email: '', password: '', role: 'user', can_access_sulamerica: false })
   const [creatingUser, setCreatingUser] = useState(false)
   const [createError, setCreateError] = useState(null)
 
@@ -75,6 +76,16 @@ export default function Users() {
       setError(e.message || 'Erro ao carregar dados')
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function onToggleSulamerica(u) {
+    try {
+      const next = !u.can_access_sulamerica
+      await updateProfileSulamericaAccess(u.id, next)
+      setUsersList((xs) => xs.map((x) => (x.id === u.id ? { ...x, can_access_sulamerica: next } : x)))
+    } catch (e) {
+      alert(e.message || 'Erro ao atualizar acesso para a subpágina')
     }
   }
 
@@ -277,6 +288,7 @@ export default function Users() {
                       <th className="py-2">E-mail</th>
                       <th className="py-2">Papel</th>
                       <th className="py-2">Status</th>
+                      <th className="py-2">SulAmérica</th>
                       <th className="py-2">Colaborador</th>
                       <th className="py-2">Ações</th>
                     </tr>
@@ -290,6 +302,20 @@ export default function Users() {
                           <td className="py-2">{u.email}</td>
                           <td className="py-2 capitalize">{currentRole}</td>
                           <td className="py-2 capitalize">{u.status || 'active'}</td>
+                          <td className="py-2">
+                            {canAdmin ? (
+                              <label className="inline-flex items-center gap-2 text-xs">
+                                <input
+                                  type="checkbox"
+                                  checked={!!u.can_access_sulamerica}
+                                  onChange={() => onToggleSulamerica(u)}
+                                />
+                                <span>Portal SulAmérica</span>
+                              </label>
+                            ) : (
+                              <span className="text-xs text-neutral-500">{u.can_access_sulamerica ? 'Habilitado' : 'Não habilitado'}</span>
+                            )}
+                          </td>
                           <td className="py-2">
                             {canAdmin ? (
                               <div className="flex items-center gap-2">

@@ -4,7 +4,7 @@ function adminUrl(path) {
   return `${ADMIN_API_BASE}${path}`
 }
 
-export async function createUser({ email, password, role = 'user' }, actor) {
+export async function createUser({ email, password, role = 'user', can_access_sulamerica = false }, actor) {
   try {
     const res = await fetch(adminUrl('/admin/users'), {
       method: 'POST',
@@ -13,7 +13,7 @@ export async function createUser({ email, password, role = 'user' }, actor) {
         ...(actor?.id ? { 'x-actor-id': actor.id } : {}),
         ...(actor?.email ? { 'x-actor-email': actor.email } : {}),
       },
-      body: JSON.stringify({ email, password, role }),
+      body: JSON.stringify({ email, password, role, can_access_sulamerica }),
     })
     const data = await res.json().catch(() => ({}))
     if (!res.ok) {

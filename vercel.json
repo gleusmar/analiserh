@@ -1,6 +1,11 @@
 {
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
+    {
+      "source": "/",
+      "has": [{ "type": "host", "value": "sulamerica.analiselabclinico.com.br" }],
+      "destination": "/sulamerica"
+    },
     { "source": "/(.*)", "destination": "/" }
   ]
 }

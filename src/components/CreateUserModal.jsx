@@ -12,6 +12,14 @@ export function CreateUserModal({ open, onClose, data, setData, onSubmit, busy, 
             <option value="admin">admin</option>
             <option value="gestor-plantoes">gestor-plantoes</option>
           </select>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={!!data.can_access_sulamerica}
+              onChange={(e)=>setData(d=>({...d, can_access_sulamerica: e.target.checked}))}
+            />
+            <span>Permitir acesso ao portal SulAmérica</span>
+          </label>
           {error && <div className="text-sm text-red-600">{error}</div>}
           <div className="flex justify-end gap-2">
             <button type="button" onClick={onClose} className="px-3 py-2 rounded-xl border border-neutral-200">Cancelar</button>

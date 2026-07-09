@@ -23,6 +23,7 @@ import PayrollEntries from './pages/PayrollEntries.jsx'
 import Overtime from './pages/Overtime.jsx'
 import Logs from './pages/Logs.jsx'
 import IncomeReports from './pages/IncomeReports.jsx'
+import Sulamerica from './pages/Sulamerica.jsx'
 
 function App() {
   return (
@@ -40,6 +41,19 @@ function App() {
             <DashboardLayout>
               <Dashboard />
             </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/sulamerica"
+        element={
+          <ProtectedRoute>
+            <RoleRoute allow={["admin", "super", "gestor-plantoes", "user"]}>
+              <DashboardLayout>
+                <Sulamerica />
+              </DashboardLayout>
+            </RoleRoute>
           </ProtectedRoute>
         }
       />
