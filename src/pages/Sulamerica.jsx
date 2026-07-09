@@ -9,10 +9,13 @@ export default function Sulamerica() {
 
   useEffect(() => {
     if (loading) return
-    if (profile?.can_access_sulamerica) return
+    // Se o perfil ainda não foi carregado, não decidir ainda
+    if (!profile) return
+    if (profile.can_access_sulamerica) return
     setToast({ title: 'Acesso restrito', message: 'Você não tem permissão para acessar o portal SulAmérica.' })
     const timer = setTimeout(() => {
-      navigate('/', { replace: true })
+      // Redirecionar para o domínio principal de RH
+      window.location.href = 'https://rh.analiselabclinico.com.br'
     }, 2500)
     return () => clearTimeout(timer)
   }, [loading, profile, navigate])
@@ -21,7 +24,12 @@ export default function Sulamerica() {
     return <div className="min-h-screen grid place-items-center text-neutral-500">Carregando...</div>
   }
 
-  if (!profile?.can_access_sulamerica) {
+  // Enquanto o perfil não estiver carregado, evitar piscar tela de acesso negado
+  if (!profile) {
+    return <div className="min-h-screen grid place-items-center text-neutral-500">Carregando...</div>
+  }
+
+  if (!profile.can_access_sulamerica) {
     return (
       <div className="relative min-h-screen flex items-center justify-center bg-white">
         {toast && (
