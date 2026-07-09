@@ -62,6 +62,112 @@ app.post('/api/holerites/auto-map', async (req, res) => {
   }
 })
 
+// Parse SulAmérica TISS PDF guide and extract header fields + exams
+// Body: { data: base64Pdf } or { data: 'data:application/pdf;base64,...' }
+app.post('/api/sulamerica/parse-pdf', async (req, res) => {
+  try {
+    const { data } = req.body || {}
+    if (!data) {
+      return res.status(400).json({ error: 'campo data (base64 do PDF) é obrigatório' })
+    }
+
+    const buf = Buffer.from(String(data).replace(/^data:.*;base64,/, ''), 'base64')
+    const parsed = await pdfParse(buf)
+
+    const text = String(parsed.text || '')
+    const pages = text.split(/\f/)
+
+    // Helper to build a line array from raw text
+    const toLines = (t) => String(t || '')
+      .split(/\r?\n/)
+      .map(l => l.trim())
+      .filter(Boolean)
+
+    const allLines = toLines(text)
+    const firstPageLines = toLines(pages[0] || text)
+
+    const getField = (lines, labelRe, valueRe, fallbackIdxOffset = 1) => {
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i]
+        if (!labelRe.test(line)) continue
+        if (valueRe) {
+          const m = line.match(valueRe)
+          if (m && m[1]) return m[1].trim()
+        }
+        const next = lines[i + fallbackIdxOffset]
+        if (next) return next.trim()
+      }
+      return ''
+    }
+
+    const header = {
+      registro_ANS: getField(firstPageLines, /registro\s*ans/i, /(\d{6})/), // 1 - Registro ANS
+      codigo_operadora: getField(firstPageLines, /c[oó]digo\s+na\s+operadora/i, /(\S+)/), // 29
+      nome_contratado: getField(firstPageLines, /nome\s+do\s+contratado/i, null), // 30
+      numero_requisicao: getField(firstPageLines, /n[ºo]\s+da\s+requisi[cç][aã]o/i, /(\S+)/), // 2
+      data_autorizacao: getField(firstPageLines, /data\s+da\s+autoriza[cç][aã]o/i, /(\d{2}\/\d{2}\/\d{4})/), // 4
+      numero_carteira: getField(firstPageLines, /n[úu]mero\s+da\s+carteira/i, /(\S+)/), // 8
+      validade_carteira: getField(firstPageLines, /validade\s+da\s+carteira/i, /(\d{2}\/\d{2}\/\d{4})/), // 9
+      beneficiario_nome: getField(firstPageLines, /nome\s*:?$/i, null) || getField(firstPageLines, /nome\s+do\s+benefici[áa]rio/i, null), // 10
+      cns: getField(firstPageLines, /(cart[aã]o\s+nacional\s+de\s+sa[úu]de|cns)/i, /(\d[\d\. ]{10,})/), // 11
+      atendimento_RN: getField(firstPageLines, /atendimento\s+rn/i, /(sim|nao|não)/i), // 12
+      profissional_nome: getField(firstPageLines, /nome\s+do\s+profissional\s+solicitante/i, null), // 15
+      conselho_profissional: getField(firstPageLines, /conselho\s+profissional/i, /(CRM|COREN|CRO|CRP|CRF|CREFITO|CREFONO|CBO|OUTROS)/i), // 16
+      numero_conselho: getField(firstPageLines, /n[úu]mero\s+no\s+conselho/i, /(\S+)/), // 17
+      uf_conselho: getField(firstPageLines, /uf\s+.*conselho/i, /uf\s+.*?([A-Z]{2})/), // 18
+      cbos: getField(firstPageLines, /cbos/i, /(\d{4}-?\d{2})/), // 19
+      indicacao_clinica: getField(allLines, /indica[cç][aã]o\s+cl[ií]nica/i, null, 1), // 23
+      tipo_atendimento: getField(allLines, /tipo\s+de\s+atendimento/i, /(eletivo|urg[eê]ncia|emerg[eê]ncia|outros)/i), // 32
+      indicacao_acidente: getField(allLines, /indica[cç][aã]o\s+de\s+acidente/i, /(trabalho|tr[aâ]nsito|outros|nao|não)/i), // 33
+      tipo_consulta: getField(allLines, /tipo\s+de\s+consulta/i, /(primeira|seguimento|pré?-natal|p[óo]s?-op)/i), // 34
+    }
+
+    // Extract exam lines from all pages; on pages > 1 we only append exams
+    const examLines = []
+    const examHeaderRe = /c[oó]digo\s+descri[cç][aã]o/i
+    const examRowRe = /^(?<date>\d{2}\/\d{2}\/\d{4})?\s*(?<code>\d{3,})?\s+(?<desc>.+?)\s+(?<qty>\d+)\s+(?<val>\d{1,3}(?:\.\d{3})*,\d{2})$/
+
+    const parsePageForExams = (pageText, isFirst) => {
+      const lines = toLines(pageText)
+      let inTable = false
+      for (const line of lines) {
+        if (!inTable && examHeaderRe.test(line)) {
+          inTable = true
+          continue
+        }
+        if (!inTable) continue
+        // Basic stop conditions (new section)
+        if (/observa[cç][oõ]es/i.test(line) || /totais?/i.test(line)) break
+        const m = line.match(examRowRe)
+        if (m && m.groups) {
+          examLines.push({
+            date: m.groups.date || '',
+            code: m.groups.code || '',
+            description: m.groups.desc.trim(),
+            quantity: Number(m.groups.qty || '0') || 0,
+            value: m.groups.val || '',
+          })
+        }
+      }
+    }
+
+    pages.forEach((p, idx) => {
+      if (!p) return
+      if (idx === 0) {
+        parsePageForExams(p, true)
+      } else {
+        // Para páginas 2+ só interessa a lista de exames, que será agregada
+        parsePageForExams(p, false)
+      }
+    })
+
+    return res.json({ ok: true, header, exams: examLines })
+  } catch (e) {
+    console.error(e)
+    return res.status(500).json({ error: e.message || 'falha ao processar PDF SulAmérica' })
+  }
+})
+
 // Remove holerite file of a collaborator for a sheet
 // Body: { sheetId, collaborator_id }
 app.post('/api/holerites/remove', async (req, res) => {
