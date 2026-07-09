@@ -3,11 +3,12 @@ import { LogOut, Menu } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 
 export default function Header({ onToggleSidebar }) {
-  const { user, role, signOut } = useAuth()
+  const { user, role, profile, signOut } = useAuth()
 
   const canAdmin = role === 'admin' || role === 'super'
   const canGestor = role === 'gestor-plantoes'
   const isUser = role === 'user'
+  const canSulamerica = !!profile?.can_access_sulamerica
 
   const sections = [
     {
@@ -30,6 +31,12 @@ export default function Header({ onToggleSidebar }) {
         { to: '/payroll/vacations', label: 'Férias', show: canAdmin || canGestor || isUser },
         { to: '/payroll/overtime', label: 'Horas Extras', show: canAdmin || canGestor || isUser },
         { to: '/payroll/income-reports', label: 'Informe de Rendimentos', show: canAdmin || canGestor || isUser },
+      ],
+    },
+    {
+      title: null,
+      items: [
+        { to: '/sulamerica', label: 'Sulamérica', show: canSulamerica, variant: 'sulamerica' },
       ],
     },
     {
@@ -64,18 +71,34 @@ export default function Header({ onToggleSidebar }) {
           if (!sec.title) {
             return (
               <div key={idx} className="flex items-center gap-2">
-                {items.map(({ to, label }) => (
-                  <NavLink
-                    key={to}
-                    to={to}
-                    end
-                    className={({ isActive }) =>
-                      `px-2 py-1 rounded-md hover:bg-neutral-100 ${isActive ? 'bg-neutral-100 text-neutral-900 font-semibold' : 'text-neutral-700'}`
-                    }
-                  >
-                    {label}
-                  </NavLink>
-                ))}
+                {items.map(({ to, label, variant }) => {
+                  if (variant === 'sulamerica') {
+                    return (
+                      <a
+                        key={to}
+                        href="https://sulamerica.analiselabclinico.com.br"
+                        className="px-2 py-1 rounded-md text-orange-500 hover:bg-neutral-100 hover:text-orange-600"
+                      >
+                        {label}
+                      </a>
+                    )
+                  }
+                  return (
+                    <NavLink
+                      key={to}
+                      to={to}
+                      end
+                      className={({ isActive }) => {
+                        const base = 'px-2 py-1 rounded-md hover:bg-neutral-100'
+                        const activeBg = isActive ? ' bg-neutral-100 font-semibold' : ''
+                        const color = isActive ? ' text-neutral-900' : ' text-neutral-700'
+                        return base + activeBg + color
+                      }}
+                    >
+                      {label}
+                    </NavLink>
+                  )
+                })}
               </div>
             )
           }

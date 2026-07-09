@@ -25,6 +25,8 @@ import Logs from './pages/Logs.jsx'
 import IncomeReports from './pages/IncomeReports.jsx'
 import Sulamerica from './pages/Sulamerica.jsx'
 
+const isSulamericaHost = typeof window !== 'undefined' && window.location.hostname === 'sulamerica.analiselabclinico.com.br'
+
 function App() {
   return (
     <Routes>
@@ -39,7 +41,7 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardLayout>
-              <Dashboard />
+              {isSulamericaHost ? <Sulamerica /> : <Dashboard />}
             </DashboardLayout>
           </ProtectedRoute>
         }
