@@ -9,6 +9,8 @@ export default function Header({ onToggleSidebar }) {
   const canGestor = role === 'gestor-plantoes'
   const isUser = role === 'user'
   const canSulamerica = !!profile?.can_access_sulamerica
+  const isSulamericaHost = typeof window !== 'undefined' && window.location.hostname === 'sulamerica.analiselabclinico.com.br'
+  const rhBaseUrl = 'https://rh.analiselabclinico.com.br'
 
   const sections = [
     {
@@ -57,10 +59,17 @@ export default function Header({ onToggleSidebar }) {
         <button onClick={onToggleSidebar} className="md:hidden p-2 rounded-lg hover:bg-neutral-100" aria-label="Abrir menu">
           <Menu className="size-5" />
         </button>
-        <NavLink to="/" className="flex items-center gap-2 hover:opacity-80">
-          <div><img alt="Meu Análise" className="w-8 h-8 rounded-md" src="/ico.png" /></div>
-          <div className="font-semibold text-sm md:text-base">Meu Análise</div>
-        </NavLink>
+        {isSulamericaHost ? (
+          <a href={`${rhBaseUrl}/`} className="flex items-center gap-2 hover:opacity-80">
+            <div><img alt="Meu Análise" className="w-8 h-8 rounded-md" src="/ico.png" /></div>
+            <div className="font-semibold text-sm md:text-base">Meu Análise</div>
+          </a>
+        ) : (
+          <NavLink to="/" className="flex items-center gap-2 hover:opacity-80">
+            <div><img alt="Meu Análise" className="w-8 h-8 rounded-md" src="/ico.png" /></div>
+            <div className="font-semibold text-sm md:text-base">Meu Análise</div>
+          </NavLink>
+        )}
       </div>
 
       {/* Navegação principal (desktop) centralizada */}
@@ -78,6 +87,17 @@ export default function Header({ onToggleSidebar }) {
                         key={to}
                         href="https://sulamerica.analiselabclinico.com.br"
                         className="px-2 py-1 rounded-md text-orange-500 hover:bg-neutral-100 hover:text-orange-600"
+                      >
+                        {label}
+                      </a>
+                    )
+                  }
+                  if (isSulamericaHost) {
+                    return (
+                      <a
+                        key={to}
+                        href={`${rhBaseUrl}${to}`}
+                        className="px-2 py-1 rounded-md hover:bg-neutral-100 text-neutral-700"
                       >
                         {label}
                       </a>
@@ -111,16 +131,26 @@ export default function Header({ onToggleSidebar }) {
                 <div className="min-w-48 rounded-md border shadow-lg p-2 bg-white text-neutral-900 border-neutral-200">
                   <div className="flex flex-col">
                     {items.map(({ to, label }) => (
-                      <NavLink
-                        key={to}
-                        to={to}
-                        end
-                        className={({ isActive }) =>
-                          `px-3 py-1.5 rounded-md text-xs md:text-sm hover:bg-neutral-100 ${isActive ? 'bg-neutral-100 text-neutral-900 font-semibold' : 'text-neutral-700'}`
-                        }
-                      >
-                        {label}
-                      </NavLink>
+                      isSulamericaHost ? (
+                        <a
+                          key={to}
+                          href={`${rhBaseUrl}${to}`}
+                          className="px-3 py-1.5 rounded-md text-xs md:text-sm hover:bg-neutral-100 text-neutral-700"
+                        >
+                          {label}
+                        </a>
+                      ) : (
+                        <NavLink
+                          key={to}
+                          to={to}
+                          end
+                          className={({ isActive }) =>
+                            `px-3 py-1.5 rounded-md text-xs md:text-sm hover:bg-neutral-100 ${isActive ? 'bg-neutral-100 text-neutral-900 font-semibold' : 'text-neutral-700'}`
+                          }
+                        >
+                          {label}
+                        </NavLink>
+                      )
                     ))}
                   </div>
                 </div>
