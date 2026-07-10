@@ -251,6 +251,58 @@ export default function Sulamerica() {
     ctx.putImageData(imgData, 0, 0)
   }
 
+  const toDegrees = (rad) => Math.round((rad * 180) / Math.PI)
+
+  const detectTextRotation = (items) => {
+    const angles = []
+    for (const item of items) {
+      if (!item.str || !item.str.trim()) continue
+      const tx = item.transform || []
+      const a = Number(tx[0] || 0)
+      const b = Number(tx[1] || 0)
+      if (a === 0 && b === 0) continue
+      const angle = toDegrees(Math.atan2(b, a))
+      angles.push(angle)
+    }
+    if (angles.length === 0) return 0
+    const rounded = angles.map(a => {
+      if (Math.abs(a) <= 15) return 0
+      if (Math.abs(a - 90) <= 15) return 90
+      if (Math.abs(a + 90) <= 15) return -90
+      if (Math.abs(a - 180) <= 15 || Math.abs(a + 180) <= 15) return 180
+      return a
+    })
+    const counts = {}
+    for (const a of rounded) {
+      counts[a] = (counts[a] || 0) + 1
+    }
+    let dominant = 0
+    let max = 0
+    for (const [a, count] of Object.entries(counts)) {
+      if (count > max) {
+        max = count
+        dominant = Number(a)
+      }
+    }
+    return dominant
+  }
+
+  const rotateCanvas = (canvas, angle) => {
+    if (angle === 0 || angle === 180) return canvas
+    const w = canvas.width
+    const h = canvas.height
+    const rotated = document.createElement('canvas')
+    rotated.width = h
+    rotated.height = w
+    const ctx = rotated.getContext('2d')
+    ctx.fillStyle = 'white'
+    ctx.fillRect(0, 0, rotated.width, rotated.height)
+    ctx.translate(rotated.width / 2, rotated.height / 2)
+    ctx.rotate((angle * Math.PI) / 180)
+    ctx.drawImage(canvas, -w / 2, -h / 2)
+    return rotated
+  }
+
   const renderPageToDataUrl = async (pdf, pageNumber, scale = 4) => {
     const page = await pdf.getPage(pageNumber)
     const viewport = page.getViewport({ scale })
@@ -261,8 +313,20 @@ export default function Sulamerica() {
     ctx.fillStyle = 'white'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
     await page.render({ canvasContext: ctx, viewport }).promise
-    preprocessCanvas(canvas, 180)
-    return canvas.toDataURL('image/png')
+
+    const textContent = await page.getTextContent()
+    const rotation = detectTextRotation(textContent.items || [])
+    let finalCanvas = canvas
+    if (rotation === 90) {
+      finalCanvas = rotateCanvas(canvas, -90)
+    } else if (rotation === -90) {
+      finalCanvas = rotateCanvas(canvas, 90)
+    } else if (rotation === 180) {
+      finalCanvas = rotateCanvas(canvas, 180)
+    }
+
+    preprocessCanvas(finalCanvas, 180)
+    return finalCanvas.toDataURL('image/png')
   }
 
   const ocrFromPdf = async (arrayBuffer) => {
