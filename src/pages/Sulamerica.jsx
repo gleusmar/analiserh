@@ -232,14 +232,36 @@ export default function Sulamerica() {
     return pageTexts.join('\f')
   }
 
-  const renderPageToDataUrl = async (pdf, pageNumber, scale = 2) => {
+  const preprocessCanvas = (canvas, threshold = 180) => {
+    const ctx = canvas.getContext('2d')
+    const w = canvas.width
+    const h = canvas.height
+    const imgData = ctx.getImageData(0, 0, w, h)
+    const data = imgData.data
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i]
+      const g = data[i + 1]
+      const b = data[i + 2]
+      const gray = 0.299 * r + 0.587 * g + 0.114 * b
+      const val = gray > threshold ? 255 : 0
+      data[i] = val
+      data[i + 1] = val
+      data[i + 2] = val
+    }
+    ctx.putImageData(imgData, 0, 0)
+  }
+
+  const renderPageToDataUrl = async (pdf, pageNumber, scale = 4) => {
     const page = await pdf.getPage(pageNumber)
     const viewport = page.getViewport({ scale })
     const canvas = document.createElement('canvas')
     canvas.width = viewport.width
     canvas.height = viewport.height
     const ctx = canvas.getContext('2d')
+    ctx.fillStyle = 'white'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
     await page.render({ canvasContext: ctx, viewport }).promise
+    preprocessCanvas(canvas, 180)
     return canvas.toDataURL('image/png')
   }
 
@@ -255,10 +277,15 @@ export default function Sulamerica() {
       }
     })
 
+    await worker.setParameters({
+      tessedit_pageseg_mode: '6',
+      tessedit_ocr_engine_mode: '1',
+    })
+
     const parts = []
     for (let i = 1; i <= pdf.numPages; i++) {
       setOcrStatus(`Processando página ${i} de ${pdf.numPages}...`)
-      const dataUrl = await renderPageToDataUrl(pdf, i, 2)
+      const dataUrl = await renderPageToDataUrl(pdf, i, 4)
       const {
         data: { text }
       } = await worker.recognize(dataUrl)
