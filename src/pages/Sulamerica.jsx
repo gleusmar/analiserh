@@ -318,9 +318,9 @@ export default function Sulamerica() {
     const rotation = detectTextRotation(textContent.items || [])
     let finalCanvas = canvas
     if (rotation === 90) {
-      finalCanvas = rotateCanvas(canvas, -90)
-    } else if (rotation === -90) {
       finalCanvas = rotateCanvas(canvas, 90)
+    } else if (rotation === -90) {
+      finalCanvas = rotateCanvas(canvas, -90)
     } else if (rotation === 180) {
       finalCanvas = rotateCanvas(canvas, 180)
     }
