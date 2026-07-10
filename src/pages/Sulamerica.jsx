@@ -337,9 +337,9 @@ export default function Sulamerica() {
       setOcrStatus('')
       const arrayBuffer = await readFileAsArrayBuffer(file)
 
-      let fullText = await extractTextFromPdf(arrayBuffer)
+      let fullText = await extractTextFromPdf(arrayBuffer.slice(0))
       if (!isReadableText(fullText)) {
-        fullText = await ocrFromPdf(arrayBuffer)
+        fullText = await ocrFromPdf(arrayBuffer.slice(0))
       }
 
       setRawText(fullText)
