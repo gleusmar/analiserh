@@ -14,24 +14,96 @@ export default function Sulamerica() {
   const [importing, setImporting] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState(null)
+  const [rawText, setRawText] = useState('')
+  const [showDebug, setShowDebug] = useState(false)
 
   const toLines = (t) => String(t || '')
     .split(/\r?\n/)
     .map(l => l.trim())
     .filter(Boolean)
 
-  const getField = (lines, labelRe, valueRe, fallbackIdxOffset = 1) => {
+  const normalize = (s) => String(s || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  const getField = (lines, rawLabel, valueRe, opts = {}) => {
+    const { fallbackIdxOffset = 1, maxLength = 120, onSameLine = false } = opts
+    const labelVariants = Array.isArray(rawLabel) ? rawLabel : [rawLabel]
+    const labelRegexes = labelVariants.map(l => new RegExp(normalize(l).replace(/\s+/g, '\\s+'), 'i'))
+
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]
-      if (!labelRe.test(line)) continue
+      const normLine = normalize(line)
+      const matchedLabel = labelRegexes.find(re => re.test(normLine))
+      if (!matchedLabel) continue
+
       if (valueRe) {
         const m = line.match(valueRe)
-        if (m && m[1]) return m[1].trim()
+        if (m && m[1] !== undefined) return m[1].trim()
       }
+
+      const matchIdx = normLine.search(matchedLabel)
+      if (matchIdx !== -1) {
+        const labelEndInNorm = matchIdx + matchedLabel.source.replace(/\\s\+/g, ' ').length
+        const normParts = normLine.split(/\s+/)
+        const lineParts = line.split(/\s+/)
+        const wordIdx = normLine.slice(0, labelEndInNorm).trim().split(/\s+/).length
+        const after = lineParts.slice(wordIdx).join(' ').trim()
+        if (after && after.length <= maxLength && !onSameLine) return after
+        if (after && onSameLine) return after
+      }
+
       const next = lines[i + fallbackIdxOffset]
       if (next) return next.trim()
     }
     return ''
+  }
+
+  const parseExamLine = (line) => {
+    const date = ''
+    let remaining = line
+    const dateMatch = remaining.match(/^(\d{2}\/\d{2}\/\d{4})\s+/)
+    if (dateMatch) {
+      remaining = remaining.slice(dateMatch[0].length).trim()
+    }
+    // Tenta formato: codigo descricao quantidade valor
+    const m1 = remaining.match(/^(\d{3,})\s+(.+?)\s+(\d+)\s+(\d{1,3}(?:\.\d{3})*,\d{2})\s*$/)
+    if (m1) {
+      return {
+        date: dateMatch ? dateMatch[1] : '',
+        code: m1[1].trim(),
+        description: m1[2].trim(),
+        quantity: Number(m1[3]) || 0,
+        value: m1[4].trim(),
+      }
+    }
+    // Tenta capturar valor no final, quantidade antes, e descricao no meio
+    const valMatch = remaining.match(/(\d{1,3}(?:\.\d{3})*,\d{2})\s*$/)
+    if (valMatch) {
+      const beforeVal = remaining.slice(0, valMatch.index).trim()
+      const qtyMatch = beforeVal.match(/(\d+)\s+([^\d]+)$/) || beforeVal.match(/(\d+)\s*$/)
+      if (qtyMatch) {
+        const qty = Number(qtyMatch[1])
+        const descAndCode = beforeVal.slice(0, beforeVal.lastIndexOf(qtyMatch[1])).trim()
+        const codeMatch = descAndCode.match(/^(\d{3,})\s+(.*)$/) || descAndCode.match(/^(\d{3,})$/)
+        const code = codeMatch ? codeMatch[1] : ''
+        const description = codeMatch ? codeMatch[2].trim() : descAndCode
+        if (description && qty) {
+          return {
+            date: dateMatch ? dateMatch[1] : '',
+            code,
+            description,
+            quantity: qty,
+            value: valMatch[1].trim(),
+          }
+        }
+      }
+    }
+    return null
   }
 
   const parseTiss = (fullText) => {
@@ -40,50 +112,50 @@ export default function Sulamerica() {
     const firstPageLines = toLines(pages[0] || fullText)
 
     const header = {
-      registro_ANS: getField(firstPageLines, /registro\s*ans/i, /(\d{6})/),
-      codigo_operadora: getField(firstPageLines, /c[oó]digo\s+na\s+operadora/i, /(\S+)/),
-      nome_contratado: getField(firstPageLines, /nome\s+do\s+contratado/i, null),
-      numero_requisicao: getField(firstPageLines, /n[ºo]\s+da\s+requisi[cç][aã]o/i, /(\S+)/),
-      data_autorizacao: getField(firstPageLines, /data\s+da\s+autoriza[cç][aã]o/i, /(\d{2}\/\d{2}\/\d{4})/),
-      numero_carteira: getField(firstPageLines, /n[úu]mero\s+da\s+carteira/i, /(\S+)/),
-      validade_carteira: getField(firstPageLines, /validade\s+da\s+carteira/i, /(\d{2}\/\d{2}\/\d{4})/),
-      beneficiario_nome: getField(firstPageLines, /nome\s*:?$/i, null) || getField(firstPageLines, /nome\s+do\s+benefici[áa]rio/i, null),
-      cns: getField(firstPageLines, /(cart[aã]o\s+nacional\s+de\s+sa[úu]de|cns)/i, /(\d[\d\. ]{10,})/),
-      atendimento_RN: getField(firstPageLines, /atendimento\s+rn/i, /(sim|nao|não)/i),
-      profissional_nome: getField(firstPageLines, /nome\s+do\s+profissional\s+solicitante/i, null),
-      conselho_profissional: getField(firstPageLines, /conselho\s+profissional/i, /(CRM|COREN|CRO|CRP|CRF|CREFITO|CREFONO|CBO|OUTROS)/i),
-      numero_conselho: getField(firstPageLines, /n[úu]mero\s+no\s+conselho/i, /(\S+)/),
-      uf_conselho: getField(firstPageLines, /uf\s+.*conselho/i, /uf\s+.*?([A-Z]{2})/),
-      cbos: getField(firstPageLines, /cbos/i, /(\d{4}-?\d{2})/),
-      indicacao_clinica: getField(allLines, /indica[cç][aã]o\s+cl[ií]nica/i, null, 1),
-      tipo_atendimento: getField(allLines, /tipo\s+de\s+atendimento/i, /(eletivo|urg[eê]ncia|emerg[eê]ncia|outros)/i),
-      indicacao_acidente: getField(allLines, /indica[cç][aã]o\s+de\s+acidente/i, /(trabalho|tr[aâ]nsito|outros|nao|não)/i),
-      tipo_consulta: getField(allLines, /tipo\s+de\s+consulta/i, /(primeira|seguimento|pr[eé]-?natal|p[óo]s?-op)/i),
+      registro_ANS: getField(firstPageLines, ['registro ans', 'registroans'], /(\d{6})/),
+      codigo_operadora: getField(firstPageLines, ['codigo na operadora', 'codigo operadora'], /(\S+)/),
+      nome_contratado: getField(firstPageLines, ['nome do contratado', 'contratado'], null, { maxLength: 80 }),
+      numero_requisicao: getField(firstPageLines, ['no da requisicao', 'numero da requisicao', 'requisicao'], /(\S+)/),
+      data_autorizacao: getField(firstPageLines, ['data da autorizacao', 'autorizacao'], /(\d{2}\/\d{2}\/\d{4})/),
+      numero_carteira: getField(firstPageLines, ['numero da carteira', 'carteira'], /(\S+)/),
+      validade_carteira: getField(firstPageLines, ['validade da carteira', 'validade'], /(\d{2}\/\d{2}\/\d{4})/),
+      beneficiario_nome: getField(firstPageLines, ['nome do beneficiario', 'beneficiario'], null, { maxLength: 80 })
+        || getField(firstPageLines, ['nome'], null, { maxLength: 80 }),
+      cns: getField(firstPageLines, ['cartao nacional de saude', 'cns'], /(\d[\d\. ]{10,})/),
+      atendimento_RN: getField(firstPageLines, ['atendimento rn'], /(sim|nao|nao|n\/a)/i),
+      profissional_nome: getField(firstPageLines, ['nome do profissional solicitante', 'profissional solicitante'], null, { maxLength: 80 }),
+      conselho_profissional: getField(firstPageLines, ['conselho profissional'], /(CRM|COREN|CRO|CRP|CRF|CREFITO|CREFONO|CBO|OUTROS)/i),
+      numero_conselho: getField(firstPageLines, ['numero no conselho'], /(\S+)/),
+      uf_conselho: getField(firstPageLines, ['uf'], /([A-Z]{2})/),
+      cbos: getField(firstPageLines, ['cbos'], /(\d{4}-?\d{2})/),
+      indicacao_clinica: getField(allLines, ['indicacao clinica'], null, { maxLength: 500 }),
+      tipo_atendimento: getField(allLines, ['tipo de atendimento'], /(eletivo|urgencia|emergencia|outros|ambulatorial)/i),
+      indicacao_acidente: getField(allLines, ['indicacao de acidente'], /(trabalho|transito|outros|nao|nao|nenhuma)/i),
+      tipo_consulta: getField(allLines, ['tipo de consulta'], /(primeira|seguimento|pre natal|pos op|eletiva)/i),
     }
 
     const examLines = []
-    const examHeaderRe = /c[oó]digo\s+descri[cç][aã]o/i
-    const examRowRe = /^(?<date>\d{2}\/\d{2}\/\d{4})?\s*(?<code>\d{3,})?\s+(?<desc>.+?)\s+(?<qty>\d+)\s+(?<val>\d{1,3}(?:\.\d{3})*,\d{2})$/
+    const headerPatterns = [
+      /codigo\s+descricao/i,
+      /data\s+codigo\s+descricao/i,
+      /procedimento\s+realizado/i,
+      /codigo\s+procedimento/i,
+    ]
 
     const parsePageForExams = (pageText) => {
       const lines = toLines(pageText)
       let inTable = false
       for (const line of lines) {
-        if (!inTable && examHeaderRe.test(line)) {
+        const norm = normalize(line)
+        if (!inTable && headerPatterns.some(re => re.test(line) || re.test(norm))) {
           inTable = true
           continue
         }
         if (!inTable) continue
-        if (/observa[cç][oõ]es/i.test(line) || /totais?/i.test(line)) break
-        const m = line.match(examRowRe)
-        if (m && m.groups) {
-          examLines.push({
-            date: m.groups.date || '',
-            code: m.groups.code || '',
-            description: m.groups.desc.trim(),
-            quantity: Number(m.groups.qty || '0') || 0,
-            value: m.groups.val || '',
-          })
+        if (/observacoes/i.test(norm) || /totais?/i.test(norm) || /assinatura/i.test(norm)) break
+        const parsed = parseExamLine(line)
+        if (parsed) {
+          examLines.push(parsed)
         }
       }
     }
@@ -102,19 +174,52 @@ export default function Sulamerica() {
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i)
       const textContent = await page.getTextContent()
-      const items = textContent.items
-      let pageText = ''
-      for (const item of items) {
-        if ('str' in item) {
-          pageText += item.str
-          if (item.hasEOL) {
-            pageText += '\n'
-          } else {
-            pageText += ' '
+      const items = (textContent.items || [])
+        .filter(item => item && typeof item.str === 'string' && item.str.trim())
+        .map(item => {
+          const tx = item.transform || []
+          return {
+            text: item.str,
+            x: Number(tx[4] || 0),
+            y: Number(tx[5] || 0),
+            width: Number(item.width || 0),
+            height: Number(item.height || 0),
           }
+        })
+
+      // Agrupa por linha baseado na posicao Y (com tolerancia)
+      const rows = []
+      const tolerance = 3
+      for (const item of items) {
+        let row = rows.find(r => Math.abs(r.y - item.y) <= tolerance)
+        if (!row) {
+          row = { y: item.y, items: [] }
+          rows.push(row)
         }
+        row.items.push(item)
       }
-      pageTexts.push(pageText)
+
+      rows.sort((a, b) => a.y - b.y)
+      for (const row of rows) {
+        row.items.sort((a, b) => a.x - b.x)
+      }
+
+      const lines = rows.map(row => {
+        let line = ''
+        let lastX = null
+        for (const item of row.items) {
+          if (lastX !== null && item.x - lastX > 5) {
+            line += ' '
+          } else if (lastX !== null && item.x - lastX > 0) {
+            line += ' '
+          }
+          line += item.text
+          lastX = item.x + item.width
+        }
+        return line
+      })
+
+      pageTexts.push(lines.join('\n'))
     }
     return pageTexts.join('\f')
   }
@@ -178,8 +283,10 @@ export default function Sulamerica() {
       setImporting(true)
       setError('')
       setResult(null)
+      setRawText('')
       const arrayBuffer = await readFileAsArrayBuffer(file)
       const fullText = await extractTextFromPdf(arrayBuffer)
+      setRawText(fullText)
       const parsed = parseTiss(fullText)
       setResult(parsed)
     } catch (err) {
@@ -216,13 +323,24 @@ export default function Sulamerica() {
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={importing}
-            className="inline-flex items-center justify-center rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {importing ? 'Importando...' : 'Importar PDF'}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="submit"
+              disabled={importing}
+              className="inline-flex items-center justify-center rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {importing ? 'Importando...' : 'Importar PDF'}
+            </button>
+            {rawText && (
+              <button
+                type="button"
+                onClick={() => setShowDebug(s => !s)}
+                className="text-xs text-neutral-500 hover:text-neutral-700 underline"
+              >
+                {showDebug ? 'Ocultar texto bruto' : 'Ver texto bruto extraído'}
+              </button>
+            )}
+          </div>
         </form>
       </div>
 
@@ -341,6 +459,15 @@ export default function Sulamerica() {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {showDebug && rawText && (
+        <div className="rounded-2xl border border-neutral-200 bg-white p-4 text-sm text-neutral-700">
+          <h2 className="text-base font-semibold mb-3">Texto bruto extraído do PDF</h2>
+          <pre className="text-xs bg-neutral-50 border border-neutral-200 rounded-lg p-2 overflow-auto max-h-96 whitespace-pre-wrap">
+            {rawText}
+          </pre>
         </div>
       )}
     </div>
