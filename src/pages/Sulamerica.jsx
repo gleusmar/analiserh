@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext.jsx'
 import * as pdfjsLib from 'pdfjs-dist'
 import workerUrl from 'pdfjs-dist/build/pdf.worker.js?url'
+import { createWorker } from 'tesseract.js'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl
 
@@ -16,6 +17,8 @@ export default function Sulamerica() {
   const [result, setResult] = useState(null)
   const [rawText, setRawText] = useState('')
   const [showDebug, setShowDebug] = useState(false)
+  const [ocrProgress, setOcrProgress] = useState(0)
+  const [ocrStatus, setOcrStatus] = useState('')
 
   const toLines = (t) => String(t || '')
     .split(/\r?\n/)
@@ -168,6 +171,14 @@ export default function Sulamerica() {
     return { header, exams: examLines }
   }
 
+  const isReadableText = (text) => {
+    const letters = (text.match(/[a-zA-Z]/g) || []).length
+    const digits = (text.match(/\d/g) || []).length
+    const total = text.length
+    if (total === 0) return false
+    return (letters + digits) / total > 0.7
+  }
+
   const extractTextFromPdf = async (arrayBuffer) => {
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
     const pageTexts = []
@@ -187,7 +198,6 @@ export default function Sulamerica() {
           }
         })
 
-      // Agrupa por linha baseado na posicao Y (com tolerancia)
       const rows = []
       const tolerance = 3
       for (const item of items) {
@@ -208,9 +218,7 @@ export default function Sulamerica() {
         let line = ''
         let lastX = null
         for (const item of row.items) {
-          if (lastX !== null && item.x - lastX > 5) {
-            line += ' '
-          } else if (lastX !== null && item.x - lastX > 0) {
+          if (lastX !== null && item.x - lastX > 3) {
             line += ' '
           }
           line += item.text
@@ -222,6 +230,45 @@ export default function Sulamerica() {
       pageTexts.push(lines.join('\n'))
     }
     return pageTexts.join('\f')
+  }
+
+  const renderPageToDataUrl = async (pdf, pageNumber, scale = 2) => {
+    const page = await pdf.getPage(pageNumber)
+    const viewport = page.getViewport({ scale })
+    const canvas = document.createElement('canvas')
+    canvas.width = viewport.width
+    canvas.height = viewport.height
+    const ctx = canvas.getContext('2d')
+    await page.render({ canvasContext: ctx, viewport }).promise
+    return canvas.toDataURL('image/png')
+  }
+
+  const ocrFromPdf = async (arrayBuffer) => {
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+    const worker = await createWorker('por', 1, {
+      logger: (m) => {
+        if (m.status === 'recognizing text') {
+          setOcrProgress(Math.round(m.progress * 100))
+        } else {
+          setOcrStatus(m.status)
+        }
+      }
+    })
+
+    const parts = []
+    for (let i = 1; i <= pdf.numPages; i++) {
+      setOcrStatus(`Processando página ${i} de ${pdf.numPages}...`)
+      const dataUrl = await renderPageToDataUrl(pdf, i, 2)
+      const {
+        data: { text }
+      } = await worker.recognize(dataUrl)
+      parts.push(text)
+    }
+
+    await worker.terminate()
+    setOcrStatus('')
+    setOcrProgress(0)
+    return parts.join('\n\n--- PAGE ---\n\n')
   }
 
   useEffect(() => {
@@ -264,6 +311,8 @@ export default function Sulamerica() {
     setFile(f)
     setResult(null)
     setError('')
+    setOcrProgress(0)
+    setOcrStatus('')
   }
 
   const readFileAsArrayBuffer = (f) => new Promise((resolve, reject) => {
@@ -284,8 +333,15 @@ export default function Sulamerica() {
       setError('')
       setResult(null)
       setRawText('')
+      setOcrProgress(0)
+      setOcrStatus('')
       const arrayBuffer = await readFileAsArrayBuffer(file)
-      const fullText = await extractTextFromPdf(arrayBuffer)
+
+      let fullText = await extractTextFromPdf(arrayBuffer)
+      if (!isReadableText(fullText)) {
+        fullText = await ocrFromPdf(arrayBuffer)
+      }
+
       setRawText(fullText)
       const parsed = parseTiss(fullText)
       setResult(parsed)
@@ -294,6 +350,8 @@ export default function Sulamerica() {
       setError(err.message || 'Falha ao importar PDF')
     } finally {
       setImporting(false)
+      setOcrProgress(0)
+      setOcrStatus('')
     }
   }
 
@@ -316,6 +374,12 @@ export default function Sulamerica() {
             />
             <p className="text-xs text-neutral-500">Selecione o PDF padronizado da guia médica de plano de saúde SulAmérica.</p>
           </div>
+
+          {ocrStatus && (
+            <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700">
+              {ocrStatus} {ocrProgress > 0 && `${ocrProgress}%`}
+            </div>
+          )}
 
           {error && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
