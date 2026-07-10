@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext.jsx'
+import * as pdfjsLib from 'pdfjs-dist'
+import workerUrl from 'pdfjs-dist/build/pdf.worker.js?url'
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl
 
 export default function Sulamerica() {
   const { profile, loading } = useAuth()
@@ -10,6 +14,110 @@ export default function Sulamerica() {
   const [importing, setImporting] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState(null)
+
+  const toLines = (t) => String(t || '')
+    .split(/\r?\n/)
+    .map(l => l.trim())
+    .filter(Boolean)
+
+  const getField = (lines, labelRe, valueRe, fallbackIdxOffset = 1) => {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]
+      if (!labelRe.test(line)) continue
+      if (valueRe) {
+        const m = line.match(valueRe)
+        if (m && m[1]) return m[1].trim()
+      }
+      const next = lines[i + fallbackIdxOffset]
+      if (next) return next.trim()
+    }
+    return ''
+  }
+
+  const parseTiss = (fullText) => {
+    const pages = String(fullText || '').split(/\f/)
+    const allLines = toLines(fullText)
+    const firstPageLines = toLines(pages[0] || fullText)
+
+    const header = {
+      registro_ANS: getField(firstPageLines, /registro\s*ans/i, /(\d{6})/),
+      codigo_operadora: getField(firstPageLines, /c[oó]digo\s+na\s+operadora/i, /(\S+)/),
+      nome_contratado: getField(firstPageLines, /nome\s+do\s+contratado/i, null),
+      numero_requisicao: getField(firstPageLines, /n[ºo]\s+da\s+requisi[cç][aã]o/i, /(\S+)/),
+      data_autorizacao: getField(firstPageLines, /data\s+da\s+autoriza[cç][aã]o/i, /(\d{2}\/\d{2}\/\d{4})/),
+      numero_carteira: getField(firstPageLines, /n[úu]mero\s+da\s+carteira/i, /(\S+)/),
+      validade_carteira: getField(firstPageLines, /validade\s+da\s+carteira/i, /(\d{2}\/\d{2}\/\d{4})/),
+      beneficiario_nome: getField(firstPageLines, /nome\s*:?$/i, null) || getField(firstPageLines, /nome\s+do\s+benefici[áa]rio/i, null),
+      cns: getField(firstPageLines, /(cart[aã]o\s+nacional\s+de\s+sa[úu]de|cns)/i, /(\d[\d\. ]{10,})/),
+      atendimento_RN: getField(firstPageLines, /atendimento\s+rn/i, /(sim|nao|não)/i),
+      profissional_nome: getField(firstPageLines, /nome\s+do\s+profissional\s+solicitante/i, null),
+      conselho_profissional: getField(firstPageLines, /conselho\s+profissional/i, /(CRM|COREN|CRO|CRP|CRF|CREFITO|CREFONO|CBO|OUTROS)/i),
+      numero_conselho: getField(firstPageLines, /n[úu]mero\s+no\s+conselho/i, /(\S+)/),
+      uf_conselho: getField(firstPageLines, /uf\s+.*conselho/i, /uf\s+.*?([A-Z]{2})/),
+      cbos: getField(firstPageLines, /cbos/i, /(\d{4}-?\d{2})/),
+      indicacao_clinica: getField(allLines, /indica[cç][aã]o\s+cl[ií]nica/i, null, 1),
+      tipo_atendimento: getField(allLines, /tipo\s+de\s+atendimento/i, /(eletivo|urg[eê]ncia|emerg[eê]ncia|outros)/i),
+      indicacao_acidente: getField(allLines, /indica[cç][aã]o\s+de\s+acidente/i, /(trabalho|tr[aâ]nsito|outros|nao|não)/i),
+      tipo_consulta: getField(allLines, /tipo\s+de\s+consulta/i, /(primeira|seguimento|pr[eé]-?natal|p[óo]s?-op)/i),
+    }
+
+    const examLines = []
+    const examHeaderRe = /c[oó]digo\s+descri[cç][aã]o/i
+    const examRowRe = /^(?<date>\d{2}\/\d{2}\/\d{4})?\s*(?<code>\d{3,})?\s+(?<desc>.+?)\s+(?<qty>\d+)\s+(?<val>\d{1,3}(?:\.\d{3})*,\d{2})$/
+
+    const parsePageForExams = (pageText) => {
+      const lines = toLines(pageText)
+      let inTable = false
+      for (const line of lines) {
+        if (!inTable && examHeaderRe.test(line)) {
+          inTable = true
+          continue
+        }
+        if (!inTable) continue
+        if (/observa[cç][oõ]es/i.test(line) || /totais?/i.test(line)) break
+        const m = line.match(examRowRe)
+        if (m && m.groups) {
+          examLines.push({
+            date: m.groups.date || '',
+            code: m.groups.code || '',
+            description: m.groups.desc.trim(),
+            quantity: Number(m.groups.qty || '0') || 0,
+            value: m.groups.val || '',
+          })
+        }
+      }
+    }
+
+    pages.forEach((p) => {
+      if (!p) return
+      parsePageForExams(p)
+    })
+
+    return { header, exams: examLines }
+  }
+
+  const extractTextFromPdf = async (arrayBuffer) => {
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+    const pageTexts = []
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i)
+      const textContent = await page.getTextContent()
+      const items = textContent.items
+      let pageText = ''
+      for (const item of items) {
+        if ('str' in item) {
+          pageText += item.str
+          if (item.hasEOL) {
+            pageText += '\n'
+          } else {
+            pageText += ' '
+          }
+        }
+      }
+      pageTexts.push(pageText)
+    }
+    return pageTexts.join('\f')
+  }
 
   useEffect(() => {
     if (loading) return
@@ -53,11 +161,11 @@ export default function Sulamerica() {
     setError('')
   }
 
-  const readFileAsBase64 = (f) => new Promise((resolve, reject) => {
+  const readFileAsArrayBuffer = (f) => new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = () => resolve(reader.result)
     reader.onerror = (err) => reject(err)
-    reader.readAsDataURL(f)
+    reader.readAsArrayBuffer(f)
   })
 
   const onImport = async (e) => {
@@ -70,21 +178,10 @@ export default function Sulamerica() {
       setImporting(true)
       setError('')
       setResult(null)
-      const base64 = await readFileAsBase64(file)
-
-      const res = await fetch('http://localhost:3001/api/sulamerica/parse-pdf', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ data: base64 }),
-      })
-
-      const json = await res.json()
-      if (!res.ok || !json.ok) {
-        throw new Error(json.error || 'Falha ao processar PDF')
-      }
-      setResult(json)
+      const arrayBuffer = await readFileAsArrayBuffer(file)
+      const fullText = await extractTextFromPdf(arrayBuffer)
+      const parsed = parseTiss(fullText)
+      setResult(parsed)
     } catch (err) {
       console.error(err)
       setError(err.message || 'Falha ao importar PDF')
