@@ -109,10 +109,119 @@ export default function Sulamerica() {
     return null
   }
 
+  const parseDate = (s) => {
+    const m = String(s || '').match(/(\d{2})\s*(\d{2})\s*(\d{4})/)
+    if (m) return `${m[1]}/${m[2]}/${m[3]}`
+    return s
+  }
+
+  const parseTissTextOnly = (fullText) => {
+    const lines = toLines(fullText)
+    const header = {}
+    const exams = []
+
+    // Páginas separadas por marcador
+    const pages = String(fullText || '').split(/\f|\n--- PAGE ---\n/)
+
+    for (const pageText of pages) {
+      const pageLines = toLines(pageText)
+      if (!header.numero_requisicao && /\d{6,}/.test(pageLines[0] || '')) {
+        header.numero_requisicao = pageLines[0].match(/(\d{6,})/)?.[1] || ''
+      }
+      if (!header.registro_ANS && pageLines[1]) {
+        const ansMatch = pageLines[1].match(/(\d{6})/)
+        header.registro_ANS = ansMatch ? ansMatch[1] : ''
+        header.nome_operadora = pageLines[1].replace(/\d{6}/, '').replace(/[^A-Z\s]/gi, '').trim()
+      }
+      if (!header.data_autorizacao && pageLines[2]) {
+        header.data_autorizacao = parseDate(pageLines[2])
+      }
+      if (!header.numero_carteira && pageLines[3]) {
+        const parts = pageLines[3].split(/\s{2,}/)
+        if (parts.length >= 3) {
+          header.numero_carteira = parts[0].trim()
+          header.validade_carteira = parseDate(parts[1])
+          header.beneficiario_nome = parts.slice(2).join(' ').trim()
+        } else {
+          const tokens = pageLines[3].split(/\s+/)
+          if (tokens.length >= 5) {
+            header.numero_carteira = tokens[0]
+            header.validade_carteira = parseDate(`${tokens[1]} ${tokens[2]} ${tokens[3]}`)
+            header.beneficiario_nome = tokens.slice(4).join(' ')
+          }
+        }
+      }
+
+      // CRM/UF
+      const crmLine = pageLines.find(l => /CRM\s+\d+\s+[A-Z]{2}\s+\d+/i.test(l))
+      if (crmLine && !header.numero_conselho) {
+        const m = crmLine.match(/CRM\s+\d+\s+([A-Z]{2})\s+(\d+)/i)
+        if (m) {
+          header.conselho_profissional = 'CRM'
+          header.uf_conselho = m[1]
+          header.numero_conselho = m[2]
+        }
+      }
+
+      // Exames autorizados (linhas 16) possuem descrição completa
+      const authorized = {}
+      const executed = {}
+
+      for (const line of pageLines) {
+        const m2 = line.match(/^16\s+(\d{8,})\s+([A-Z][A-Z0-9\s\-\.]+?)\s+\d+\s+\d+$/i)
+        if (m2) {
+          authorized[m2[1]] = m2[2].trim()
+        }
+      }
+
+      // Exames executados/faturados (linhas 2906...) possuem valores
+      for (const line of pageLines) {
+        const m = line.match(/\b(\d{8,})\s+([A-Z][A-Z0-9\s\-\.]+?)\s+o?\d+\s+UC\s+(\d{1,3})\s+(\d{2,3})\s+(\d{1,3})\s+(\d{2,3})/i)
+        if (m) {
+          const code = m[1]
+          const value1 = `${m[3]},${m[4]}`
+          const value2 = `${m[5]},${m[6]}`
+          executed[code] = {
+            description: m[2].trim(),
+            value: value1,
+            value_total: value2,
+          }
+        }
+      }
+
+      // Unifica autorizados e executados pelo código
+      const allCodes = new Set([...Object.keys(authorized), ...Object.keys(executed)])
+      for (const code of allCodes) {
+        const desc = authorized[code] || executed[code]?.description || ''
+        const val = executed[code]?.value || ''
+        const valTotal = executed[code]?.value_total || ''
+        exams.push({
+          code,
+          description: desc,
+          value: val,
+          value_total: valTotal,
+          quantity: 1,
+          date: '',
+        })
+      }
+    }
+
+    return { header, exams }
+  }
+
   const parseTiss = (fullText) => {
     const pages = String(fullText || '').split(/\f/)
     const allLines = toLines(fullText)
     const firstPageLines = toLines(pages[0] || fullText)
+
+    // Detecta novo padrão Sulamérica text-only (sem rótulos, começa com número da requisição e SULAMERICA)
+    const isTextOnly = firstPageLines.slice(0, 10).some(l =>
+      /SULAMERICA\s+SAUDE/i.test(l) ||
+      /\b\d{6}\s+SULAMERICA/i.test(l)
+    )
+    if (isTextOnly) {
+      return parseTissTextOnly(fullText)
+    }
 
     const header = {
       registro_ANS: getField(firstPageLines, ['registro ans', 'registroans'], /(\d{6})/),
