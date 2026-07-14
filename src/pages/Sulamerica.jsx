@@ -407,7 +407,7 @@ export default function Sulamerica() {
     const rotation = detectTextRotation(textContent.items || [])
     let finalCanvas = canvas
     if (rotation !== 0) {
-      finalCanvas = rotateCanvas(canvas, -rotation)
+      finalCanvas = rotateCanvas(canvas, rotation)
     }
 
     return finalCanvas.toDataURL('image/png')
