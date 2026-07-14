@@ -27,9 +27,12 @@ export default function Sulamerica() {
 
   const postProcessOcrText = (t) => {
     let s = String(t || '')
-    s = s.replace(/(\bU)\n([cC]c?)\s+/g, '$1 $2 ')
+    s = s.replace(/(\bU)\n([^\s\d\n]{0,3})\s+/g, '$1 $2 ')
     s = s.replace(/(\b[cC]c?\s+\d{1,3}[.,]?\d{0,2})\n(\d{1,3}(?:[.,]\d{2,3})?)\s+(\d{1,3}[.,]\d{2,3})/g, '$1$2 $3')
     s = s.replace(/(\b[cC]c?\s+\d{1,3}[.,]\d{2,3}\s+\d{1,3}[.,]?)\n(\d{2,3})/g, '$1$2')
+    s = s.replace(/(\d{0,3}\s*[.,]\s*\d{2,3}\s+\d{0,3}\s*[.,]?)\n(\d{2,3})/g, '$1$2')
+    s = s.replace(/(\d{0,3}\s*[.,])\n(\d{2,3})/g, '$1$2')
+    s = s.replace(/(\d{1,3})\n([.,]\d{2,3})/g, '$1$2')
     return s
   }
 
@@ -124,7 +127,7 @@ export default function Sulamerica() {
   const parseTissTextOnly = (fullText) => {
     const header = {}
     const exams = []
-    const normalizeValue = (int, dec) => `${int},${dec}`
+    const normalizeValue = (int, dec) => `${int || '0'},${dec}`
 
     const pages = postProcessOcrText(String(fullText || '')).split(/\f|\n--- PAGE ---\n/)
 
@@ -153,11 +156,12 @@ export default function Sulamerica() {
       }
 
       const cartLine = pageLines.find(l => /(\d{18,})\s+(\d{2}[/\s]\d{2}[/\s]\d{4})\s+(.+)/.test(l))
+        || pageLines.find(l => /(\S{18,})\s+(\d{2}[/\s]\d{2}[/\s]\d{4})\s+(.+)/.test(l))
       if (cartLine) {
-        const m = cartLine.match(/(\d{18,})\s+(\d{2}[/\s]\d{2}[/\s]\d{4})\s+(.+)/)
-        header.numero_carteira = m[1]
-        header.validade_carteira = parseDate(m[2])
-        header.beneficiario_nome = m[3].trim()
+        const m = cartLine.match(/(?:(\d{18,})|(\S{18,}))\s+(\d{2}[/\s]\d{2}[/\s]\d{4})\s+(.+)/)
+        header.numero_carteira = m[1] || m[2]
+        header.validade_carteira = parseDate(m[3])
+        header.beneficiario_nome = m[4].trim()
       }
 
       const crmLine = pageLines.find(l => /CRM\s+([A-Z]{2})\s+([\d.]+)/i.test(l))
@@ -174,20 +178,22 @@ export default function Sulamerica() {
       const executed = {}
 
       for (const line of pageLines) {
-        const m2 = line.match(/^\s*[\d\s\-:.]*16\s+(\d{8,})\s+([A-Z][A-Z0-9\s\-.]+?)\s+(\d+)\s+(\d+)\s*$/i)
+        const m2 = line.match(/^\s*[\d\s\-:.]*16\s+(\d{8})\s+([A-Z][A-Z0-9\s\-.]+?)(?:\s+(\d+)(?:\s+(\d+))?)?\s*$/i)
         if (m2) {
           authorized[m2[1]] = m2[2].trim()
         }
       }
 
       for (const line of pageLines) {
-        const m = line.match(/(?:^|[\s:])(?:\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}\s+\d{2}:\d{2}\s+)?(?:16|1\s+6|91)\s+(\d{8,})\s+([A-Z][A-Z0-9\s\-.]+?)\s+(?:[oO0]?[\dlL1]{0,2}\s+)?[Uu]\s*(?:[Cc][Cc]?)?\s+(\d{1,3})[\s.,](\d{2,3})\s+(\d{1,3})[\s.,](\d{2,3})/i)
+        const m = line.match(/(?:^|[\s:])(?:\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}\s+\d{2}:\d{2}\s+)?(?:16|1\s+6|91)\s+(\d{8})\s+([A-Z][A-Z0-9\s\-.]+?)\s+(?:\(?\s*)?(?:[oO0]?[\dlL1]{0,2}\s+)?(?:[Uu]\s*(?:\S{0,3})?\s+)?(?:(\d{0,3})\s*[.,]\s*(\d{2,3}))(?:\s+(?:(\d{0,3})\s*[.,]\s*(\d{2,3})))?/i)
         if (m) {
-          executed[m[1]] = {
-            description: m[2].trim(),
-            value: normalizeValue(m[3], m[4]),
-            value_total: normalizeValue(m[5], m[6])
+          let value = normalizeValue(m[3], m[4])
+          let valueTotal = m[5] ? normalizeValue(m[5], m[6]) : value
+          const valueDec = value.split(',')[1]
+          if (valueTotal.startsWith('0,') && !value.startsWith('0,') && valueTotal.split(',')[1] === valueDec) {
+            valueTotal = value
           }
+          executed[m[1]] = { description: m[2].trim(), value, value_total: valueTotal }
         }
       }
 
@@ -392,7 +398,26 @@ export default function Sulamerica() {
     return rotated
   }
 
-  const renderPageToDataUrl = async (pdf, pageNumber, scale = 4) => {
+  const preprocessCanvas = (canvas, threshold = 240) => {
+    const ctx = canvas.getContext('2d')
+    const w = canvas.width
+    const h = canvas.height
+    const imgData = ctx.getImageData(0, 0, w, h)
+    const data = imgData.data
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i]
+      const g = data[i + 1]
+      const b = data[i + 2]
+      const gray = 0.299 * r + 0.587 * g + 0.114 * b
+      const val = gray > threshold ? 255 : 0
+      data[i] = val
+      data[i + 1] = val
+      data[i + 2] = val
+    }
+    ctx.putImageData(imgData, 0, 0)
+  }
+
+  const renderPageToDataUrl = async (pdf, pageNumber, scale = 5) => {
     const page = await pdf.getPage(pageNumber)
     const viewport = page.getViewport({ scale })
     const canvas = document.createElement('canvas')
@@ -410,6 +435,7 @@ export default function Sulamerica() {
       finalCanvas = rotateCanvas(canvas, rotation)
     }
 
+    preprocessCanvas(finalCanvas, 240)
     return finalCanvas.toDataURL('image/png')
   }
 
@@ -433,7 +459,7 @@ export default function Sulamerica() {
     const parts = []
     for (let i = 1; i <= pdf.numPages; i++) {
       setOcrStatus(`Processando página ${i} de ${pdf.numPages}...`)
-      const dataUrl = await renderPageToDataUrl(pdf, i, 4)
+      const dataUrl = await renderPageToDataUrl(pdf, i, 5)
       const {
         data: { text }
       } = await worker.recognize(dataUrl)
