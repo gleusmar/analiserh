@@ -1,495 +1,221 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState, useCallback, memo } from 'react'
 import { useAuth } from '../contexts/AuthContext.jsx'
-import * as pdfjsLib from 'pdfjs-dist'
-import workerUrl from 'pdfjs-dist/build/pdf.worker.js?url'
-import { createWorker } from 'tesseract.js'
+import { parseTissXml } from '../lib/parseTissXml.js'
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl
+function readFileText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const buffer = e.target.result
+      let encoding = 'utf-8'
+      const head = new Uint8Array(buffer).slice(0, 200)
+      const headStr = new TextDecoder('utf-8').decode(head)
+      const m = headStr.match(/encoding=["']([^"']+)["']/i)
+      if (m) encoding = m[1].toLowerCase()
+      try {
+        const decoder = new TextDecoder(encoding)
+        resolve(decoder.decode(buffer))
+      } catch {
+        resolve(new TextDecoder('utf-8').decode(buffer))
+      }
+    }
+    reader.onerror = reject
+    reader.readAsArrayBuffer(file)
+  })
+}
+
+function Field({ label, value, onChange, type = 'text' }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="text-xs font-medium text-neutral-600">{label}</label>
+      <input
+        type={type}
+        value={value ?? ''}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-lg border border-neutral-300 px-2 py-1 text-xs"
+      />
+    </div>
+  )
+}
+
+const ProcedimentoRow = memo(function ProcedimentoRow({ index, guiaIndex, procedimento, onUpdate }) {
+  const update = (field, value) => onUpdate(guiaIndex, index, field, value)
+  const inputClass = 'w-full rounded-md border border-neutral-300 px-1 py-0.5 text-xs'
+  return (
+    <tr className="border-b border-neutral-100">
+      <td className="py-1 px-1"><input value={procedimento.sequencialItem} onChange={(e) => update('sequencialItem', e.target.value)} className={inputClass} /></td>
+      <td className="py-1 px-1"><input value={procedimento.dataExecucao} onChange={(e) => update('dataExecucao', e.target.value)} className={inputClass} /></td>
+      <td className="py-1 px-1"><input value={procedimento.horaInicial} onChange={(e) => update('horaInicial', e.target.value)} className={inputClass} /></td>
+      <td className="py-1 px-1"><input value={procedimento.horaFinal} onChange={(e) => update('horaFinal', e.target.value)} className={inputClass} /></td>
+      <td className="py-1 px-1"><input value={procedimento.codigoTabela} onChange={(e) => update('codigoTabela', e.target.value)} className={inputClass} /></td>
+      <td className="py-1 px-1"><input value={procedimento.codigoProcedimento} onChange={(e) => update('codigoProcedimento', e.target.value)} className={inputClass} /></td>
+      <td className="py-1 px-1 min-w-[200px]"><input value={procedimento.descricaoProcedimento} onChange={(e) => update('descricaoProcedimento', e.target.value)} className={inputClass} /></td>
+      <td className="py-1 px-1"><input value={procedimento.quantidadeExecutada} onChange={(e) => update('quantidadeExecutada', e.target.value)} className={inputClass} /></td>
+      <td className="py-1 px-1"><input value={procedimento.viaAcesso} onChange={(e) => update('viaAcesso', e.target.value)} className={inputClass} /></td>
+      <td className="py-1 px-1"><input value={procedimento.tecnicaUtilizada} onChange={(e) => update('tecnicaUtilizada', e.target.value)} className={inputClass} /></td>
+      <td className="py-1 px-1"><input value={procedimento.reducaoAcrescimo} onChange={(e) => update('reducaoAcrescimo', e.target.value)} className={inputClass} /></td>
+      <td className="py-1 px-1"><input value={procedimento.valorUnitario} onChange={(e) => update('valorUnitario', e.target.value)} className={inputClass} /></td>
+      <td className="py-1 px-1"><input value={procedimento.valorTotal} onChange={(e) => update('valorTotal', e.target.value)} className={inputClass} /></td>
+    </tr>
+  )
+})
+
+const GuiaCard = memo(function GuiaCard({ guia, index, onUpdateGuia, onUpdateProcedimento }) {
+  const totalFields = [
+    ['valorProcedimentos', 'Procedimentos'],
+    ['valorDiarias', 'Diárias'],
+    ['valorTaxasAlugueis', 'Taxas/Aluguéis'],
+    ['valorMateriais', 'Materiais'],
+    ['valorMedicamentos', 'Medicamentos'],
+    ['valorOPME', 'OPME'],
+    ['valorGasesMedicinais', 'Gases medicinais'],
+    ['valorTotalGeral', 'Total geral'],
+  ]
+
+  return (
+    <div className="rounded-2xl border border-neutral-200 bg-white p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold">Guia {guia.numeroGuiaPrestador || `#${index + 1}`}</h3>
+        <span className="text-xs text-neutral-500">{guia.procedimentos.length} procedimento(s)</span>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+        <Field label="Nº guia prestador" value={guia.numeroGuiaPrestador} onChange={(v) => onUpdateGuia(index, 'numeroGuiaPrestador', v)} />
+        <Field label="Registro ANS" value={guia.registroANS} onChange={(v) => onUpdateGuia(index, 'registroANS', v)} />
+        <Field label="Nº carteira" value={guia.numeroCarteira} onChange={(v) => onUpdateGuia(index, 'numeroCarteira', v)} />
+        <Field label="Atendimento RN" value={guia.atendimentoRN} onChange={(v) => onUpdateGuia(index, 'atendimentoRN', v)} />
+        <Field label="Código prestador solicitante" value={guia.codigoPrestadorSolicitante} onChange={(v) => onUpdateGuia(index, 'codigoPrestadorSolicitante', v)} />
+        <Field label="Nome contratado solicitante" value={guia.nomeContratadoSolicitante} onChange={(v) => onUpdateGuia(index, 'nomeContratadoSolicitante', v)} />
+        <Field label="Nome profissional" value={guia.nomeProfissional} onChange={(v) => onUpdateGuia(index, 'nomeProfissional', v)} />
+        <Field label="Conselho profissional" value={guia.conselhoProfissional} onChange={(v) => onUpdateGuia(index, 'conselhoProfissional', v)} />
+        <Field label="Nº conselho profissional" value={guia.numeroConselhoProfissional} onChange={(v) => onUpdateGuia(index, 'numeroConselhoProfissional', v)} />
+        <Field label="UF" value={guia.ufProfissional} onChange={(v) => onUpdateGuia(index, 'ufProfissional', v)} />
+        <Field label="CBOS" value={guia.cbos} onChange={(v) => onUpdateGuia(index, 'cbos', v)} />
+        <Field label="Data solicitação" value={guia.dataSolicitacao} onChange={(v) => onUpdateGuia(index, 'dataSolicitacao', v)} />
+        <Field label="Caráter atendimento" value={guia.caraterAtendimento} onChange={(v) => onUpdateGuia(index, 'caraterAtendimento', v)} />
+        <Field label="Código prestador executante" value={guia.codigoPrestadorExecutante} onChange={(v) => onUpdateGuia(index, 'codigoPrestadorExecutante', v)} />
+        <Field label="CNES" value={guia.cnes} onChange={(v) => onUpdateGuia(index, 'cnes', v)} />
+        <Field label="Tipo atendimento" value={guia.tipoAtendimento} onChange={(v) => onUpdateGuia(index, 'tipoAtendimento', v)} />
+        <Field label="Indicação acidente" value={guia.indicacaoAcidente} onChange={(v) => onUpdateGuia(index, 'indicacaoAcidente', v)} />
+        <Field label="Regime atendimento" value={guia.regimeAtendimento} onChange={(v) => onUpdateGuia(index, 'regimeAtendimento', v)} />
+        <Field label="Senha" value={guia.senha} onChange={(v) => onUpdateGuia(index, 'senha', v)} />
+        <Field label="Data autorização" value={guia.dataAutorizacao} onChange={(v) => onUpdateGuia(index, 'dataAutorizacao', v)} />
+        <Field label="Data validade senha" value={guia.dataValidadeSenha} onChange={(v) => onUpdateGuia(index, 'dataValidadeSenha', v)} />
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b text-left text-neutral-500">
+              <th className="py-1 px-1">Seq</th>
+              <th className="px-1">Data</th>
+              <th className="px-1">Início</th>
+              <th className="px-1">Fim</th>
+              <th className="px-1">Tab</th>
+              <th className="px-1">Código</th>
+              <th className="px-1 min-w-[200px]">Procedimento</th>
+              <th className="px-1">Qtd</th>
+              <th className="px-1">Via</th>
+              <th className="px-1">Téc</th>
+              <th className="px-1">Red/Acr</th>
+              <th className="px-1">Unit</th>
+              <th className="px-1">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {guia.procedimentos.map((p, pIdx) => (
+              <ProcedimentoRow key={pIdx} index={pIdx} guiaIndex={index} procedimento={p} onUpdate={onUpdateProcedimento} />
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2 border-t border-neutral-100">
+        {totalFields.map(([key, label]) => (
+          <Field key={key} label={label} value={guia[key]} onChange={(v) => onUpdateGuia(index, key, v)} />
+        ))}
+      </div>
+    </div>
+  )
+})
 
 export default function Sulamerica() {
   const { profile, loading } = useAuth()
-  const navigate = useNavigate()
   const [toast, setToast] = useState(null)
   const [file, setFile] = useState(null)
-  const [importing, setImporting] = useState(false)
-  const [error, setError] = useState('')
-  const [result, setResult] = useState(null)
-  const [rawText, setRawText] = useState('')
-  const [showDebug, setShowDebug] = useState(false)
-  const [ocrProgress, setOcrProgress] = useState(0)
-  const [ocrStatus, setOcrStatus] = useState('')
-
-  const toLines = (t) => String(t || '')
-    .split(/\r?\n/)
-    .map(l => l.trim())
-    .filter(Boolean)
-
-  const postProcessOcrText = (t) => {
-    let s = String(t || '')
-    s = s.replace(/(\bU)\n([^\s\d\n]{0,3})\s+/g, '$1 $2 ')
-    s = s.replace(/(\b[cC]c?\s+\d{1,3}[.,]?\d{0,2})\n(\d{1,3}(?:[.,]\d{2,3})?)\s+(\d{1,3}[.,]\d{2,3})/g, '$1$2 $3')
-    s = s.replace(/(\b[cC]c?\s+\d{1,3}[.,]\d{2,3}\s+\d{1,3}[.,]?)\n(\d{2,3})/g, '$1$2')
-    s = s.replace(/(\d{0,3}\s*[.,]\s*\d{2,3}\s+\d{0,3}\s*[.,]?)\n(\d{2,3})/g, '$1$2')
-    s = s.replace(/(\d{0,3}\s*[.,])\n(\d{2,3})/g, '$1$2')
-    s = s.replace(/(\d{1,3})\n([.,]\d{2,3})/g, '$1$2')
-    return s
-  }
-
-  const normalize = (s) => String(s || '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-
-  const getField = (lines, rawLabel, valueRe, opts = {}) => {
-    const { fallbackIdxOffset = 1, maxLength = 120, onSameLine = false } = opts
-    const labelVariants = Array.isArray(rawLabel) ? rawLabel : [rawLabel]
-    const labelRegexes = labelVariants.map(l => new RegExp(normalize(l).replace(/\s+/g, '\\s+'), 'i'))
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i]
-      const normLine = normalize(line)
-      const matchedLabel = labelRegexes.find(re => re.test(normLine))
-      if (!matchedLabel) continue
-
-      if (valueRe) {
-        const m = line.match(valueRe)
-        if (m && m[1] !== undefined) return m[1].trim()
-      }
-
-      const matchIdx = normLine.search(matchedLabel)
-      if (matchIdx !== -1) {
-        const labelEndInNorm = matchIdx + matchedLabel.source.replace(/\\s\+/g, ' ').length
-        const lineParts = line.split(/\s+/)
-        const wordIdx = normLine.slice(0, labelEndInNorm).trim().split(/\s+/).length
-        const after = lineParts.slice(wordIdx).join(' ').trim()
-        if (after && after.length <= maxLength && !onSameLine) return after
-        if (after && onSameLine) return after
-      }
-
-      const next = lines[i + fallbackIdxOffset]
-      if (next) return next.trim()
-    }
-    return ''
-  }
-
-  const parseExamLine = (line) => {
-    let remaining = line
-    const dateMatch = remaining.match(/^(\d{2}\/\d{2}\/\d{4})\s+/)
-    if (dateMatch) {
-      remaining = remaining.slice(dateMatch[0].length).trim()
-    }
-    // Tenta formato: codigo descricao quantidade valor
-    const m1 = remaining.match(/^(\d{3,})\s+(.+?)\s+(\d+)\s+(\d{1,3}(?:\.\d{3})*,\d{2})\s*$/)
-    if (m1) {
-      return {
-        date: dateMatch ? dateMatch[1] : '',
-        code: m1[1].trim(),
-        description: m1[2].trim(),
-        quantity: Number(m1[3]) || 0,
-        value: m1[4].trim(),
-      }
-    }
-    // Tenta capturar valor no final, quantidade antes, e descricao no meio
-    const valMatch = remaining.match(/(\d{1,3}(?:\.\d{3})*,\d{2})\s*$/)
-    if (valMatch) {
-      const beforeVal = remaining.slice(0, valMatch.index).trim()
-      const qtyMatch = beforeVal.match(/(\d+)\s+([^\d]+)$/) || beforeVal.match(/(\d+)\s*$/)
-      if (qtyMatch) {
-        const qty = Number(qtyMatch[1])
-        const descAndCode = beforeVal.slice(0, beforeVal.lastIndexOf(qtyMatch[1])).trim()
-        const codeMatch = descAndCode.match(/^(\d{3,})\s+(.*)$/) || descAndCode.match(/^(\d{3,})$/)
-        const code = codeMatch ? codeMatch[1] : ''
-        const description = codeMatch ? codeMatch[2].trim() : descAndCode
-        if (description && qty) {
-          return {
-            date: dateMatch ? dateMatch[1] : '',
-            code,
-            description,
-            quantity: qty,
-            value: valMatch[1].trim(),
-          }
-        }
-      }
-    }
-    return null
-  }
-
-  const parseDate = (s) => {
-    const m = String(s || '').match(/(\d{2})\s*[/]?\s*(\d{2})\s*[/]?\s*(\d{4})/)
-    if (m) return `${m[1]}/${m[2]}/${m[3]}`
-    return s
-  }
-
-  const parseTissTextOnly = (fullText) => {
-    const header = {}
-    const exams = []
-    const normalizeValue = (int, dec) => `${int || '0'},${dec}`
-
-    const pages = postProcessOcrText(String(fullText || '')).split(/\f|\n--- PAGE ---\n/)
-
-    for (const pageText of pages) {
-      const pageLines = toLines(pageText)
-      if (pageLines.length === 0) continue
-
-      const reqLine = pageLines.find(l => /(?:2[-–—]N\s*|No\.?\s*|da Guia Principal)\s*(\d{6,})/i.test(l)) || pageLines[0]
-      const reqM = reqLine.match(/(\d{6,})/)
-      if (reqM && !header.numero_requisicao) header.numero_requisicao = reqM[1]
-
-      const opLine = pageLines.find(l => /SULAMERICA/i.test(l))
-      if (opLine) {
-        const m = opLine.match(/(\d{6})\s+SULAMERICA\s*(.*)/i)
-        if (m) {
-          header.registro_ANS = m[1]
-          header.nome_operadora = `SULAMERICA ${m[2]}`.trim()
-        }
-      }
-
-      const authLabel = pageLines.findIndex(l => /Data da Autoriza/i.test(l))
-      if (authLabel >= 0 && pageLines[authLabel + 1]) {
-        header.data_autorizacao = parseDate(pageLines[authLabel + 1])
-      } else if (pageLines[2]) {
-        header.data_autorizacao = parseDate(pageLines[2])
-      }
-
-      const cartLine = pageLines.find(l => /(\d{18,})\s+(\d{2}[/\s]\d{2}[/\s]\d{4})\s+(.+)/.test(l))
-        || pageLines.find(l => /(\S{18,})\s+(\d{2}[/\s]\d{2}[/\s]\d{4})\s+(.+)/.test(l))
-      if (cartLine) {
-        const m = cartLine.match(/(?:(\d{18,})|(\S{18,}))\s+(\d{2}[/\s]\d{2}[/\s]\d{4})\s+(.+)/)
-        header.numero_carteira = m[1] || m[2]
-        header.validade_carteira = parseDate(m[3])
-        header.beneficiario_nome = m[4].trim()
-      }
-
-      const crmLine = pageLines.find(l => /CRM\s+([A-Z]{2})\s+([\d.]+)/i.test(l))
-      if (crmLine && !header.numero_conselho) {
-        const m = crmLine.match(/CRM\s+([A-Z]{2})\s+([\d.]+)/i)
-        if (m) {
-          header.conselho_profissional = 'CRM'
-          header.uf_conselho = m[1]
-          header.numero_conselho = m[2].replace(/\D/g, '')
-        }
-      }
-
-      const authorized = {}
-      const executed = {}
-
-      for (const line of pageLines) {
-        const m2 = line.match(/^\s*[\d\s\-:.]*16\s+(\d{8})\s+([A-Z][A-Z0-9\s\-.]+?)(?:\s+(\d+)(?:\s+(\d+))?)?\s*$/i)
-        if (m2) {
-          authorized[m2[1]] = m2[2].trim()
-        }
-      }
-
-      for (const line of pageLines) {
-        const m = line.match(/(?:^|[\s:])(?:\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}\s+\d{2}:\d{2}\s+)?(?:16|1\s+6|91)\s+(\d{8})\s+([A-Z][A-Z0-9\s\-.]+?)\s+(?:\(?\s*)?(?:[oO0]?[\dlL1]{0,2}\s+)?(?:[Uu]\s*(?:\S{0,3})?\s+)?(?:(\d{0,3})\s*[.,]\s*(\d{2,3}))(?:\s+(?:(\d{0,3})\s*[.,]\s*(\d{2,3})))?/i)
-        if (m) {
-          let value = normalizeValue(m[3], m[4])
-          let valueTotal = m[5] ? normalizeValue(m[5], m[6]) : value
-          const valueDec = value.split(',')[1]
-          if (valueTotal.startsWith('0,') && !value.startsWith('0,') && valueTotal.split(',')[1] === valueDec) {
-            valueTotal = value
-          }
-          executed[m[1]] = { description: m[2].trim(), value, value_total: valueTotal }
-        }
-      }
-
-      const allCodes = new Set([...Object.keys(authorized), ...Object.keys(executed)])
-      for (const code of allCodes) {
-        exams.push({
-          code,
-          description: authorized[code] || executed[code]?.description || '',
-          value: executed[code]?.value || '',
-          value_total: executed[code]?.value_total || '',
-          quantity: 1,
-          date: ''
-        })
-      }
-    }
-
-    return { header, exams }
-  }
-
-  const parseTiss = (fullText) => {
-    const pages = String(fullText || '').split(/\f/)
-    const allLines = toLines(fullText)
-    const firstPageLines = toLines(pages[0] || fullText)
-
-    // Detecta novo padrão Sulamérica text-only (sem rótulos, começa com número da requisição e SULAMERICA)
-    const isTextOnly = firstPageLines.slice(0, 10).some(l =>
-      /SULAMERICA\s+SAUDE/i.test(l) ||
-      /\b\d{6}\s+SULAMERICA/i.test(l)
-    )
-    if (isTextOnly) {
-      return parseTissTextOnly(fullText)
-    }
-
-    const header = {
-      registro_ANS: getField(firstPageLines, ['registro ans', 'registroans'], /(\d{6})/),
-      codigo_operadora: getField(firstPageLines, ['codigo na operadora', 'codigo operadora'], /(\S+)/),
-      nome_contratado: getField(firstPageLines, ['nome do contratado', 'contratado'], null, { maxLength: 80 }),
-      numero_requisicao: getField(firstPageLines, ['no da requisicao', 'numero da requisicao', 'requisicao'], /(\S+)/),
-      data_autorizacao: getField(firstPageLines, ['data da autorizacao', 'autorizacao'], /(\d{2}\/\d{2}\/\d{4})/),
-      numero_carteira: getField(firstPageLines, ['numero da carteira', 'carteira'], /(\S+)/),
-      validade_carteira: getField(firstPageLines, ['validade da carteira', 'validade'], /(\d{2}\/\d{2}\/\d{4})/),
-      beneficiario_nome: getField(firstPageLines, ['nome do beneficiario', 'beneficiario'], null, { maxLength: 80 })
-        || getField(firstPageLines, ['nome'], null, { maxLength: 80 }),
-      cns: getField(firstPageLines, ['cartao nacional de saude', 'cns'], /(\d[\d. ]{10,})/),
-      atendimento_RN: getField(firstPageLines, ['atendimento rn'], /(sim|nao|nao|n\/a)/i),
-      profissional_nome: getField(firstPageLines, ['nome do profissional solicitante', 'profissional solicitante'], null, { maxLength: 80 }),
-      conselho_profissional: getField(firstPageLines, ['conselho profissional'], /(CRM|COREN|CRO|CRP|CRF|CREFITO|CREFONO|CBO|OUTROS)/i),
-      numero_conselho: getField(firstPageLines, ['numero no conselho'], /(\S+)/),
-      uf_conselho: getField(firstPageLines, ['uf'], /([A-Z]{2})/),
-      cbos: getField(firstPageLines, ['cbos'], /(\d{4}-?\d{2})/),
-      indicacao_clinica: getField(allLines, ['indicacao clinica'], null, { maxLength: 500 }),
-      tipo_atendimento: getField(allLines, ['tipo de atendimento'], /(eletivo|urgencia|emergencia|outros|ambulatorial)/i),
-      indicacao_acidente: getField(allLines, ['indicacao de acidente'], /(trabalho|transito|outros|nao|nao|nenhuma)/i),
-      tipo_consulta: getField(allLines, ['tipo de consulta'], /(primeira|seguimento|pre natal|pos op|eletiva)/i),
-    }
-
-    const examLines = []
-    const headerPatterns = [
-      /codigo\s+descricao/i,
-      /data\s+codigo\s+descricao/i,
-      /procedimento\s+realizado/i,
-      /codigo\s+procedimento/i,
-    ]
-
-    const parsePageForExams = (pageText) => {
-      const lines = toLines(pageText)
-      let inTable = false
-      for (const line of lines) {
-        const norm = normalize(line)
-        if (!inTable && headerPatterns.some(re => re.test(line) || re.test(norm))) {
-          inTable = true
-          continue
-        }
-        if (!inTable) continue
-        if (/observacoes/i.test(norm) || /totais?/i.test(norm) || /assinatura/i.test(norm)) break
-        const parsed = parseExamLine(line)
-        if (parsed) {
-          examLines.push(parsed)
-        }
-      }
-    }
-
-    pages.forEach((p) => {
-      if (!p) return
-      parsePageForExams(p)
-    })
-
-    return { header, exams: examLines }
-  }
-
-  const isReadableText = (text) => {
-    const letters = (text.match(/[a-zA-Z]/g) || []).length
-    const digits = (text.match(/\d/g) || []).length
-    const total = text.length
-    if (total === 0) return false
-    return (letters + digits) / total > 0.7
-  }
-
-  const extractTextFromPdf = async (arrayBuffer) => {
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
-    const pageTexts = []
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i)
-      const textContent = await page.getTextContent()
-      const items = (textContent.items || [])
-        .filter(item => item && typeof item.str === 'string' && item.str.trim())
-        .map(item => {
-          const tx = item.transform || []
-          return {
-            text: item.str,
-            x: Number(tx[4] || 0),
-            y: Number(tx[5] || 0),
-            width: Number(item.width || 0),
-            height: Number(item.height || 0),
-          }
-        })
-
-      const rows = []
-      const tolerance = 3
-      for (const item of items) {
-        let row = rows.find(r => Math.abs(r.y - item.y) <= tolerance)
-        if (!row) {
-          row = { y: item.y, items: [] }
-          rows.push(row)
-        }
-        row.items.push(item)
-      }
-
-      rows.sort((a, b) => a.y - b.y)
-      for (const row of rows) {
-        row.items.sort((a, b) => a.x - b.x)
-      }
-
-      const lines = rows.map(row => {
-        let line = ''
-        let lastX = null
-        for (const item of row.items) {
-          if (lastX !== null && item.x - lastX > 3) {
-            line += ' '
-          }
-          line += item.text
-          lastX = item.x + item.width
-        }
-        return line
-      })
-
-      pageTexts.push(lines.join('\n'))
-    }
-    return pageTexts.join('\f')
-  }
-
-  const toDegrees = (rad) => Math.round((rad * 180) / Math.PI)
-
-  const detectTextRotation = (items) => {
-    const angles = []
-    for (const item of items) {
-      if (!item.str || !item.str.trim()) continue
-      const tx = item.transform || []
-      const a = Number(tx[0] || 0)
-      const b = Number(tx[1] || 0)
-      if (a === 0 && b === 0) continue
-      const angle = toDegrees(Math.atan2(b, a))
-      angles.push(angle)
-    }
-    if (angles.length === 0) return 0
-    const rounded = angles.map(a => {
-      if (Math.abs(a) <= 15) return 0
-      if (Math.abs(a - 90) <= 15) return 90
-      if (Math.abs(a + 90) <= 15) return -90
-      if (Math.abs(a - 180) <= 15 || Math.abs(a + 180) <= 15) return 180
-      return a
-    })
-    const counts = {}
-    for (const a of rounded) {
-      counts[a] = (counts[a] || 0) + 1
-    }
-    let dominant = 0
-    let max = 0
-    for (const [a, count] of Object.entries(counts)) {
-      if (count > max) {
-        max = count
-        dominant = Number(a)
-      }
-    }
-    return dominant
-  }
-
-  const rotateCanvas = (canvas, angle) => {
-    if (angle === 0) return canvas
-    const w = canvas.width
-    const h = canvas.height
-    const rotated = document.createElement('canvas')
-    const is180 = Math.abs(angle) === 180
-    rotated.width = is180 ? w : h
-    rotated.height = is180 ? h : w
-    const ctx = rotated.getContext('2d')
-    ctx.fillStyle = 'white'
-    ctx.fillRect(0, 0, rotated.width, rotated.height)
-    ctx.translate(rotated.width / 2, rotated.height / 2)
-    ctx.rotate((angle * Math.PI) / 180)
-    ctx.drawImage(canvas, -w / 2, -h / 2)
-    return rotated
-  }
-
-  const preprocessCanvas = (canvas, threshold = 240) => {
-    const ctx = canvas.getContext('2d')
-    const w = canvas.width
-    const h = canvas.height
-    const imgData = ctx.getImageData(0, 0, w, h)
-    const data = imgData.data
-    for (let i = 0; i < data.length; i += 4) {
-      const r = data[i]
-      const g = data[i + 1]
-      const b = data[i + 2]
-      const gray = 0.299 * r + 0.587 * g + 0.114 * b
-      const val = gray > threshold ? 255 : 0
-      data[i] = val
-      data[i + 1] = val
-      data[i + 2] = val
-    }
-    ctx.putImageData(imgData, 0, 0)
-  }
-
-  const renderPageToDataUrl = async (pdf, pageNumber, scale = 5) => {
-    const page = await pdf.getPage(pageNumber)
-    const viewport = page.getViewport({ scale })
-    const canvas = document.createElement('canvas')
-    canvas.width = viewport.width
-    canvas.height = viewport.height
-    const ctx = canvas.getContext('2d')
-    ctx.fillStyle = 'white'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-    await page.render({ canvasContext: ctx, viewport }).promise
-
-    const textContent = await page.getTextContent()
-    const rotation = detectTextRotation(textContent.items || [])
-    let finalCanvas = canvas
-    if (rotation !== 0) {
-      finalCanvas = rotateCanvas(canvas, rotation)
-    }
-
-    preprocessCanvas(finalCanvas, 240)
-    return finalCanvas.toDataURL('image/png')
-  }
-
-  const ocrFromPdf = async (arrayBuffer) => {
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
-    const worker = await createWorker('por', 1, {
-      logger: (m) => {
-        if (m.status === 'recognizing text') {
-          setOcrProgress(Math.round(m.progress * 100))
-        } else {
-          setOcrStatus(m.status)
-        }
-      }
-    })
-
-    await worker.setParameters({
-      tessedit_pageseg_mode: '3',
-      tessedit_ocr_engine_mode: '1',
-    })
-
-    const parts = []
-    for (let i = 1; i <= pdf.numPages; i++) {
-      setOcrStatus(`Processando página ${i} de ${pdf.numPages}...`)
-      const dataUrl = await renderPageToDataUrl(pdf, i, 5)
-      const {
-        data: { text }
-      } = await worker.recognize(dataUrl)
-      parts.push(postProcessOcrText(text))
-    }
-
-    await worker.terminate()
-    setOcrStatus('')
-    setOcrProgress(0)
-    return parts.join('\n\n--- PAGE ---\n\n')
-  }
+  const [data, setData] = useState(null)
+  const [error, setError] = useState(null)
+  const [parsing, setParsing] = useState(false)
 
   useEffect(() => {
     if (loading) return
-    // Se o perfil ainda não foi carregado, não decidir ainda
     if (!profile) return
     if (profile.can_access_sulamerica) return
     setToast({ title: 'Acesso restrito', message: 'Você não tem permissão para acessar o portal SulAmérica.' })
     const timer = setTimeout(() => {
-      // Redirecionar para o domínio principal de RH
       window.location.href = 'https://rh.analiselabclinico.com.br'
     }, 2500)
     return () => clearTimeout(timer)
-  }, [loading, profile, navigate])
+  }, [loading, profile])
+
+  const updateHeader = useCallback((field, value) => {
+    setData((prev) => ({ ...prev, header: { ...prev.header, [field]: value } }))
+  }, [])
+
+  const updateLote = useCallback((value) => {
+    setData((prev) => ({ ...prev, lote: { ...prev.lote, numeroLote: value } }))
+  }, [])
+
+  const updateGuia = useCallback((index, field, value) => {
+    setData((prev) => {
+      const guias = [...prev.guias]
+      guias[index] = { ...guias[index], [field]: value }
+      return { ...prev, guias }
+    })
+  }, [])
+
+  const updateProcedimento = useCallback((guiaIndex, procedimentoIndex, field, value) => {
+    setData((prev) => {
+      const guias = [...prev.guias]
+      const guia = { ...guias[guiaIndex] }
+      const procedimentos = [...guia.procedimentos]
+      procedimentos[procedimentoIndex] = { ...procedimentos[procedimentoIndex], [field]: value }
+      guia.procedimentos = procedimentos
+      guias[guiaIndex] = guia
+      return { ...prev, guias }
+    })
+  }, [])
+
+  const handleFileChange = (e) => {
+    setFile(e.target.files[0] || null)
+    setError(null)
+  }
+
+  const handleImport = async () => {
+    if (!file) return
+    setParsing(true)
+    setError(null)
+    try {
+      const text = await readFileText(file)
+      const parsed = parseTissXml(text)
+      setData(parsed)
+    } catch (err) {
+      setError(err.message || 'Erro ao importar o XML.')
+    } finally {
+      setParsing(false)
+    }
+  }
+
+  const handleClear = () => {
+    setData(null)
+    setFile(null)
+    setError(null)
+  }
 
   if (loading) {
     return <div className="min-h-screen grid place-items-center text-neutral-500">Carregando...</div>
   }
 
-  // Enquanto o perfil não estiver carregado, evitar piscar tela de acesso negado
   if (!profile) {
     return <div className="min-h-screen grid place-items-center text-neutral-500">Carregando...</div>
   }
@@ -507,233 +233,73 @@ export default function Sulamerica() {
     )
   }
 
-  const onFileChange = (e) => {
-    const f = e.target.files?.[0] || null
-    setFile(f)
-    setResult(null)
-    setError('')
-    setOcrProgress(0)
-    setOcrStatus('')
-  }
-
-  const readFileAsArrayBuffer = (f) => new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result)
-    reader.onerror = (err) => reject(err)
-    reader.readAsArrayBuffer(f)
-  })
-
-  const onImport = async (e) => {
-    e.preventDefault()
-    if (!file) {
-      setError('Selecione um arquivo PDF no padrão TISS para continuar.')
-      return
-    }
-    try {
-      setImporting(true)
-      setError('')
-      setResult(null)
-      setRawText('')
-      setOcrProgress(0)
-      setOcrStatus('')
-      const arrayBuffer = await readFileAsArrayBuffer(file)
-
-      let fullText = await extractTextFromPdf(arrayBuffer.slice(0))
-      if (!isReadableText(fullText)) {
-        fullText = await ocrFromPdf(arrayBuffer.slice(0))
-      }
-
-      setRawText(fullText)
-      const parsed = parseTiss(fullText)
-      setResult(parsed)
-    } catch (err) {
-      console.error(err)
-      setError(err.message || 'Falha ao importar PDF')
-    } finally {
-      setImporting(false)
-      setOcrProgress(0)
-      setOcrStatus('')
-    }
-  }
-
   return (
     <div className="space-y-6">
       <div className="pt-2">
         <h1 className="text-2xl font-semibold">Portal SulAmérica</h1>
-        <p className="mt-2 text-sm text-neutral-600">Importe o PDF da guia TISS para visualizar os dados extraídos.</p>
+        <p className="mt-2 text-sm text-neutral-600">Importe um XML TISS (guia médica) e visualize ou edite as guias.</p>
       </div>
 
-      <div className="rounded-2xl border border-neutral-200 bg-white p-4 text-sm text-neutral-700 space-y-4">
-        <form className="space-y-4" onSubmit={onImport}>
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-neutral-800">Arquivo da guia TISS (PDF)</label>
-            <input
-              type="file"
-              accept="application/pdf"
-              onChange={onFileChange}
-              className="block w-full text-sm text-neutral-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border file:border-neutral-300 file:text-sm file:font-medium file:bg-neutral-50 file:text-neutral-800 hover:file:bg-neutral-100"
-            />
-            <p className="text-xs text-neutral-500">Selecione o PDF padronizado da guia médica de plano de saúde SulAmérica.</p>
-          </div>
-
-          {ocrStatus && (
-            <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700">
-              {ocrStatus} {ocrProgress > 0 && `${ocrProgress}%`}
-            </div>
-          )}
-
-          {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-              {error}
-            </div>
-          )}
-
-          <div className="flex items-center gap-3">
+      <div className="rounded-2xl border border-neutral-200 bg-white p-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            type="file"
+            accept=".xml"
+            onChange={handleFileChange}
+            className="text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-neutral-100 file:text-neutral-700"
+          />
+          <button
+            onClick={handleImport}
+            disabled={!file || parsing}
+            className="px-4 py-2 rounded-lg bg-neutral-900 text-white text-sm disabled:opacity-50"
+          >
+            {parsing ? 'Importando...' : 'Importar'}
+          </button>
+          {data && (
             <button
-              type="submit"
-              disabled={importing}
-              className="inline-flex items-center justify-center rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed"
+              onClick={handleClear}
+              className="px-4 py-2 rounded-lg border border-neutral-300 text-sm text-neutral-700 hover:bg-neutral-100"
             >
-              {importing ? 'Importando...' : 'Importar PDF'}
+              Limpar
             </button>
-            {rawText && (
-              <button
-                type="button"
-                onClick={() => setShowDebug(s => !s)}
-                className="text-xs text-neutral-500 hover:text-neutral-700 underline"
-              >
-                {showDebug ? 'Ocultar texto bruto' : 'Ver texto bruto extraído'}
-              </button>
-            )}
-          </div>
-        </form>
+          )}
+        </div>
+        {error && <div className="mt-3 text-sm text-red-600">{error}</div>}
+        {file && !data && <div className="mt-2 text-xs text-neutral-500">{file.name}</div>}
       </div>
 
-      {result && (
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-neutral-200 bg-white p-4 text-sm text-neutral-700">
-            <h2 className="text-base font-semibold mb-3">Dados da guia</h2>
-            <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-xs md:text-sm">
-              <div>
-                <dt className="font-medium text-neutral-800">Registro ANS</dt>
-                <dd>{result.header?.registro_ANS || '\u2014'}</dd>
-              </div>
-              <div>
-                <dt className="font-medium text-neutral-800">Código na Operadora</dt>
-                <dd>{result.header?.codigo_operadora || '\u2014'}</dd>
-              </div>
-              <div>
-                <dt className="font-medium text-neutral-800">Nome do Contratado</dt>
-                <dd>{result.header?.nome_contratado || '\u2014'}</dd>
-              </div>
-              <div>
-                <dt className="font-medium text-neutral-800">Nº da Requisição</dt>
-                <dd>{result.header?.numero_requisicao || '\u2014'}</dd>
-              </div>
-              <div>
-                <dt className="font-medium text-neutral-800">Data da Autorização</dt>
-                <dd>{result.header?.data_autorizacao || '\u2014'}</dd>
-              </div>
-              <div>
-                <dt className="font-medium text-neutral-800">Número da Carteira</dt>
-                <dd>{result.header?.numero_carteira || '\u2014'}</dd>
-              </div>
-              <div>
-                <dt className="font-medium text-neutral-800">Validade da Carteira</dt>
-                <dd>{result.header?.validade_carteira || '\u2014'}</dd>
-              </div>
-              <div>
-                <dt className="font-medium text-neutral-800">Nome do Beneficiário</dt>
-                <dd>{result.header?.beneficiario_nome || '\u2014'}</dd>
-              </div>
-              <div>
-                <dt className="font-medium text-neutral-800">Cartão Nacional de Saúde (CNS)</dt>
-                <dd>{result.header?.cns || '\u2014'}</dd>
-              </div>
-              <div>
-                <dt className="font-medium text-neutral-800">Atendimento RN</dt>
-                <dd>{result.header?.atendimento_RN || '\u2014'}</dd>
-              </div>
-              <div>
-                <dt className="font-medium text-neutral-800">Profissional Solicitante</dt>
-                <dd>{result.header?.profissional_nome || '\u2014'}</dd>
-              </div>
-              <div>
-                <dt className="font-medium text-neutral-800">Conselho Profissional</dt>
-                <dd>{result.header?.conselho_profissional || '\u2014'}</dd>
-              </div>
-              <div>
-                <dt className="font-medium text-neutral-800">Número no Conselho</dt>
-                <dd>{result.header?.numero_conselho || '\u2014'}</dd>
-              </div>
-              <div>
-                <dt className="font-medium text-neutral-800">UF do Conselho</dt>
-                <dd>{result.header?.uf_conselho || '\u2014'}</dd>
-              </div>
-              <div>
-                <dt className="font-medium text-neutral-800">CBOS</dt>
-                <dd>{result.header?.cbos || '\u2014'}</dd>
-              </div>
-              <div className="md:col-span-2">
-                <dt className="font-medium text-neutral-800">Indicação Clínica</dt>
-                <dd>{result.header?.indicacao_clinica || '\u2014'}</dd>
-              </div>
-              <div>
-                <dt className="font-medium text-neutral-800">Tipo de Atendimento</dt>
-                <dd>{result.header?.tipo_atendimento || '\u2014'}</dd>
-              </div>
-              <div>
-                <dt className="font-medium text-neutral-800">Indicação de Acidente</dt>
-                <dd>{result.header?.indicacao_acidente || '\u2014'}</dd>
-              </div>
-              <div>
-                <dt className="font-medium text-neutral-800">Tipo de Consulta</dt>
-                <dd>{result.header?.tipo_consulta || '\u2014'}</dd>
-              </div>
-            </dl>
+      {data && (
+        <>
+          <div className="rounded-2xl border border-neutral-200 bg-white p-4 space-y-4">
+            <h2 className="text-base font-semibold">Cabeçalho do lote</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              <Field label="Tipo de transação" value={data.header.tipoTransacao} onChange={(v) => updateHeader('tipoTransacao', v)} />
+              <Field label="Sequencial transação" value={data.header.sequencialTransacao} onChange={(v) => updateHeader('sequencialTransacao', v)} />
+              <Field label="Data registro transação" value={data.header.dataRegistroTransacao} onChange={(v) => updateHeader('dataRegistroTransacao', v)} />
+              <Field label="Hora registro transação" value={data.header.horaRegistroTransacao} onChange={(v) => updateHeader('horaRegistroTransacao', v)} />
+              <Field label="Código prestador na operadora" value={data.header.codigoPrestadorNaOperadora} onChange={(v) => updateHeader('codigoPrestadorNaOperadora', v)} />
+              <Field label="Registro ANS destino" value={data.header.registroANS} onChange={(v) => updateHeader('registroANS', v)} />
+              <Field label="Padrão" value={data.header.padrao} onChange={(v) => updateHeader('padrao', v)} />
+              <Field label="Número do lote" value={data.lote.numeroLote} onChange={updateLote} />
+            </div>
           </div>
 
-          <div className="rounded-2xl border border-neutral-200 bg-white p-4 text-sm text-neutral-700">
-            <h2 className="text-base font-semibold mb-3">Exames</h2>
-            {(!result.exams || result.exams.length === 0) ? (
-              <p className="text-xs text-neutral-500">Nenhum exame encontrado no PDF.</p>
-            ) : (
-              <div className="overflow-auto">
-                <table className="min-w-full text-xs md:text-sm border-collapse">
-                  <thead>
-                    <tr className="bg-neutral-50 text-neutral-700">
-                      <th className="border border-neutral-200 px-2 py-1 text-left">Data</th>
-                      <th className="border border-neutral-200 px-2 py-1 text-left">Código</th>
-                      <th className="border border-neutral-200 px-2 py-1 text-left">Descrição</th>
-                      <th className="border border-neutral-200 px-2 py-1 text-right">Quantidade</th>
-                      <th className="border border-neutral-200 px-2 py-1 text-right">Valor</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {result.exams.map((ex, idx) => (
-                      <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-neutral-50'}>
-                        <td className="border border-neutral-200 px-2 py-1 whitespace-nowrap">{ex.date || '\u2014'}</td>
-                        <td className="border border-neutral-200 px-2 py-1 whitespace-nowrap">{ex.code || '\u2014'}</td>
-                        <td className="border border-neutral-200 px-2 py-1">{ex.description || '\u2014'}</td>
-                        <td className="border border-neutral-200 px-2 py-1 text-right">{ex.quantity ?? '\u2014'}</td>
-                        <td className="border border-neutral-200 px-2 py-1 text-right">{ex.value || '\u2014'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">Guias ({data.guias.length})</h2>
           </div>
-        </div>
-      )}
 
-      {showDebug && rawText && (
-        <div className="rounded-2xl border border-neutral-200 bg-white p-4 text-sm text-neutral-700">
-          <h2 className="text-base font-semibold mb-3">Texto bruto extraído do PDF</h2>
-          <pre className="text-xs bg-neutral-50 border border-neutral-200 rounded-lg p-2 overflow-auto max-h-96 whitespace-pre-wrap">
-            {rawText}
-          </pre>
-        </div>
+          <div className="space-y-4">
+            {data.guias.map((guia, gIdx) => (
+              <GuiaCard
+                key={gIdx}
+                index={gIdx}
+                guia={guia}
+                onUpdateGuia={updateGuia}
+                onUpdateProcedimento={updateProcedimento}
+              />
+            ))}
+          </div>
+        </>
       )}
     </div>
   )
