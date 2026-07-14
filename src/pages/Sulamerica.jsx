@@ -73,10 +73,10 @@ function CarteiraField({ value, onChange, className = '' }) {
         inputMode="numeric"
         value={value ?? ''}
         onChange={(e) => onChange(e.target.value.replace(/\D/g, ''))}
-        className={`w-full rounded-lg border bg-white px-3 py-2 text-lg font-semibold tracking-wider focus:outline-none focus:ring-1 ${valid ? 'border-emerald-300 text-emerald-700 focus:border-emerald-500 focus:ring-emerald-500' : 'border-rose-300 bg-rose-50 text-rose-700 focus:border-rose-500 focus:ring-rose-500'}`}
+        className={`w-full rounded-lg border px-3 py-2 text-lg font-semibold tracking-wider focus:outline-none focus:ring-1 ${valid ? 'border-emerald-300 bg-white text-emerald-700 focus:border-emerald-500 focus:ring-emerald-500' : 'border-rose-400 bg-rose-100 text-rose-800 focus:border-rose-500 focus:ring-rose-500'}`}
       />
       {!valid && (value ?? '').length > 0 && (
-        <span className="text-xs text-red-600">A carteirinha deve conter exatamente 20 dígitos.</span>
+        <span className="text-xs text-rose-700">A carteirinha deve conter exatamente 20 dígitos.</span>
       )}
     </div>
   )
@@ -123,7 +123,7 @@ const ProcedimentoRow = memo(function ProcedimentoRow({ index, guiaIndex, proced
   const inputLeft = 'w-full rounded-md border border-slate-300 bg-white px-1 py-1 text-xs text-left focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500'
   const requiresAuth = AUTH_PREAUTH_CODES.has(String(procedimento.codigoProcedimento ?? '').trim())
   return (
-    <div className={`${gridCols} border-b border-blue-50 ${requiresAuth ? 'bg-rose-50 hover:bg-rose-50' : 'bg-white hover:bg-blue-50/30'}`}>
+    <div className={`${gridCols} border-b border-blue-50 ${requiresAuth ? 'bg-rose-100 hover:bg-rose-100' : 'bg-white hover:bg-blue-50/30'}`}>
       <div className={`${cell} col-span-1 justify-center`}><input value={procedimento.sequencialItem} onChange={(e) => update('sequencialItem', e.target.value)} className={input} /></div>
       <div className={`${cell} col-span-1 justify-center`}><input value={procedimento.codigoTabela} onChange={(e) => update('codigoTabela', e.target.value)} className={input} /></div>
       <div className={`${cell} col-span-2 justify-center`}><input value={procedimento.dataExecucao} onChange={(e) => update('dataExecucao', formatDateInput(e.target.value))} className={input} /></div>
