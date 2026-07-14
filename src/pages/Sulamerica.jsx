@@ -73,7 +73,7 @@ function CarteiraField({ value, onChange, className = '' }) {
         inputMode="numeric"
         value={value ?? ''}
         onChange={(e) => onChange(e.target.value.replace(/\D/g, ''))}
-        className={`w-full rounded-lg border bg-white px-3 py-2 text-lg font-semibold tracking-wider focus:outline-none focus:ring-1 ${valid ? 'border-emerald-300 text-emerald-700 focus:border-emerald-500 focus:ring-emerald-500' : 'border-red-300 text-red-700 focus:border-red-500 focus:ring-red-500'}`}
+        className={`w-full rounded-lg border bg-white px-3 py-2 text-lg font-semibold tracking-wider focus:outline-none focus:ring-1 ${valid ? 'border-emerald-300 text-emerald-700 focus:border-emerald-500 focus:ring-emerald-500' : 'border-rose-300 bg-rose-50 text-rose-700 focus:border-rose-500 focus:ring-rose-500'}`}
       />
       {!valid && (value ?? '').length > 0 && (
         <span className="text-xs text-red-600">A carteirinha deve conter exatamente 20 dígitos.</span>
@@ -84,13 +84,46 @@ function CarteiraField({ value, onChange, className = '' }) {
 
 const gridCols = 'grid grid-cols-[repeat(26,minmax(0,1fr))]'
 
+const AUTH_PREAUTH_CODES = new Set([
+  '40302610',
+  '40302830',
+  '40302903',
+  '40304701',
+  '40304710',
+  '40304728',
+  '40304736',
+  '40304973',
+  '40305015',
+  '40306771',
+  '40308804',
+  '40314049',
+  '40314057',
+  '40314065',
+  '40314235',
+  '40314286',
+  '40314430',
+  '40314561',
+  '40314618',
+  '40319326',
+  '40321029',
+  '40321517',
+  '40322394',
+  '40323153',
+  '40324389',
+  '40324591',
+  '40324605',
+  '40324788',
+  '40324796',
+])
+
 const ProcedimentoRow = memo(function ProcedimentoRow({ index, guiaIndex, procedimento, onUpdate }) {
   const update = (field, value) => onUpdate(guiaIndex, index, field, value)
   const cell = 'px-0.5 py-1 flex items-center'
   const input = 'w-full rounded-md border border-slate-300 bg-white px-0.5 py-1 text-xs text-center focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500'
   const inputLeft = 'w-full rounded-md border border-slate-300 bg-white px-1 py-1 text-xs text-left focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500'
+  const requiresAuth = AUTH_PREAUTH_CODES.has(String(procedimento.codigoProcedimento ?? '').trim())
   return (
-    <div className={`${gridCols} border-b border-blue-50 bg-white hover:bg-blue-50/30`}>
+    <div className={`${gridCols} border-b border-blue-50 ${requiresAuth ? 'bg-rose-50 hover:bg-rose-50' : 'bg-white hover:bg-blue-50/30'}`}>
       <div className={`${cell} col-span-1 justify-center`}><input value={procedimento.sequencialItem} onChange={(e) => update('sequencialItem', e.target.value)} className={input} /></div>
       <div className={`${cell} col-span-1 justify-center`}><input value={procedimento.codigoTabela} onChange={(e) => update('codigoTabela', e.target.value)} className={input} /></div>
       <div className={`${cell} col-span-2 justify-center`}><input value={procedimento.dataExecucao} onChange={(e) => update('dataExecucao', formatDateInput(e.target.value))} className={input} /></div>
@@ -120,6 +153,12 @@ const GuiaCard = memo(function GuiaCard({ guia, index, onUpdateGuia, onUpdatePro
     ['valorTotalGeral', 'Total geral'],
   ]
 
+  const solicitanteInvalido = (guia.nomeProfissional ?? '').toString().trim().toUpperCase() === 'SOLICITACAO PROPRIA'
+
+  const hasPreauthProcedures = guia.procedimentos?.some((p) =>
+    AUTH_PREAUTH_CODES.has(String(p.codigoProcedimento ?? '').trim()),
+  )
+
   return (
     <div className="rounded-2xl border border-blue-100 bg-white shadow-sm overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-2 bg-linear-to-r from-blue-700 to-blue-600 px-5 py-3 text-white">
@@ -139,14 +178,22 @@ const GuiaCard = memo(function GuiaCard({ guia, index, onUpdateGuia, onUpdatePro
         <div className="grid grid-cols-1 md:grid-cols-8 gap-3">
           <CarteiraField className="col-span-1 md:col-span-8" value={guia.numeroCarteira} onChange={(v) => onUpdateGuia(index, 'numeroCarteira', v)} />
 
-          <Field className="col-span-1 md:col-span-3" label="Solicitante" value={guia.nomeProfissional} onChange={(v) => onUpdateGuia(index, 'nomeProfissional', v)} />
+          <Field
+            className="col-span-1 md:col-span-3"
+            label="Solicitante"
+            value={guia.nomeProfissional}
+            onChange={(v) => onUpdateGuia(index, 'nomeProfissional', v)}
+            inputClassName={solicitanteInvalido ? 'bg-rose-50 border-rose-300 text-rose-700 focus:border-rose-500 focus:ring-rose-500' : ''}
+            error={solicitanteInvalido ? 'Informe um solicitante válido.' : undefined}
+          />
           <SelectField className="col-span-1" label="Conselho" value={guia.conselhoProfissional} options={CODE_MAPS.conselhoProfissional} onChange={(v) => onUpdateGuia(index, 'conselhoProfissional', v)} />
           <SelectField className="col-span-1" label="UF" value={guia.ufProfissional} options={CODE_MAPS.ufProfissional} onChange={(v) => onUpdateGuia(index, 'ufProfissional', v)} />
           <Field className="col-span-1" label="Nº Conselho" value={guia.numeroConselhoProfissional} onChange={(v) => onUpdateGuia(index, 'numeroConselhoProfissional', v)} />
           <Field className="col-span-1" label="CBOS" value={guia.cbos} onChange={(v) => onUpdateGuia(index, 'cbos', v)} />
 
-          <Field className="col-span-1 md:col-span-2" label="Data da Solicitação" value={guia.dataSolicitacao} onChange={(v) => onUpdateGuia(index, 'dataSolicitacao', formatDateInput(v))} />
+          <Field className="col-span-1" label="Data da Solicitação" value={guia.dataSolicitacao} onChange={(v) => onUpdateGuia(index, 'dataSolicitacao', formatDateInput(v))} />
           <SelectField className="col-span-1 md:col-span-2" label="Caráter do Atendimento" value={guia.caraterAtendimento} options={CODE_MAPS.caraterAtendimento} onChange={(v) => onUpdateGuia(index, 'caraterAtendimento', v)} />
+          <SelectField className="col-span-1" label="Atendimento RN" value={guia.atendimentoRN} options={CODE_MAPS.atendimentoRN} onChange={(v) => onUpdateGuia(index, 'atendimentoRN', v)} />
           <SelectField className="col-span-1 md:col-span-2" label="Tipo do Atendimento" value={guia.tipoAtendimento} options={CODE_MAPS.tipoAtendimento} onChange={(v) => onUpdateGuia(index, 'tipoAtendimento', v)} />
           <SelectField className="col-span-1" label="Indicação de Acidente" value={guia.indicacaoAcidente} options={CODE_MAPS.indicacaoAcidente} onChange={(v) => onUpdateGuia(index, 'indicacaoAcidente', v)} />
           <SelectField className="col-span-1" label="Regime de Atendimento" value={guia.regimeAtendimento} options={CODE_MAPS.regimeAtendimento} onChange={(v) => onUpdateGuia(index, 'regimeAtendimento', v)} />
@@ -180,6 +227,12 @@ const GuiaCard = memo(function GuiaCard({ guia, index, onUpdateGuia, onUpdatePro
             ))}
           </div>
         </div>
+
+        {hasPreauthProcedures && (
+          <div className="mt-2 text-xs font-medium text-rose-700">
+            Esta requisição possui procedimentos que exigem senha e autorização prévia.
+          </div>
+        )}
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-emerald-100 bg-emerald-50/60 rounded-lg p-3">
           {totalFields.map(([key, label]) => (
