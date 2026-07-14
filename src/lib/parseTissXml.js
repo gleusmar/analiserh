@@ -1,3 +1,5 @@
+import { formatDateBr } from './tissCodeMaps.js'
+
 function getText(parent, localName) {
   if (!parent) return ''
   for (const child of parent.children) {
@@ -20,7 +22,7 @@ function parseProcedimento(el) {
   const proc = getChild(el, 'procedimento')
   return {
     sequencialItem: getText(el, 'sequencialItem'),
-    dataExecucao: getText(el, 'dataExecucao'),
+    dataExecucao: formatDateBr(getText(el, 'dataExecucao')),
     horaInicial: getText(el, 'horaInicial'),
     horaFinal: getText(el, 'horaFinal'),
     codigoTabela: getText(proc, 'codigoTabela'),
@@ -98,16 +100,17 @@ function parseGuia(guia) {
     numeroConselhoProfissional: getText(profSolic, 'numeroConselhoProfissional'),
     ufProfissional: getText(profSolic, 'UF'),
     cbos: getText(profSolic, 'CBOS'),
-    dataSolicitacao: getText(dadosSolicitacao, 'dataSolicitacao'),
+    dataSolicitacao: formatDateBr(getText(dadosSolicitacao, 'dataSolicitacao')),
     caraterAtendimento: getText(dadosSolicitacao, 'caraterAtendimento'),
     codigoPrestadorExecutante: getText(contratadoExec, 'codigoPrestadorNaOperadora'),
     cnes: getText(dadosExec, 'CNES'),
     tipoAtendimento: getText(dadosAtend, 'tipoAtendimento'),
+    tipoConsulta: getText(dadosAtend, 'tipoConsulta'),
     indicacaoAcidente: getText(dadosAtend, 'indicacaoAcidente'),
     regimeAtendimento: getText(dadosAtend, 'regimeAtendimento'),
     senha: getText(dadosAut, 'senha'),
-    dataAutorizacao: getText(dadosAut, 'dataAutorizacao'),
-    dataValidadeSenha: getText(dadosAut, 'dataValidadeSenha'),
+    dataAutorizacao: formatDateBr(getText(dadosAut, 'dataAutorizacao')),
+    dataValidadeSenha: formatDateBr(getText(dadosAut, 'dataValidadeSenha')),
     procedimentos: parseProcedimentos(procsEl),
     ...total,
   }
@@ -147,7 +150,7 @@ export function parseTissXml(xmlText) {
     header: {
       tipoTransacao: getText(identTrans, 'tipoTransacao'),
       sequencialTransacao: getText(identTrans, 'sequencialTransacao'),
-      dataRegistroTransacao: getText(identTrans, 'dataRegistroTransacao'),
+      dataRegistroTransacao: formatDateBr(getText(identTrans, 'dataRegistroTransacao')),
       horaRegistroTransacao: getText(identTrans, 'horaRegistroTransacao'),
       codigoPrestadorNaOperadora: getText(identPrestador, 'codigoPrestadorNaOperadora'),
       registroANS: getText(destino, 'registroANS'),
