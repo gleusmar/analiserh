@@ -25,6 +25,14 @@ export default function Sulamerica() {
     .map(l => l.trim())
     .filter(Boolean)
 
+  const postProcessOcrText = (t) => {
+    let s = String(t || '')
+    s = s.replace(/(\bU)\n([cC]c?)\s+/g, '$1 $2 ')
+    s = s.replace(/(\b[cC]c?\s+\d{1,3}[.,]?\d{0,2})\n(\d{1,3}(?:[.,]\d{2,3})?)\s+(\d{1,3}[.,]\d{2,3})/g, '$1$2 $3')
+    s = s.replace(/(\b[cC]c?\s+\d{1,3}[.,]\d{2,3}\s+\d{1,3}[.,]?)\n(\d{2,3})/g, '$1$2')
+    return s
+  }
+
   const normalize = (s) => String(s || '')
     .toLowerCase()
     .normalize('NFD')
@@ -52,7 +60,6 @@ export default function Sulamerica() {
       const matchIdx = normLine.search(matchedLabel)
       if (matchIdx !== -1) {
         const labelEndInNorm = matchIdx + matchedLabel.source.replace(/\\s\+/g, ' ').length
-        const normParts = normLine.split(/\s+/)
         const lineParts = line.split(/\s+/)
         const wordIdx = normLine.slice(0, labelEndInNorm).trim().split(/\s+/).length
         const after = lineParts.slice(wordIdx).join(' ').trim()
@@ -67,7 +74,6 @@ export default function Sulamerica() {
   }
 
   const parseExamLine = (line) => {
-    const date = ''
     let remaining = line
     const dateMatch = remaining.match(/^(\d{2}\/\d{2}\/\d{4})\s+/)
     if (dateMatch) {
@@ -110,98 +116,90 @@ export default function Sulamerica() {
   }
 
   const parseDate = (s) => {
-    const m = String(s || '').match(/(\d{2})\s*(\d{2})\s*(\d{4})/)
+    const m = String(s || '').match(/(\d{2})\s*[/]?\s*(\d{2})\s*[/]?\s*(\d{4})/)
     if (m) return `${m[1]}/${m[2]}/${m[3]}`
     return s
   }
 
   const parseTissTextOnly = (fullText) => {
-    const lines = toLines(fullText)
     const header = {}
     const exams = []
+    const normalizeValue = (int, dec) => `${int},${dec}`
 
-    // Páginas separadas por marcador
-    const pages = String(fullText || '').split(/\f|\n--- PAGE ---\n/)
+    const pages = postProcessOcrText(String(fullText || '')).split(/\f|\n--- PAGE ---\n/)
 
     for (const pageText of pages) {
       const pageLines = toLines(pageText)
-      if (!header.numero_requisicao && /\d{6,}/.test(pageLines[0] || '')) {
-        header.numero_requisicao = pageLines[0].match(/(\d{6,})/)?.[1] || ''
-      }
-      if (!header.registro_ANS && pageLines[1]) {
-        const ansMatch = pageLines[1].match(/(\d{6})/)
-        header.registro_ANS = ansMatch ? ansMatch[1] : ''
-        header.nome_operadora = pageLines[1].replace(/\d{6}/, '').replace(/[^A-Z\s]/gi, '').trim()
-      }
-      if (!header.data_autorizacao && pageLines[2]) {
-        header.data_autorizacao = parseDate(pageLines[2])
-      }
-      if (!header.numero_carteira && pageLines[3]) {
-        const parts = pageLines[3].split(/\s{2,}/)
-        if (parts.length >= 3) {
-          header.numero_carteira = parts[0].trim()
-          header.validade_carteira = parseDate(parts[1])
-          header.beneficiario_nome = parts.slice(2).join(' ').trim()
-        } else {
-          const tokens = pageLines[3].split(/\s+/)
-          if (tokens.length >= 5) {
-            header.numero_carteira = tokens[0]
-            header.validade_carteira = parseDate(`${tokens[1]} ${tokens[2]} ${tokens[3]}`)
-            header.beneficiario_nome = tokens.slice(4).join(' ')
-          }
+      if (pageLines.length === 0) continue
+
+      const reqLine = pageLines.find(l => /(?:2[-–—]N\s*|No\.?\s*|da Guia Principal)\s*(\d{6,})/i.test(l)) || pageLines[0]
+      const reqM = reqLine.match(/(\d{6,})/)
+      if (reqM && !header.numero_requisicao) header.numero_requisicao = reqM[1]
+
+      const opLine = pageLines.find(l => /SULAMERICA/i.test(l))
+      if (opLine) {
+        const m = opLine.match(/(\d{6})\s+SULAMERICA\s*(.*)/i)
+        if (m) {
+          header.registro_ANS = m[1]
+          header.nome_operadora = `SULAMERICA ${m[2]}`.trim()
         }
       }
 
-      // CRM/UF
-      const crmLine = pageLines.find(l => /CRM\s+\d+\s+[A-Z]{2}\s+\d+/i.test(l))
+      const authLabel = pageLines.findIndex(l => /Data da Autoriza/i.test(l))
+      if (authLabel >= 0 && pageLines[authLabel + 1]) {
+        header.data_autorizacao = parseDate(pageLines[authLabel + 1])
+      } else if (pageLines[2]) {
+        header.data_autorizacao = parseDate(pageLines[2])
+      }
+
+      const cartLine = pageLines.find(l => /(\d{18,})\s+(\d{2}[/\s]\d{2}[/\s]\d{4})\s+(.+)/.test(l))
+      if (cartLine) {
+        const m = cartLine.match(/(\d{18,})\s+(\d{2}[/\s]\d{2}[/\s]\d{4})\s+(.+)/)
+        header.numero_carteira = m[1]
+        header.validade_carteira = parseDate(m[2])
+        header.beneficiario_nome = m[3].trim()
+      }
+
+      const crmLine = pageLines.find(l => /CRM\s+([A-Z]{2})\s+([\d.]+)/i.test(l))
       if (crmLine && !header.numero_conselho) {
-        const m = crmLine.match(/CRM\s+\d+\s+([A-Z]{2})\s+(\d+)/i)
+        const m = crmLine.match(/CRM\s+([A-Z]{2})\s+([\d.]+)/i)
         if (m) {
           header.conselho_profissional = 'CRM'
           header.uf_conselho = m[1]
-          header.numero_conselho = m[2]
+          header.numero_conselho = m[2].replace(/\D/g, '')
         }
       }
 
-      // Exames autorizados (linhas 16) possuem descrição completa
       const authorized = {}
       const executed = {}
 
       for (const line of pageLines) {
-        const m2 = line.match(/^16\s+(\d{8,})\s+([A-Z][A-Z0-9\s\-\.]+?)\s+\d+\s+\d+$/i)
+        const m2 = line.match(/^\s*[\d\s\-:.]*16\s+(\d{8,})\s+([A-Z][A-Z0-9\s\-.]+?)\s+(\d+)\s+(\d+)\s*$/i)
         if (m2) {
           authorized[m2[1]] = m2[2].trim()
         }
       }
 
-      // Exames executados/faturados (linhas 2906...) possuem valores
       for (const line of pageLines) {
-        const m = line.match(/\b(\d{8,})\s+([A-Z][A-Z0-9\s\-\.]+?)\s+o?\d+\s+UC\s+(\d{1,3})\s+(\d{2,3})\s+(\d{1,3})\s+(\d{2,3})/i)
+        const m = line.match(/(?:^|[\s:])(?:\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}\s+\d{2}:\d{2}\s+)?(?:16|1\s+6|91)\s+(\d{8,})\s+([A-Z][A-Z0-9\s\-.]+?)\s+(?:[oO0]?[\dlL1]{0,2}\s+)?[Uu]\s*(?:[Cc][Cc]?)?\s+(\d{1,3})[\s.,](\d{2,3})\s+(\d{1,3})[\s.,](\d{2,3})/i)
         if (m) {
-          const code = m[1]
-          const value1 = `${m[3]},${m[4]}`
-          const value2 = `${m[5]},${m[6]}`
-          executed[code] = {
+          executed[m[1]] = {
             description: m[2].trim(),
-            value: value1,
-            value_total: value2,
+            value: normalizeValue(m[3], m[4]),
+            value_total: normalizeValue(m[5], m[6])
           }
         }
       }
 
-      // Unifica autorizados e executados pelo código
       const allCodes = new Set([...Object.keys(authorized), ...Object.keys(executed)])
       for (const code of allCodes) {
-        const desc = authorized[code] || executed[code]?.description || ''
-        const val = executed[code]?.value || ''
-        const valTotal = executed[code]?.value_total || ''
         exams.push({
           code,
-          description: desc,
-          value: val,
-          value_total: valTotal,
+          description: authorized[code] || executed[code]?.description || '',
+          value: executed[code]?.value || '',
+          value_total: executed[code]?.value_total || '',
           quantity: 1,
-          date: '',
+          date: ''
         })
       }
     }
@@ -233,7 +231,7 @@ export default function Sulamerica() {
       validade_carteira: getField(firstPageLines, ['validade da carteira', 'validade'], /(\d{2}\/\d{2}\/\d{4})/),
       beneficiario_nome: getField(firstPageLines, ['nome do beneficiario', 'beneficiario'], null, { maxLength: 80 })
         || getField(firstPageLines, ['nome'], null, { maxLength: 80 }),
-      cns: getField(firstPageLines, ['cartao nacional de saude', 'cns'], /(\d[\d\. ]{10,})/),
+      cns: getField(firstPageLines, ['cartao nacional de saude', 'cns'], /(\d[\d. ]{10,})/),
       atendimento_RN: getField(firstPageLines, ['atendimento rn'], /(sim|nao|nao|n\/a)/i),
       profissional_nome: getField(firstPageLines, ['nome do profissional solicitante', 'profissional solicitante'], null, { maxLength: 80 }),
       conselho_profissional: getField(firstPageLines, ['conselho profissional'], /(CRM|COREN|CRO|CRP|CRF|CREFITO|CREFONO|CBO|OUTROS)/i),
@@ -341,25 +339,6 @@ export default function Sulamerica() {
     return pageTexts.join('\f')
   }
 
-  const preprocessCanvas = (canvas, threshold = 180) => {
-    const ctx = canvas.getContext('2d')
-    const w = canvas.width
-    const h = canvas.height
-    const imgData = ctx.getImageData(0, 0, w, h)
-    const data = imgData.data
-    for (let i = 0; i < data.length; i += 4) {
-      const r = data[i]
-      const g = data[i + 1]
-      const b = data[i + 2]
-      const gray = 0.299 * r + 0.587 * g + 0.114 * b
-      const val = gray > threshold ? 255 : 0
-      data[i] = val
-      data[i + 1] = val
-      data[i + 2] = val
-    }
-    ctx.putImageData(imgData, 0, 0)
-  }
-
   const toDegrees = (rad) => Math.round((rad * 180) / Math.PI)
 
   const detectTextRotation = (items) => {
@@ -397,12 +376,13 @@ export default function Sulamerica() {
   }
 
   const rotateCanvas = (canvas, angle) => {
-    if (angle === 0 || angle === 180) return canvas
+    if (angle === 0) return canvas
     const w = canvas.width
     const h = canvas.height
     const rotated = document.createElement('canvas')
-    rotated.width = h
-    rotated.height = w
+    const is180 = Math.abs(angle) === 180
+    rotated.width = is180 ? w : h
+    rotated.height = is180 ? h : w
     const ctx = rotated.getContext('2d')
     ctx.fillStyle = 'white'
     ctx.fillRect(0, 0, rotated.width, rotated.height)
@@ -426,15 +406,10 @@ export default function Sulamerica() {
     const textContent = await page.getTextContent()
     const rotation = detectTextRotation(textContent.items || [])
     let finalCanvas = canvas
-    if (rotation === 90) {
-      finalCanvas = rotateCanvas(canvas, 90)
-    } else if (rotation === -90) {
-      finalCanvas = rotateCanvas(canvas, -90)
-    } else if (rotation === 180) {
-      finalCanvas = rotateCanvas(canvas, 180)
+    if (rotation !== 0) {
+      finalCanvas = rotateCanvas(canvas, -rotation)
     }
 
-    preprocessCanvas(finalCanvas, 180)
     return finalCanvas.toDataURL('image/png')
   }
 
@@ -451,7 +426,7 @@ export default function Sulamerica() {
     })
 
     await worker.setParameters({
-      tessedit_pageseg_mode: '6',
+      tessedit_pageseg_mode: '3',
       tessedit_ocr_engine_mode: '1',
     })
 
@@ -462,7 +437,7 @@ export default function Sulamerica() {
       const {
         data: { text }
       } = await worker.recognize(dataUrl)
-      parts.push(text)
+      parts.push(postProcessOcrText(text))
     }
 
     await worker.terminate()
