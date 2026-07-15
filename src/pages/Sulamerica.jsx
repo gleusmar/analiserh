@@ -73,10 +73,10 @@ function CarteiraField({ value, onChange, className = '' }) {
         inputMode="numeric"
         value={value ?? ''}
         onChange={(e) => onChange(e.target.value.replace(/\D/g, ''))}
-        className={`w-full rounded-lg border px-3 py-2 text-lg font-semibold tracking-wider focus:outline-none focus:ring-1 ${valid ? 'border-emerald-300 bg-white text-emerald-700 focus:border-emerald-500 focus:ring-emerald-500' : 'border-rose-400 bg-rose-100 text-rose-800 focus:border-rose-500 focus:ring-rose-500'}`}
+        className={`w-full rounded-lg border px-3 py-2 text-lg font-semibold tracking-wider focus:outline-none focus:ring-1 ${valid ? 'border-emerald-300 bg-white text-emerald-700 focus:border-emerald-500 focus:ring-emerald-500' : 'border-red-400 bg-red-100 text-red-800 focus:border-red-500 focus:ring-red-500'}`}
       />
       {!valid && (value ?? '').length > 0 && (
-        <span className="text-xs text-rose-700">A carteirinha deve conter exatamente 20 dígitos.</span>
+        <span className="text-xs text-red-700">A carteirinha deve conter exatamente 20 dígitos.</span>
       )}
     </div>
   )
@@ -122,8 +122,14 @@ const ProcedimentoRow = memo(function ProcedimentoRow({ index, guiaIndex, proced
   const input = 'w-full rounded-md border border-slate-300 bg-white px-0.5 py-1 text-xs text-center focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500'
   const inputLeft = 'w-full rounded-md border border-slate-300 bg-white px-1 py-1 text-xs text-left focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500'
   const requiresAuth = AUTH_PREAUTH_CODES.has(String(procedimento.codigoProcedimento ?? '').trim())
+  const isEven = index % 2 === 0
+  const rowColor = requiresAuth
+    ? 'bg-red-200 hover:bg-red-300'
+    : isEven
+      ? 'bg-blue-50 hover:bg-blue-100'
+      : 'bg-blue-100 hover:bg-blue-200'
   return (
-    <div className={`${gridCols} border-b border-blue-50 ${requiresAuth ? 'bg-rose-100 hover:bg-rose-100' : 'bg-white hover:bg-blue-50/30'}`}>
+    <div className={`${gridCols} border-b border-blue-50 ${rowColor}`}>
       <div className={`${cell} col-span-1 justify-center`}><input value={procedimento.sequencialItem} onChange={(e) => update('sequencialItem', e.target.value)} className={input} /></div>
       <div className={`${cell} col-span-1 justify-center`}><input value={procedimento.codigoTabela} onChange={(e) => update('codigoTabela', e.target.value)} className={input} /></div>
       <div className={`${cell} col-span-2 justify-center`}><input value={procedimento.dataExecucao} onChange={(e) => update('dataExecucao', formatDateInput(e.target.value))} className={input} /></div>
@@ -174,7 +180,7 @@ const GuiaCard = memo(function GuiaCard({ guia, index, onUpdateGuia, onUpdatePro
         </div>
       </div>
 
-      <div className="p-5 space-y-4">
+      <div className="p-5 space-y-4 bg-neutral-100">
         <div className="grid grid-cols-1 md:grid-cols-8 gap-3">
           <CarteiraField className="col-span-1 md:col-span-8" value={guia.numeroCarteira} onChange={(v) => onUpdateGuia(index, 'numeroCarteira', v)} />
 
@@ -183,7 +189,7 @@ const GuiaCard = memo(function GuiaCard({ guia, index, onUpdateGuia, onUpdatePro
             label="Solicitante"
             value={guia.nomeProfissional}
             onChange={(v) => onUpdateGuia(index, 'nomeProfissional', v)}
-            inputClassName={solicitanteInvalido ? 'bg-rose-50 border-rose-300 text-rose-700 focus:border-rose-500 focus:ring-rose-500' : ''}
+            inputClassName={solicitanteInvalido ? 'bg-red-200 border-rose-300 text-rose-700 focus:border-rose-500 focus:ring-rose-500' : ''}
             error={solicitanteInvalido ? 'Informe um solicitante válido.' : undefined}
           />
           <SelectField className="col-span-1" label="Conselho" value={guia.conselhoProfissional} options={CODE_MAPS.conselhoProfissional} onChange={(v) => onUpdateGuia(index, 'conselhoProfissional', v)} />
@@ -234,7 +240,7 @@ const GuiaCard = memo(function GuiaCard({ guia, index, onUpdateGuia, onUpdatePro
           </div>
         )}
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-emerald-100 bg-emerald-50/60 rounded-lg p-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-neutral-200 bg-emerald-50/60 rounded-lg p-3">
           {totalFields.map(([key, label]) => (
             <Field key={key} label={label} value={guia[key]} labelClassName="text-emerald-800" onChange={(v) => onUpdateGuia(index, key, v)} />
           ))}
