@@ -8,6 +8,73 @@ export async function ensureProfile(user) {
   await supabase.from('profiles').insert(payload)
 }
 
+// Sulamérica guias
+export async function saveSulamericaGuiasWithCheck(payload) {
+  if (!payload || !Array.isArray(payload.guias)) throw new Error('Nada para salvar')
+
+  const { header, lote, guias } = payload
+
+  const results = []
+
+  for (const guia of guias) {
+    const numero = guia.numeroGuiaPrestador || null
+    if (!numero) {
+      results.push({ numeroGuiaPrestador: numero, status: 'skipped', reason: 'missing_numeroGuiaPrestador' })
+      continue
+    }
+
+    // Verifica se já existe guia com o mesmo número
+    const { data: existing, error: checkError } = await supabase
+      .from('sulamerica_guias')
+      .select('id, numero_guia_prestador')
+      .eq('numero_guia_prestador', numero)
+      .maybeSingle()
+    if (checkError) throw checkError
+
+    if (existing) {
+      results.push({ numeroGuiaPrestador: numero, status: 'exists', id: existing.id })
+      continue
+    }
+
+    const row = {
+      numero_guia_prestador: numero,
+      numero_carteira: guia.numeroCarteira || null,
+      data_solicitacao: guia.dataSolicitacao || null,
+      solicitante: guia.nomeProfissional || null,
+      header: header || null,
+      lote: lote || null,
+      guia,
+    }
+
+    const { data, error } = await supabase
+      .from('sulamerica_guias')
+      .insert(row)
+      .select('id, numero_guia_prestador')
+      .single()
+    if (error) throw error
+
+    try {
+      await logAudit('sulamerica:guia:create', {
+        target_id: data.id,
+        details: { numero_guia_prestador: data.numero_guia_prestador },
+      })
+    } catch (_) {}
+
+    results.push({ numeroGuiaPrestador: numero, status: 'created', id: data.id })
+  }
+
+  return results
+}
+
+export async function listSulamericaGuias() {
+  const { data, error } = await supabase
+    .from('sulamerica_guias')
+    .select('id, numero_guia_prestador, numero_carteira, data_solicitacao, solicitante, guia')
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data || []
+}
+
 // Vacations (Férias)
 export async function listVacations({ q = '', onlyMine = false, myCollaboratorId = null } = {}) {
   let query = supabase

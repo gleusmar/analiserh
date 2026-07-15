@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, memo } from 'react'
 import { useAuth } from '../contexts/AuthContext.jsx'
 import { parseTissXml } from '../lib/parseTissXml.js'
 import { CODE_MAPS, getTissLabel, formatDateInput } from '../lib/tissCodeMaps.js'
+import { saveSulamericaGuiasWithCheck } from '../lib/db'
 
 function readFileText(file) {
   return new Promise((resolve, reject) => {
@@ -40,7 +41,7 @@ function Field({ label, value, onChange, type = 'text', className = '', inputCla
   )
 }
 
-function SelectField({ label, value, onChange, options, className = '', labelClassName = '', error }) {
+function SelectField({ label, value, onChange, options, className = '', labelClassName = '', inputClassName = '', error }) {
   const entries = Object.entries(options || {})
   const stringValue = value ?? ''
   return (
@@ -49,7 +50,7 @@ function SelectField({ label, value, onChange, options, className = '', labelCla
       <select
         value={stringValue}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        className={`w-full rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 ${inputClassName}`}
       >
         {stringValue !== '' && !entries.some(([code]) => String(code) === stringValue) && (
           <option value={stringValue}>{stringValue}</option>
@@ -147,7 +148,7 @@ const ProcedimentoRow = memo(function ProcedimentoRow({ index, guiaIndex, proced
   )
 })
 
-const GuiaCard = memo(function GuiaCard({ guia, index, onUpdateGuia, onUpdateProcedimento }) {
+const GuiaCard = memo(function GuiaCard({ guia, index, onUpdateGuia, onUpdateProcedimento, onRemoveGuia }) {
   const totalFields = [
     ['valorProcedimentos', 'Procedimentos'],
     ['valorDiarias', 'Diárias'],
@@ -165,6 +166,26 @@ const GuiaCard = memo(function GuiaCard({ guia, index, onUpdateGuia, onUpdatePro
     AUTH_PREAUTH_CODES.has(String(p.codigoProcedimento ?? '').trim()),
   )
 
+  const isEmpty = (v) => String(v ?? '').trim() === ''
+  const invalidInputClass = 'border-red-400 bg-red-100 text-red-800 focus:border-red-500 focus:ring-red-500'
+
+  const obrigSolicitanteVazio = isEmpty(guia.nomeProfissional)
+  const obrigConselhoVazio = isEmpty(guia.conselhoProfissional)
+  const obrigUfVazio = isEmpty(guia.ufProfissional)
+  const obrigNumConselhoVazio = isEmpty(guia.numeroConselhoProfissional)
+  const obrigCbosVazio = isEmpty(guia.cbos)
+  const obrigDataSolicVazio = isEmpty(guia.dataSolicitacao)
+  const obrigCaraterVazio = isEmpty(guia.caraterAtendimento)
+  const obrigAtendRNVazio = isEmpty(guia.atendimentoRN)
+  const obrigTipoAtendVazio = isEmpty(guia.tipoAtendimento)
+  const obrigIndicacaoAcidenteVazio = isEmpty(guia.indicacaoAcidente)
+  const obrigRegimeAtendVazio = isEmpty(guia.regimeAtendimento)
+  const obrigCodigoExecVazio = isEmpty(guia.codigoPrestadorExecutante)
+
+  const senhaObrigVazia = hasPreauthProcedures && isEmpty(guia.senha)
+  const dataAutorizObrigVazia = hasPreauthProcedures && isEmpty(guia.dataAutorizacao)
+  const validadeSenhaObrigVazia = hasPreauthProcedures && isEmpty(guia.dataValidadeSenha)
+
   return (
     <div className="rounded-2xl border border-blue-100 bg-white shadow-sm overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-2 bg-linear-to-r from-blue-700 to-blue-600 px-5 py-3 text-white">
@@ -173,10 +194,16 @@ const GuiaCard = memo(function GuiaCard({ guia, index, onUpdateGuia, onUpdatePro
           {guia.registroANS && (
             <span className="rounded bg-white/20 px-2 py-0.5 text-xs">ANS {guia.registroANS}</span>
           )}
-          {guia.atendimentoRN && (
-            <span className="rounded bg-white/20 px-2 py-0.5 text-xs">RN {getTissLabel(CODE_MAPS.atendimentoRN, guia.atendimentoRN)}</span>
-          )}
           <span className="rounded bg-white/20 px-2 py-0.5 text-xs">{guia.procedimentos.length} procedimento(s)</span>
+          {typeof onRemoveGuia === 'function' && (
+            <button
+              type="button"
+              onClick={() => onRemoveGuia(index)}
+              className="ml-2 rounded-full border border-red-200 bg-red-500/20 px-3 py-1 text-xs font-semibold text-red-50 hover:bg-red-500/40"
+            >
+              Remover guia
+            </button>
+          )}
         </div>
       </div>
 
@@ -189,26 +216,121 @@ const GuiaCard = memo(function GuiaCard({ guia, index, onUpdateGuia, onUpdatePro
             label="Solicitante"
             value={guia.nomeProfissional}
             onChange={(v) => onUpdateGuia(index, 'nomeProfissional', v)}
-            inputClassName={solicitanteInvalido ? 'bg-red-200 border-rose-300 text-rose-700 focus:border-rose-500 focus:ring-rose-500' : ''}
+            inputClassName={
+              solicitanteInvalido || obrigSolicitanteVazio
+                ? invalidInputClass
+                : ''
+            }
             error={solicitanteInvalido ? 'Informe um solicitante válido.' : undefined}
           />
-          <SelectField className="col-span-1" label="Conselho" value={guia.conselhoProfissional} options={CODE_MAPS.conselhoProfissional} onChange={(v) => onUpdateGuia(index, 'conselhoProfissional', v)} />
-          <SelectField className="col-span-1" label="UF" value={guia.ufProfissional} options={CODE_MAPS.ufProfissional} onChange={(v) => onUpdateGuia(index, 'ufProfissional', v)} />
-          <Field className="col-span-1" label="Nº Conselho" value={guia.numeroConselhoProfissional} onChange={(v) => onUpdateGuia(index, 'numeroConselhoProfissional', v)} />
-          <Field className="col-span-1" label="CBOS" value={guia.cbos} onChange={(v) => onUpdateGuia(index, 'cbos', v)} />
+          <SelectField
+            className="col-span-1"
+            label="Conselho"
+            value={guia.conselhoProfissional}
+            options={CODE_MAPS.conselhoProfissional}
+            onChange={(v) => onUpdateGuia(index, 'conselhoProfissional', v)}
+            inputClassName={obrigConselhoVazio ? invalidInputClass : ''}
+          />
+          <SelectField
+            className="col-span-1"
+            label="UF"
+            value={guia.ufProfissional}
+            options={CODE_MAPS.ufProfissional}
+            onChange={(v) => onUpdateGuia(index, 'ufProfissional', v)}
+            inputClassName={obrigUfVazio ? invalidInputClass : ''}
+          />
+          <Field
+            className="col-span-1"
+            label="Nº Conselho"
+            value={guia.numeroConselhoProfissional}
+            onChange={(v) => onUpdateGuia(index, 'numeroConselhoProfissional', v)}
+            inputClassName={obrigNumConselhoVazio ? invalidInputClass : ''}
+          />
+          <Field
+            className="col-span-1"
+            label="CBOS"
+            value={guia.cbos}
+            onChange={(v) => onUpdateGuia(index, 'cbos', v)}
+            inputClassName={obrigCbosVazio ? invalidInputClass : ''}
+          />
 
-          <Field className="col-span-1" label="Data da Solicitação" value={guia.dataSolicitacao} onChange={(v) => onUpdateGuia(index, 'dataSolicitacao', formatDateInput(v))} />
-          <SelectField className="col-span-1 md:col-span-2" label="Caráter do Atendimento" value={guia.caraterAtendimento} options={CODE_MAPS.caraterAtendimento} onChange={(v) => onUpdateGuia(index, 'caraterAtendimento', v)} />
-          <SelectField className="col-span-1" label="Atendimento RN" value={guia.atendimentoRN} options={CODE_MAPS.atendimentoRN} onChange={(v) => onUpdateGuia(index, 'atendimentoRN', v)} />
-          <SelectField className="col-span-1 md:col-span-2" label="Tipo do Atendimento" value={guia.tipoAtendimento} options={CODE_MAPS.tipoAtendimento} onChange={(v) => onUpdateGuia(index, 'tipoAtendimento', v)} />
-          <SelectField className="col-span-1" label="Indicação de Acidente" value={guia.indicacaoAcidente} options={CODE_MAPS.indicacaoAcidente} onChange={(v) => onUpdateGuia(index, 'indicacaoAcidente', v)} />
-          <SelectField className="col-span-1" label="Regime de Atendimento" value={guia.regimeAtendimento} options={CODE_MAPS.regimeAtendimento} onChange={(v) => onUpdateGuia(index, 'regimeAtendimento', v)} />
+          <Field
+            className="col-span-1"
+            label="Data da Solicitação"
+            value={guia.dataSolicitacao}
+            onChange={(v) => onUpdateGuia(index, 'dataSolicitacao', formatDateInput(v))}
+            inputClassName={obrigDataSolicVazio ? invalidInputClass : ''}
+          />
+          <SelectField
+            className="col-span-1 md:col-span-2"
+            label="Caráter do Atendimento"
+            value={guia.caraterAtendimento}
+            options={CODE_MAPS.caraterAtendimento}
+            onChange={(v) => onUpdateGuia(index, 'caraterAtendimento', v)}
+            inputClassName={obrigCaraterVazio ? invalidInputClass : ''}
+          />
+          <SelectField
+            className="col-span-1"
+            label="Atendimento RN"
+            value={guia.atendimentoRN}
+            options={CODE_MAPS.atendimentoRN}
+            onChange={(v) => onUpdateGuia(index, 'atendimentoRN', v)}
+            inputClassName={obrigAtendRNVazio ? invalidInputClass : ''}
+          />
+          <SelectField
+            className="col-span-1 md:col-span-2"
+            label="Tipo do Atendimento"
+            value={guia.tipoAtendimento}
+            options={CODE_MAPS.tipoAtendimento}
+            onChange={(v) => onUpdateGuia(index, 'tipoAtendimento', v)}
+            inputClassName={obrigTipoAtendVazio ? invalidInputClass : ''}
+          />
+          <SelectField
+            className="col-span-1"
+            label="Indicação de Acidente"
+            value={guia.indicacaoAcidente}
+            options={CODE_MAPS.indicacaoAcidente}
+            onChange={(v) => onUpdateGuia(index, 'indicacaoAcidente', v)}
+            inputClassName={obrigIndicacaoAcidenteVazio ? invalidInputClass : ''}
+          />
+          <SelectField
+            className="col-span-1"
+            label="Regime de Atendimento"
+            value={guia.regimeAtendimento}
+            options={CODE_MAPS.regimeAtendimento}
+            onChange={(v) => onUpdateGuia(index, 'regimeAtendimento', v)}
+            inputClassName={obrigRegimeAtendVazio ? invalidInputClass : ''}
+          />
 
-          <Field className="col-span-1 md:col-span-2" label="Código do Executante" value={guia.codigoPrestadorExecutante} onChange={(v) => onUpdateGuia(index, 'codigoPrestadorExecutante', v)} />
+          <Field
+            className="col-span-1 md:col-span-2"
+            label="Código do Executante"
+            value={guia.codigoPrestadorExecutante}
+            onChange={(v) => onUpdateGuia(index, 'codigoPrestadorExecutante', v)}
+            inputClassName={obrigCodigoExecVazio ? invalidInputClass : ''}
+          />
           <Field className="col-span-1" label="CNES" value={guia.cnes} onChange={(v) => onUpdateGuia(index, 'cnes', v)} />
-          <Field className="col-span-1" label="Senha" value={guia.senha} onChange={(v) => onUpdateGuia(index, 'senha', v)} />
-          <Field className="col-span-1 md:col-span-2" label="Data da Autorização" value={guia.dataAutorizacao} onChange={(v) => onUpdateGuia(index, 'dataAutorizacao', formatDateInput(v))} />
-          <Field className="col-span-1 md:col-span-2" label="Validade da Senha" value={guia.dataValidadeSenha} onChange={(v) => onUpdateGuia(index, 'dataValidadeSenha', formatDateInput(v))} />
+          <Field
+            className="col-span-1"
+            label="Senha"
+            value={guia.senha}
+            onChange={(v) => onUpdateGuia(index, 'senha', v)}
+            inputClassName={senhaObrigVazia ? invalidInputClass : ''}
+          />
+          <Field
+            className="col-span-1 md:col-span-2"
+            label="Data da Autorização"
+            value={guia.dataAutorizacao}
+            onChange={(v) => onUpdateGuia(index, 'dataAutorizacao', formatDateInput(v))}
+            inputClassName={dataAutorizObrigVazia ? invalidInputClass : ''}
+          />
+          <Field
+            className="col-span-1 md:col-span-2"
+            label="Validade da Senha"
+            value={guia.dataValidadeSenha}
+            onChange={(v) => onUpdateGuia(index, 'dataValidadeSenha', formatDateInput(v))}
+            inputClassName={validadeSenhaObrigVazia ? invalidInputClass : ''}
+          />
         </div>
 
         <div className="overflow-x-auto rounded-lg border border-blue-100">
@@ -257,6 +379,8 @@ export default function Sulamerica() {
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
   const [parsing, setParsing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saveResult, setSaveResult] = useState(null)
 
   useEffect(() => {
     if (loading) return
@@ -281,6 +405,14 @@ export default function Sulamerica() {
     setData((prev) => {
       const guias = [...prev.guias]
       guias[index] = { ...guias[index], [field]: value }
+      return { ...prev, guias }
+    })
+  }, [])
+
+  const removeGuia = useCallback((guiaIndex) => {
+    setData((prev) => {
+      if (!prev) return prev
+      const guias = prev.guias.filter((_, idx) => idx !== guiaIndex)
       return { ...prev, guias }
     })
   }, [])
@@ -321,6 +453,72 @@ export default function Sulamerica() {
     setData(null)
     setFile(null)
     setError(null)
+    setSaveResult(null)
+  }
+
+  const isEmpty = (v) => String(v ?? '').trim() === ''
+
+  const guiaHasValidationErrors = (guia) => {
+    const errors = []
+    if (!/^\d{20}$/.test(String(guia.numeroCarteira ?? ''))) errors.push('numeroCarteira')
+
+    const requiredFields = [
+      'nomeProfissional',
+      'conselhoProfissional',
+      'ufProfissional',
+      'numeroConselhoProfissional',
+      'cbos',
+      'dataSolicitacao',
+      'caraterAtendimento',
+      'atendimentoRN',
+      'tipoAtendimento',
+      'indicacaoAcidente',
+      'regimeAtendimento',
+      'codigoPrestadorExecutante',
+    ]
+
+    for (const field of requiredFields) {
+      if (isEmpty(guia[field])) errors.push(field)
+    }
+
+    const hasPreauth = guia.procedimentos?.some((p) =>
+      AUTH_PREAUTH_CODES.has(String(p.codigoProcedimento ?? '').trim()),
+    )
+
+    if (hasPreauth) {
+      if (isEmpty(guia.senha)) errors.push('senha')
+      if (isEmpty(guia.dataAutorizacao)) errors.push('dataAutorizacao')
+      if (isEmpty(guia.dataValidadeSenha)) errors.push('dataValidadeSenha')
+    }
+
+    return errors
+  }
+
+  const handleSave = async () => {
+    if (!data || !Array.isArray(data.guias) || data.guias.length === 0) return
+
+    setError(null)
+    setSaveResult(null)
+
+    const validation = data.guias.map(guiaHasValidationErrors)
+    const hasAnyErrors = validation.some((errs) => errs.length > 0)
+
+    if (hasAnyErrors) {
+      setError('Existem guias com campos obrigatórios em branco ou carteirinha inválida. Corrija os campos em vermelho antes de salvar.')
+      return
+    }
+
+    try {
+      setSaving(true)
+      const result = await saveSulamericaGuiasWithCheck(data)
+      const allCreated = result.every((r) => r.status === 'created')
+      const anyFailed = result.some((r) => r.status !== 'created')
+      setSaveResult({ allCreated, anyFailed, result })
+    } catch (e) {
+      setError(e.message || 'Erro ao salvar as guias no banco de dados.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   if (loading) {
@@ -397,6 +595,14 @@ export default function Sulamerica() {
 
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-slate-800">Guias ({data.guias.length})</h2>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving || !data.guias.length}
+              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60"
+            >
+              {saving ? 'Salvando guias...' : 'Salvar guias'}
+            </button>
           </div>
 
           <div className="space-y-4">
@@ -407,9 +613,25 @@ export default function Sulamerica() {
                 guia={guia}
                 onUpdateGuia={updateGuia}
                 onUpdateProcedimento={updateProcedimento}
+                onRemoveGuia={removeGuia}
               />
             ))}
           </div>
+
+          {saveResult && (
+            <div className="mt-2 text-sm">
+              {saveResult.allCreated && !saveResult.anyFailed && (
+                <div className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-emerald-800">
+                  Todas as guias foram salvas com sucesso.
+                </div>
+              )}
+              {(!saveResult.allCreated || saveResult.anyFailed) && (
+                <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-amber-800">
+                  Algumas guias não foram salvas (por já existirem ou por outro motivo). Verifique o número da requisição e tente novamente se necessário.
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
     </div>
