@@ -185,10 +185,6 @@ const GuiaCard = memo(function GuiaCard({ guia, index, onUpdateGuia, onUpdatePro
   const obrigRegimeAtendVazio = isEmpty(guia.regimeAtendimento)
   const obrigCodigoExecVazio = isEmpty(guia.codigoPrestadorExecutante)
 
-  const senhaObrigVazia = hasPreauthProcedures && isEmpty(guia.senha)
-  const dataAutorizObrigVazia = hasPreauthProcedures && isEmpty(guia.dataAutorizacao)
-  const validadeSenhaObrigVazia = hasPreauthProcedures && isEmpty(guia.dataValidadeSenha)
-
   const invalidCarteira = !/^\d{20}$/.test(String(guia.numeroCarteira ?? ''))
 
   const headerBase = 'flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-white'
@@ -200,9 +196,6 @@ const GuiaCard = memo(function GuiaCard({ guia, index, onUpdateGuia, onUpdatePro
   if (invalidCarteira) {
     headerColorClass = 'bg-red-300'
     bodyColorClass = 'bg-red-100'
-  } else if (senhaObrigVazia) {
-    headerColorClass = 'bg-orange-300'
-    bodyColorClass = 'bg-orange-100'
   }
 
   return (
@@ -365,7 +358,6 @@ const GuiaCard = memo(function GuiaCard({ guia, index, onUpdateGuia, onUpdatePro
             label="Senha"
             value={guia.senha}
             onChange={(v) => onUpdateGuia(index, 'senha', v)}
-            inputClassName={senhaObrigVazia ? invalidInputClass : ''}
             blinkId={blinkTargetId}
           />
           <Field
@@ -374,7 +366,6 @@ const GuiaCard = memo(function GuiaCard({ guia, index, onUpdateGuia, onUpdatePro
             label="Data da Autorização"
             value={guia.dataAutorizacao}
             onChange={(v) => onUpdateGuia(index, 'dataAutorizacao', formatDateInput(v))}
-            inputClassName={dataAutorizObrigVazia ? invalidInputClass : ''}
             blinkId={blinkTargetId}
           />
           <Field
@@ -383,7 +374,6 @@ const GuiaCard = memo(function GuiaCard({ guia, index, onUpdateGuia, onUpdatePro
             label="Validade da Senha"
             value={guia.dataValidadeSenha}
             onChange={(v) => onUpdateGuia(index, 'dataValidadeSenha', formatDateInput(v))}
-            inputClassName={validadeSenhaObrigVazia ? invalidInputClass : ''}
             blinkId={blinkTargetId}
           />
         </div>
@@ -550,17 +540,7 @@ export default function Sulamerica() {
       if (isEmpty(guia.dataValidadeSenha)) errors.push('dataValidadeSenha')
     }
 
-    return errors
-  }
-
-  const handleSave = async () => {
-    if (!data || !Array.isArray(data.guias) || data.guias.length === 0) return
-
-    setError(null)
-    setSaveResult(null)
-    setBlinkTargetId(null)
-
-    const validation = data.guias.map(guiaHasValidationErrors)
+    or
     const hasAnyErrors = validation.some((errs) => errs.length > 0)
 
     if (hasAnyErrors) {
@@ -597,9 +577,6 @@ export default function Sulamerica() {
           setBlinkTargetId(targetId)
           const el = document.getElementById(targetId)
           if (el && typeof el.focus === 'function') {
-            el.focus()
-          }
-        }
         break
       }
 

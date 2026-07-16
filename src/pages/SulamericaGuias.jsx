@@ -110,7 +110,7 @@ export default function SulamericaGuias() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-['Roboto_Condensed',system-ui,sans-serif]">
       <div className="flex items-center justify-between pt-2">
         <div>
           <h1 className="text-2xl font-semibold text-blue-900">Guias SulAmérica salvas</h1>
@@ -128,7 +128,7 @@ export default function SulamericaGuias() {
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
 
       <div className="rounded-2xl border border-blue-100 bg-white overflow-hidden">
-        <div className="flex items-center justify-between px-4 pt-3 pb-1 text-[11px] text-neutral-600">
+        <div className="flex items-center justify-between px-4 pt-3 pb-1 text-xs text-neutral-600">
           <div>
             {items.length > 0 && (
               <span>{selectedIds.length} guia(s) selecionada(s)</span>
@@ -153,7 +153,7 @@ export default function SulamericaGuias() {
             </button>
           </div>
         </div>
-        <div className="border-b border-blue-100 bg-blue-50 px-4 py-2 text-xs font-semibold text-blue-900 grid grid-cols-12 gap-2">
+        <div className="border-b border-blue-100 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-900 grid grid-cols-12 gap-2">
           <div className="col-span-1 flex items-center justify-center">
             <input
               type="checkbox"
@@ -162,11 +162,12 @@ export default function SulamericaGuias() {
               className="h-3 w-3 rounded border-blue-300 text-blue-600 focus:ring-blue-500"
             />
           </div>
-          <div className="col-span-2">Nº requisição</div>
-          <div className="col-span-2">Nº carteira</div>
-          <div className="col-span-1">Data solicitação</div>
-          <div className="col-span-3">Solicitante</div>
-          <div className="col-span-2">Nº da Guia</div>
+          <div className="col-span-2 sm:col-span-2">Nº requisição</div>
+          <div className="col-span-2 sm:col-span-2">Nº carteira</div>
+          <div className="col-span-2 sm:col-span-2">Data solicitação</div>
+          <div className="col-span-3 sm:col-span-3">Solicitante</div>
+          <div className="col-span-2 sm:col-span-2">Nº da Guia</div>
+          <div className="col-span-1 sm:col-span-1 text-center">Senha</div>
           <div className="col-span-1 text-right">Ações</div>
         </div>
         {loadingList && (
@@ -177,9 +178,15 @@ export default function SulamericaGuias() {
         )}
         {!loadingList && items.map((item) => {
           const guia = item.guia || {}
+          const hasPreauth = (guia.procedimentos || []).some((p) =>
+            ['40302610','40302830','40302903','40304701','40304710','40304728','40304736','40304973','40305015','40306771','40308804','40314049','40314057','40314065','40314235','40314286','40314430','40314561','40314618','40319326','40321029','40321517','40322394','40323153','40324389','40324591','40324605','40324788','40324796'].includes(String(p.codigoProcedimento ?? '').trim())
+          )
+          const senhaStr = String(guia.senha ?? '').trim()
+          const precisaSenha = hasPreauth
+          const temSenha = !!senhaStr
           return (
             <div key={item.id} className="border-t border-blue-50">
-              <div className="w-full px-4 py-2 text-xs grid grid-cols-12 gap-2 items-center hover:bg-blue-50">
+              <div className="w-full px-4 py-2 text-sm grid grid-cols-12 gap-2 items-center hover:bg-blue-50">
                 <div className="col-span-1 flex items-center justify-center">
                   <input
                     type="checkbox"
@@ -193,12 +200,29 @@ export default function SulamericaGuias() {
                   onClick={() => toggleExpanded(item.id)}
                   className="col-span-10 grid grid-cols-10 gap-2 items-center text-left"
                 >
-                  <div className="col-span-2 font-mono text-[11px]">{item.numero_guia_prestador}</div>
-                  <div className="col-span-2 font-mono text-[11px]">{item.numero_carteira}</div>
-                  <div className="col-span-1 text-[11px]">{formatDateBr(item.data_solicitacao)}</div>
-                  <div className="col-span-3 text-[11px] truncate">{item.solicitante}</div>
-                  <div className="col-span-2 text-[11px] font-mono">
+                  <div className="col-span-2 sm:col-span-2 font-mono text-xs">{item.numero_guia_prestador}</div>
+                  <div className="col-span-2 sm:col-span-2 font-mono text-xs">{item.numero_carteira}</div>
+                  <div className="col-span-2 sm:col-span-2 text-xs">{formatDateBr(item.data_solicitacao)}</div>
+                  <div className="col-span-3 sm:col-span-3 text-xs truncate">{item.solicitante}</div>
+                  <div className="col-span-2 sm:col-span-2 text-xs font-mono">
                     {guia.numeroGuiaOperadora ? guia.numeroGuiaOperadora : 'Não enviado'}
+                  </div>
+                  <div className="col-span-1 flex items-center justify-center text-xs">
+                    {precisaSenha ? (
+                      temSenha ? (
+                        <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
+                          ✔ senha ok
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                          ! falta senha
+                        </span>
+                      )
+                    ) : (
+                      <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
+                        não precisa
+                      </span>
+                    )}
                   </div>
                 </button>
                 <div className="col-span-1 flex flex-col items-end gap-1">
