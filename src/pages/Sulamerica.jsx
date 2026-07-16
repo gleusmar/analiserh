@@ -26,31 +26,33 @@ function readFileText(file) {
   })
 }
 
-function Field({ label, value, onChange, type = 'text', className = '', inputClassName = '', labelClassName = '', error }) {
+function Field({ id, label, value, onChange, type = 'text', className = '', inputClassName = '', labelClassName = '', error, blinkId }) {
   return (
     <div className={`flex flex-col gap-1 ${className}`}>
       <label className={`text-xs font-semibold text-slate-700 ${labelClassName}`}>{label}</label>
       <input
+        id={id}
         type={type}
         value={value ?? ''}
         onChange={(e) => onChange(e.target.value)}
-        className={`w-full rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 ${inputClassName}`}
+        className={`w-full rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 ${inputClassName} ${blinkId && id && blinkId === id ? 'animate-pulse ring-2 ring-red-400' : ''}`}
       />
       {error && <span className="text-xs text-red-600">{error}</span>}
     </div>
   )
 }
 
-function SelectField({ label, value, onChange, options, className = '', labelClassName = '', inputClassName = '', error }) {
+function SelectField({ id, label, value, onChange, options, className = '', labelClassName = '', inputClassName = '', error, blinkId }) {
   const entries = Object.entries(options || {})
   const stringValue = value ?? ''
   return (
     <div className={`flex flex-col gap-1 ${className}`}>
       <label className={`text-xs font-semibold text-slate-700 ${labelClassName}`}>{label}</label>
       <select
+        id={id}
         value={stringValue}
         onChange={(e) => onChange(e.target.value)}
-        className={`w-full rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 ${inputClassName}`}
+        className={`w-full rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 ${inputClassName} ${blinkId && id && blinkId === id ? 'animate-pulse ring-2 ring-red-400' : ''}`}
       >
         {stringValue !== '' && !entries.some(([code]) => String(code) === stringValue) && (
           <option value={stringValue}>{stringValue}</option>
@@ -64,7 +66,7 @@ function SelectField({ label, value, onChange, options, className = '', labelCla
   )
 }
 
-function CarteiraField({ value, onChange, className = '' }) {
+function CarteiraField({ id, value, onChange, className = '', blinkId }) {
   const valid = /^\d{20}$/.test(value ?? '')
   return (
     <div className={`flex flex-col gap-1 ${className}`}>
@@ -74,7 +76,8 @@ function CarteiraField({ value, onChange, className = '' }) {
         inputMode="numeric"
         value={value ?? ''}
         onChange={(e) => onChange(e.target.value.replace(/\D/g, ''))}
-        className={`w-full rounded-lg border px-3 py-2 text-lg font-semibold tracking-wider focus:outline-none focus:ring-1 ${valid ? 'border-emerald-300 bg-white text-emerald-700 focus:border-emerald-500 focus:ring-emerald-500' : 'border-red-400 bg-red-100 text-red-800 focus:border-red-500 focus:ring-red-500'}`}
+        id={id}
+        className={`w-full rounded-lg border px-3 py-2 text-lg font-semibold tracking-wider focus:outline-none focus:ring-1 ${valid ? 'border-emerald-300 bg-white text-emerald-700 focus:border-emerald-500 focus:ring-emerald-500' : 'border-red-400 bg-red-100 text-red-800 focus:border-red-500 focus:ring-red-500'} ${blinkId && id && blinkId === id ? 'animate-pulse ring-2 ring-red-400' : ''}`}
       />
       {!valid && (value ?? '').length > 0 && (
         <span className="text-xs text-red-700">A carteirinha deve conter exatamente 20 dígitos.</span>
@@ -148,7 +151,7 @@ const ProcedimentoRow = memo(function ProcedimentoRow({ index, guiaIndex, proced
   )
 })
 
-const GuiaCard = memo(function GuiaCard({ guia, index, onUpdateGuia, onUpdateProcedimento, onRemoveGuia }) {
+const GuiaCard = memo(function GuiaCard({ guia, index, onUpdateGuia, onUpdateProcedimento, onRemoveGuia, blinkTargetId }) {
   const totalFields = [
     ['valorProcedimentos', 'Procedimentos'],
     ['valorDiarias', 'Diárias'],
@@ -199,7 +202,7 @@ const GuiaCard = memo(function GuiaCard({ guia, index, onUpdateGuia, onUpdatePro
             <button
               type="button"
               onClick={() => onRemoveGuia(index)}
-              className="ml-2 rounded-full border border-red-200 bg-red-500/20 px-3 py-1 text-xs font-semibold text-red-50 hover:bg-red-500/40"
+              className="ml-2 rounded-full border border-red-200 bg-red-500 px-3 py-1 text-xs font-semibold text-red-50 hover:bg-red-600"
             >
               Remover guia
             </button>
@@ -207,11 +210,18 @@ const GuiaCard = memo(function GuiaCard({ guia, index, onUpdateGuia, onUpdatePro
         </div>
       </div>
 
-      <div className="p-5 space-y-4 bg-neutral-100">
+      <div className="p-5 space-y-4 bg-neutral-200">
         <div className="grid grid-cols-1 md:grid-cols-8 gap-3">
-          <CarteiraField className="col-span-1 md:col-span-8" value={guia.numeroCarteira} onChange={(v) => onUpdateGuia(index, 'numeroCarteira', v)} />
+          <CarteiraField
+            id={`guia-${index}-numeroCarteira`}
+            className="col-span-1 md:col-span-8"
+            value={guia.numeroCarteira}
+            onChange={(v) => onUpdateGuia(index, 'numeroCarteira', v)}
+            blinkId={blinkTargetId}
+          />
 
           <Field
+            id={`guia-${index}-nomeProfissional`}
             className="col-span-1 md:col-span-3"
             label="Solicitante"
             value={guia.nomeProfissional}
@@ -222,114 +232,143 @@ const GuiaCard = memo(function GuiaCard({ guia, index, onUpdateGuia, onUpdatePro
                 : ''
             }
             error={solicitanteInvalido ? 'Informe um solicitante válido.' : undefined}
+            blinkId={blinkTargetId}
           />
           <SelectField
+            id={`guia-${index}-conselhoProfissional`}
             className="col-span-1"
             label="Conselho"
             value={guia.conselhoProfissional}
             options={CODE_MAPS.conselhoProfissional}
             onChange={(v) => onUpdateGuia(index, 'conselhoProfissional', v)}
             inputClassName={obrigConselhoVazio ? invalidInputClass : ''}
+            blinkId={blinkTargetId}
           />
           <SelectField
+            id={`guia-${index}-ufProfissional`}
             className="col-span-1"
             label="UF"
             value={guia.ufProfissional}
             options={CODE_MAPS.ufProfissional}
             onChange={(v) => onUpdateGuia(index, 'ufProfissional', v)}
             inputClassName={obrigUfVazio ? invalidInputClass : ''}
+            blinkId={blinkTargetId}
           />
           <Field
+            id={`guia-${index}-numeroConselhoProfissional`}
             className="col-span-1"
             label="Nº Conselho"
             value={guia.numeroConselhoProfissional}
             onChange={(v) => onUpdateGuia(index, 'numeroConselhoProfissional', v)}
             inputClassName={obrigNumConselhoVazio ? invalidInputClass : ''}
+            blinkId={blinkTargetId}
           />
           <Field
+            id={`guia-${index}-cbos`}
             className="col-span-1"
             label="CBOS"
             value={guia.cbos}
             onChange={(v) => onUpdateGuia(index, 'cbos', v)}
             inputClassName={obrigCbosVazio ? invalidInputClass : ''}
+            blinkId={blinkTargetId}
           />
 
           <Field
+            id={`guia-${index}-dataSolicitacao`}
             className="col-span-1"
             label="Data da Solicitação"
             value={guia.dataSolicitacao}
             onChange={(v) => onUpdateGuia(index, 'dataSolicitacao', formatDateInput(v))}
             inputClassName={obrigDataSolicVazio ? invalidInputClass : ''}
+            blinkId={blinkTargetId}
           />
           <SelectField
+            id={`guia-${index}-caraterAtendimento`}
             className="col-span-1 md:col-span-2"
             label="Caráter do Atendimento"
             value={guia.caraterAtendimento}
             options={CODE_MAPS.caraterAtendimento}
             onChange={(v) => onUpdateGuia(index, 'caraterAtendimento', v)}
             inputClassName={obrigCaraterVazio ? invalidInputClass : ''}
+            blinkId={blinkTargetId}
           />
           <SelectField
+            id={`guia-${index}-atendimentoRN`}
             className="col-span-1"
             label="Atendimento RN"
             value={guia.atendimentoRN}
             options={CODE_MAPS.atendimentoRN}
             onChange={(v) => onUpdateGuia(index, 'atendimentoRN', v)}
             inputClassName={obrigAtendRNVazio ? invalidInputClass : ''}
+            blinkId={blinkTargetId}
           />
           <SelectField
+            id={`guia-${index}-tipoAtendimento`}
             className="col-span-1 md:col-span-2"
             label="Tipo do Atendimento"
             value={guia.tipoAtendimento}
             options={CODE_MAPS.tipoAtendimento}
             onChange={(v) => onUpdateGuia(index, 'tipoAtendimento', v)}
             inputClassName={obrigTipoAtendVazio ? invalidInputClass : ''}
+            blinkId={blinkTargetId}
           />
           <SelectField
+            id={`guia-${index}-indicacaoAcidente`}
             className="col-span-1"
             label="Indicação de Acidente"
             value={guia.indicacaoAcidente}
             options={CODE_MAPS.indicacaoAcidente}
             onChange={(v) => onUpdateGuia(index, 'indicacaoAcidente', v)}
             inputClassName={obrigIndicacaoAcidenteVazio ? invalidInputClass : ''}
+            blinkId={blinkTargetId}
           />
           <SelectField
+            id={`guia-${index}-regimeAtendimento`}
             className="col-span-1"
             label="Regime de Atendimento"
             value={guia.regimeAtendimento}
             options={CODE_MAPS.regimeAtendimento}
             onChange={(v) => onUpdateGuia(index, 'regimeAtendimento', v)}
             inputClassName={obrigRegimeAtendVazio ? invalidInputClass : ''}
+            blinkId={blinkTargetId}
           />
 
           <Field
+            id={`guia-${index}-codigoPrestadorExecutante`}
             className="col-span-1 md:col-span-2"
             label="Código do Executante"
             value={guia.codigoPrestadorExecutante}
             onChange={(v) => onUpdateGuia(index, 'codigoPrestadorExecutante', v)}
             inputClassName={obrigCodigoExecVazio ? invalidInputClass : ''}
+            blinkId={blinkTargetId}
           />
           <Field className="col-span-1" label="CNES" value={guia.cnes} onChange={(v) => onUpdateGuia(index, 'cnes', v)} />
           <Field
+            id={`guia-${index}-senha`}
             className="col-span-1"
             label="Senha"
             value={guia.senha}
             onChange={(v) => onUpdateGuia(index, 'senha', v)}
             inputClassName={senhaObrigVazia ? invalidInputClass : ''}
+            blinkId={blinkTargetId}
           />
           <Field
+            id={`guia-${index}-dataAutorizacao`}
             className="col-span-1 md:col-span-2"
             label="Data da Autorização"
             value={guia.dataAutorizacao}
             onChange={(v) => onUpdateGuia(index, 'dataAutorizacao', formatDateInput(v))}
             inputClassName={dataAutorizObrigVazia ? invalidInputClass : ''}
+            blinkId={blinkTargetId}
           />
           <Field
+            id={`guia-${index}-dataValidadeSenha`}
             className="col-span-1 md:col-span-2"
             label="Validade da Senha"
             value={guia.dataValidadeSenha}
             onChange={(v) => onUpdateGuia(index, 'dataValidadeSenha', formatDateInput(v))}
             inputClassName={validadeSenhaObrigVazia ? invalidInputClass : ''}
+            blinkId={blinkTargetId}
           />
         </div>
 
@@ -381,6 +420,7 @@ export default function Sulamerica() {
   const [parsing, setParsing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveResult, setSaveResult] = useState(null)
+  const [blinkTargetId, setBlinkTargetId] = useState(null)
 
   useEffect(() => {
     if (loading) return
@@ -454,6 +494,7 @@ export default function Sulamerica() {
     setFile(null)
     setError(null)
     setSaveResult(null)
+    setBlinkTargetId(null)
   }
 
   const isEmpty = (v) => String(v ?? '').trim() === ''
@@ -499,12 +540,51 @@ export default function Sulamerica() {
 
     setError(null)
     setSaveResult(null)
+    setBlinkTargetId(null)
 
     const validation = data.guias.map(guiaHasValidationErrors)
     const hasAnyErrors = validation.some((errs) => errs.length > 0)
 
     if (hasAnyErrors) {
       setError('Existem guias com campos obrigatórios em branco ou carteirinha inválida. Corrija os campos em vermelho antes de salvar.')
+
+      // localizar o primeiro campo inválido e focar
+      for (let gIdx = 0; gIdx < validation.length; gIdx += 1) {
+        const errs = validation[gIdx]
+        if (!errs.length) continue
+
+        let field = errs[0]
+        // mapeia nomes de campo para ids usados nos inputs
+        const fieldToId = {
+          numeroCarteira: `guia-${gIdx}-numeroCarteira`,
+          nomeProfissional: `guia-${gIdx}-nomeProfissional`,
+          conselhoProfissional: `guia-${gIdx}-conselhoProfissional`,
+          ufProfissional: `guia-${gIdx}-ufProfissional`,
+          numeroConselhoProfissional: `guia-${gIdx}-numeroConselhoProfissional`,
+          cbos: `guia-${gIdx}-cbos`,
+          dataSolicitacao: `guia-${gIdx}-dataSolicitacao`,
+          caraterAtendimento: `guia-${gIdx}-caraterAtendimento`,
+          atendimentoRN: `guia-${gIdx}-atendimentoRN`,
+          tipoAtendimento: `guia-${gIdx}-tipoAtendimento`,
+          indicacaoAcidente: `guia-${gIdx}-indicacaoAcidente`,
+          regimeAtendimento: `guia-${gIdx}-regimeAtendimento`,
+          codigoPrestadorExecutante: `guia-${gIdx}-codigoPrestadorExecutante`,
+          senha: `guia-${gIdx}-senha`,
+          dataAutorizacao: `guia-${gIdx}-dataAutorizacao`,
+          dataValidadeSenha: `guia-${gIdx}-dataValidadeSenha`,
+        }
+
+        const targetId = fieldToId[field]
+        if (targetId) {
+          setBlinkTargetId(targetId)
+          const el = document.getElementById(targetId)
+          if (el && typeof el.focus === 'function') {
+            el.focus()
+          }
+        }
+        break
+      }
+
       return
     }
 
@@ -614,6 +694,7 @@ export default function Sulamerica() {
                 onUpdateGuia={updateGuia}
                 onUpdateProcedimento={updateProcedimento}
                 onRemoveGuia={removeGuia}
+                blinkTargetId={blinkTargetId}
               />
             ))}
           </div>

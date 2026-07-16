@@ -24,6 +24,7 @@ import Overtime from './pages/Overtime.jsx'
 import Logs from './pages/Logs.jsx'
 import IncomeReports from './pages/IncomeReports.jsx'
 import Sulamerica from './pages/Sulamerica.jsx'
+import SulamericaGuias from './pages/SulamericaGuias.jsx'
 
 const isSulamericaHost = typeof window !== 'undefined' && window.location.hostname === 'sulamerica.analiselabclinico.com.br'
 
@@ -41,7 +42,7 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardLayout>
-              {isSulamericaHost ? <Sulamerica /> : <Dashboard />}
+              {isSulamericaHost ? <SulamericaGuias /> : <Dashboard />}
             </DashboardLayout>
           </ProtectedRoute>
         }
