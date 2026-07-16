@@ -675,14 +675,6 @@ export default function Sulamerica() {
 
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-slate-800">Guias ({data.guias.length})</h2>
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={saving || !data.guias.length}
-              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60"
-            >
-              {saving ? 'Salvando guias...' : 'Salvar guias'}
-            </button>
           </div>
 
           <div className="space-y-4">
@@ -714,6 +706,18 @@ export default function Sulamerica() {
             </div>
           )}
         </>
+      )}
+      {data && data.guias && data.guias.length > 0 && (
+        <div className="fixed bottom-6 right-8 z-30">
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving || !data.guias.length}
+            className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-lg hover:bg-emerald-700 disabled:opacity-60"
+          >
+            {saving ? 'Salvando guias...' : 'Salvar guias'}
+          </button>
+        </div>
       )}
     </div>
   )

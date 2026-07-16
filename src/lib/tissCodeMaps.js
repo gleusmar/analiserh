@@ -72,6 +72,17 @@ export function formatDateBr(value) {
 export function formatDateInput(value) {
   if (!value) return ''
   const v = String(value).trim()
+  // Se vier no formato ISO (do XML ou do banco), converte para dd/mm/aaaa
   if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return formatDateBr(v)
-  return v
+
+  // A partir daqui, aplica máscara de data enquanto o usuário digita
+  const digits = v.replace(/\D/g, '')
+  if (!digits) return ''
+  if (digits.length <= 2) {
+    return digits
+  }
+  if (digits.length <= 4) {
+    return `${digits.slice(0, 2)}/${digits.slice(2)}`
+  }
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4, 8)}`
 }

@@ -1,5 +1,19 @@
 import { supabase } from './supabase'
 
+function toISODate(value) {
+	if (!value) return null
+	const v = String(value).trim()
+	// já está em ISO
+	if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v
+	// converte de dd/mm/aaaa para ISO
+	const m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
+	if (m) {
+		const [, d, mth, y] = m
+		return `${y}-${mth}-${d}`
+	}
+	return null
+}
+
 export async function ensureProfile(user) {
   if (!user) return
   const { data: existing } = await supabase.from('profiles').select('id').eq('id', user.id).maybeSingle()
@@ -39,7 +53,7 @@ export async function saveSulamericaGuiasWithCheck(payload) {
     const row = {
       numero_guia_prestador: numero,
       numero_carteira: guia.numeroCarteira || null,
-      data_solicitacao: guia.dataSolicitacao || null,
+      data_solicitacao: toISODate(guia.dataSolicitacao),
       solicitante: guia.nomeProfissional || null,
       header: header || null,
       lote: lote || null,
