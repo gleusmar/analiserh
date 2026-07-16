@@ -530,17 +530,17 @@ export default function Sulamerica() {
       if (isEmpty(guia[field])) errors.push(field)
     }
 
-    const hasPreauth = guia.procedimentos?.some((p) =>
-      AUTH_PREAUTH_CODES.has(String(p.codigoProcedimento ?? '').trim()),
-    )
+    return errors
+  }
 
-    if (hasPreauth) {
-      if (isEmpty(guia.senha)) errors.push('senha')
-      if (isEmpty(guia.dataAutorizacao)) errors.push('dataAutorizacao')
-      if (isEmpty(guia.dataValidadeSenha)) errors.push('dataValidadeSenha')
-    }
+  const handleSave = async () => {
+    if (!data || !Array.isArray(data.guias) || data.guias.length === 0) return
 
-    or
+    setError(null)
+    setSaveResult(null)
+    setBlinkTargetId(null)
+
+    const validation = data.guias.map(guiaHasValidationErrors)
     const hasAnyErrors = validation.some((errs) => errs.length > 0)
 
     if (hasAnyErrors) {
@@ -551,7 +551,7 @@ export default function Sulamerica() {
         const errs = validation[gIdx]
         if (!errs.length) continue
 
-        let field = errs[0]
+        const field = errs[0]
         // mapeia nomes de campo para ids usados nos inputs
         const fieldToId = {
           numeroCarteira: `guia-${gIdx}-numeroCarteira`,
@@ -567,9 +567,6 @@ export default function Sulamerica() {
           indicacaoAcidente: `guia-${gIdx}-indicacaoAcidente`,
           regimeAtendimento: `guia-${gIdx}-regimeAtendimento`,
           codigoPrestadorExecutante: `guia-${gIdx}-codigoPrestadorExecutante`,
-          senha: `guia-${gIdx}-senha`,
-          dataAutorizacao: `guia-${gIdx}-dataAutorizacao`,
-          dataValidadeSenha: `guia-${gIdx}-dataValidadeSenha`,
         }
 
         const targetId = fieldToId[field]
@@ -577,6 +574,9 @@ export default function Sulamerica() {
           setBlinkTargetId(targetId)
           const el = document.getElementById(targetId)
           if (el && typeof el.focus === 'function') {
+            el.focus()
+          }
+        }
         break
       }
 
