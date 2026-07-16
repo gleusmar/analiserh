@@ -89,6 +89,15 @@ export async function listSulamericaGuias() {
   return data || []
 }
 
+export async function deleteSulamericaGuia(id) {
+  const { error } = await supabase
+    .from('sulamerica_guias')
+    .delete()
+    .eq('id', id)
+  if (error) throw error
+  return true
+}
+
 // Vacations (Férias)
 export async function listVacations({ q = '', onlyMine = false, myCollaboratorId = null } = {}) {
   let query = supabase

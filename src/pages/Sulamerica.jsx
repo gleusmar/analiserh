@@ -421,6 +421,7 @@ export default function Sulamerica() {
   const [saving, setSaving] = useState(false)
   const [saveResult, setSaveResult] = useState(null)
   const [blinkTargetId, setBlinkTargetId] = useState(null)
+  const [showSaveModal, setShowSaveModal] = useState(false)
 
   useEffect(() => {
     if (loading) return
@@ -495,6 +496,7 @@ export default function Sulamerica() {
     setError(null)
     setSaveResult(null)
     setBlinkTargetId(null)
+    setShowSaveModal(false)
   }
 
   const isEmpty = (v) => String(v ?? '').trim() === ''
@@ -594,6 +596,7 @@ export default function Sulamerica() {
       const allCreated = result.every((r) => r.status === 'created')
       const anyFailed = result.some((r) => r.status !== 'created')
       setSaveResult({ allCreated, anyFailed, result })
+      setShowSaveModal(true)
     } catch (e) {
       setError(e.message || 'Erro ao salvar as guias no banco de dados.')
     } finally {
@@ -717,6 +720,72 @@ export default function Sulamerica() {
           >
             {saving ? 'Salvando guias...' : 'Salvar guias'}
           </button>
+        </div>
+      )}
+      {showSaveModal && saveResult && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-2xl rounded-2xl bg-white shadow-xl max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-900">Resultado do salvamento de guias</h2>
+                <p className="text-xs text-slate-500">
+                  {saveResult.allCreated
+                    ? 'Todas as guias foram salvas com sucesso.'
+                    : 'Algumas guias não foram salvas. Veja os detalhes abaixo.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSaveModal(false)}
+                className="rounded-full px-2 py-1 text-xs text-slate-500 hover:bg-slate-100"
+              >
+                Fechar
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto px-4 py-3 text-xs">
+              <div className="space-y-2">
+                {saveResult.result.map((r, idx) => {
+                  let statusLabel = ''
+                  let statusColor = ''
+                  let reasonLabel = ''
+
+                  if (r.status === 'created') {
+                    statusLabel = 'Salva'
+                    statusColor = 'text-emerald-700'
+                    reasonLabel = 'Guia inserida com sucesso.'
+                  } else if (r.status === 'exists') {
+                    statusLabel = 'Já existia'
+                    statusColor = 'text-amber-700'
+                    reasonLabel = 'Já existe uma guia com este número no banco de dados (não foi inserida novamente).'
+                  } else if (r.status === 'skipped') {
+                    statusLabel = 'Ignorada'
+                    statusColor = 'text-red-700'
+                    if (r.reason === 'missing_numeroGuiaPrestador') {
+                      reasonLabel = 'Número da requisição ausente (numeroGuiaPrestador não informado).'
+                    } else {
+                      reasonLabel = r.reason || 'Motivo não informado.'
+                    }
+                  } else {
+                    statusLabel = r.status || 'Desconhecido'
+                    statusColor = 'text-slate-700'
+                    reasonLabel = r.reason || 'Motivo não informado.'
+                  }
+
+                  return (
+                    <div key={idx} className="flex items-start justify-between rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+                      <div>
+                        <div className="text-[11px] font-mono text-slate-800">
+                          Nº requisição: {r.numeroGuiaPrestador || '—'}
+                        </div>
+                        <div className="mt-0.5 text-[11px] text-slate-600">{reasonLabel}</div>
+                      </div>
+                      <div className={`ml-2 text-[11px] font-semibold ${statusColor}`}>{statusLabel}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
