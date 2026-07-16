@@ -189,9 +189,25 @@ const GuiaCard = memo(function GuiaCard({ guia, index, onUpdateGuia, onUpdatePro
   const dataAutorizObrigVazia = hasPreauthProcedures && isEmpty(guia.dataAutorizacao)
   const validadeSenhaObrigVazia = hasPreauthProcedures && isEmpty(guia.dataValidadeSenha)
 
+  const invalidCarteira = !/^\d{20}$/.test(String(guia.numeroCarteira ?? ''))
+
+  const headerBase = 'flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-white'
+  const bodyBase = 'p-5 space-y-4'
+
+  let headerColorClass = 'bg-linear-to-r from-blue-700 to-blue-600'
+  let bodyColorClass = 'bg-neutral-200'
+
+  if (invalidCarteira) {
+    headerColorClass = 'bg-red-300'
+    bodyColorClass = 'bg-red-100'
+  } else if (senhaObrigVazia) {
+    headerColorClass = 'bg-orange-300'
+    bodyColorClass = 'bg-orange-100'
+  }
+
   return (
     <div className="rounded-2xl border border-blue-100 bg-white shadow-sm overflow-hidden">
-      <div className="flex flex-wrap items-center justify-between gap-2 bg-linear-to-r from-blue-700 to-blue-600 px-5 py-3 text-white">
+      <div className={`${headerBase} ${headerColorClass}`}>
         <h3 className="text-lg font-semibold">Requisição {guia.numeroGuiaPrestador || `#${index + 1}`}</h3>
         <div className="flex flex-wrap items-center gap-2">
           {guia.registroANS && (
@@ -210,7 +226,7 @@ const GuiaCard = memo(function GuiaCard({ guia, index, onUpdateGuia, onUpdatePro
         </div>
       </div>
 
-      <div className="p-5 space-y-4 bg-neutral-200">
+      <div className={`${bodyBase} ${bodyColorClass}`}>
         <div className="grid grid-cols-1 md:grid-cols-8 gap-3">
           <CarteiraField
             id={`guia-${index}-numeroCarteira`}
