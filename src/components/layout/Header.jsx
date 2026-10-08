@@ -9,6 +9,7 @@ export default function Header({ onToggleSidebar }) {
   const canGestor = role === 'gestor-plantoes'
   const isUser = role === 'user'
   const canSulamerica = !!profile?.can_access_sulamerica
+  const canFinanceiro = !!profile?.can_access_financeiro
   const isSulamericaHost = typeof window !== 'undefined' && window.location.hostname === 'sulamerica.analiselabclinico.com.br'
   const rhBaseUrl = 'https://rh.analiselabclinico.com.br'
 
@@ -33,6 +34,12 @@ export default function Header({ onToggleSidebar }) {
         { to: '/payroll/vacations', label: 'Férias', show: canAdmin || canGestor || isUser },
         { to: '/payroll/overtime', label: 'Horas Extras', show: canAdmin || canGestor || isUser },
         { to: '/payroll/income-reports', label: 'Informe de Rendimentos', show: canAdmin || canGestor || isUser },
+      ],
+    },
+    {
+      title: 'Financeiro',
+      items: [
+        { to: '/financeiro/consolidacao-bancaria', label: 'Consolidação Bancária', show: canFinanceiro },
       ],
     },
     {

@@ -27,7 +27,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { email, password, role = 'user' } = req.body || {}
+    const { email, password, role = 'user', can_access_sulamerica = false, can_access_financeiro = false } = req.body || {}
 
     if (!email || !password) {
       return res.status(400).json({ error: 'email and password are required' })
@@ -56,6 +56,8 @@ export default async function handler(req, res) {
           role,
           status: 'active',
           must_change_password: true,
+          can_access_sulamerica: !!can_access_sulamerica,
+          can_access_financeiro: !!can_access_financeiro,
         },
         { onConflict: 'id' },
       )

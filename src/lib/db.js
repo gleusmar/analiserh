@@ -992,7 +992,7 @@ export async function fetchMyProfile() {
   if (!user) return null
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, email, role, status, created_at, collaborator_id, must_change_password, can_access_sulamerica, collaborators:collaborator_id(id, name, concent_id)')
+    .select('id, email, role, status, created_at, collaborator_id, must_change_password, can_access_sulamerica, can_access_financeiro, collaborators:collaborator_id(id, name, concent_id)')
     .eq('id', user.id)
     .maybeSingle()
   if (error) throw error
@@ -1002,7 +1002,7 @@ export async function fetchMyProfile() {
 export async function listProfiles() {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, email, role, status, created_at, collaborator_id, must_change_password, can_access_sulamerica')
+    .select('id, email, role, status, created_at, collaborator_id, must_change_password, can_access_sulamerica, can_access_financeiro')
     .order('created_at', { ascending: true })
   if (error) throw error
   return data
@@ -1011,7 +1011,7 @@ export async function listProfiles() {
 export async function listProfilesPaged({ q = '', role, status, page = 1, pageSize = 10, orderBy = 'created_at', direction = 'asc' } = {}) {
   let query = supabase
     .from('profiles')
-    .select('id, email, role, status, created_at, collaborator_id, can_access_sulamerica', { count: 'exact' })
+    .select('id, email, role, status, created_at, collaborator_id, can_access_sulamerica, can_access_financeiro', { count: 'exact' })
 
   if (q) query = query.ilike('email', `%${q}%`)
   if (role && role !== 'all') query = query.eq('role', role)
@@ -1062,6 +1062,25 @@ export async function updateProfileSulamericaAccess(userId, canAccess) {
     target_id: userId,
     target_email: data?.email,
     to: data?.can_access_sulamerica,
+    actor_id: actor?.id,
+    actor_email: actor?.email,
+  })
+  return data
+}
+
+export async function updateProfileFinanceiroAccess(userId, canAccess) {
+  const { data: { user: actor } } = await supabase.auth.getUser()
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ can_access_financeiro: !!canAccess })
+    .eq('id', userId)
+    .select('id, email, can_access_financeiro')
+    .maybeSingle()
+  if (error) throw error
+  await logAudit('profile:financeiro:update', {
+    target_id: userId,
+    target_email: data?.email,
+    to: data?.can_access_financeiro,
     actor_id: actor?.id,
     actor_email: actor?.email,
   })

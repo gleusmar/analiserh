@@ -12,6 +12,7 @@ import {
   listAuditLogsPaged,
   listCollaboratorsSimple,
   updateProfileSulamericaAccess,
+  updateProfileFinanceiroAccess,
 } from '../lib/db'
 import { createUser, linkProfileCollaborator, updateUserEmail, resetUserPassword } from '../lib/adminApi'
 import { CreateUserModal } from '../components/CreateUserModal.jsx'
@@ -54,7 +55,7 @@ export default function Users() {
 
   // Modal de criação de usuário
   const [openCreate, setOpenCreate] = useState(false)
-  const [createData, setCreateData] = useState({ email: '', password: '', role: 'user', can_access_sulamerica: false })
+  const [createData, setCreateData] = useState({ email: '', password: '', role: 'user', can_access_sulamerica: false, can_access_financeiro: false })
   const [creatingUser, setCreatingUser] = useState(false)
   const [createError, setCreateError] = useState(null)
 
@@ -86,6 +87,16 @@ export default function Users() {
       setUsersList((xs) => xs.map((x) => (x.id === u.id ? { ...x, can_access_sulamerica: next } : x)))
     } catch (e) {
       alert(e.message || 'Erro ao atualizar acesso para a subpágina')
+    }
+  }
+
+  async function onToggleFinanceiro(u) {
+    try {
+      const next = !u.can_access_financeiro
+      await updateProfileFinanceiroAccess(u.id, next)
+      setUsersList((xs) => xs.map((x) => (x.id === u.id ? { ...x, can_access_financeiro: next } : x)))
+    } catch (e) {
+      alert(e.message || 'Erro ao atualizar acesso ao Financeiro')
     }
   }
 
@@ -289,6 +300,7 @@ export default function Users() {
                       <th className="py-2">Papel</th>
                       <th className="py-2">Status</th>
                       <th className="py-2">SulAmérica</th>
+                      <th className="py-2">Financeiro</th>
                       <th className="py-2">Colaborador</th>
                       <th className="py-2">Ações</th>
                     </tr>
@@ -314,6 +326,20 @@ export default function Users() {
                               </label>
                             ) : (
                               <span className="text-xs text-neutral-500">{u.can_access_sulamerica ? 'Habilitado' : 'Não habilitado'}</span>
+                            )}
+                          </td>
+                          <td className="py-2">
+                            {canAdmin ? (
+                              <label className="inline-flex items-center gap-2 text-xs">
+                                <input
+                                  type="checkbox"
+                                  checked={!!u.can_access_financeiro}
+                                  onChange={() => onToggleFinanceiro(u)}
+                                />
+                                <span>Área Financeiro</span>
+                              </label>
+                            ) : (
+                              <span className="text-xs text-neutral-500">{u.can_access_financeiro ? 'Habilitado' : 'Não habilitado'}</span>
                             )}
                           </td>
                           <td className="py-2">
