@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
 import { centsToBRL, formatDateTimeBR, brlToCents } from '../../lib/finParse.js'
-import { classifyMatchStates, findAutoMatchPairs } from '../../lib/matcher.js'
+import { classifyMatchStates } from '../../lib/matcher.js'
 import { reconcileEntries } from '../../lib/financeiro.js'
 import { MatchBadge, TipoBadge } from './StatementTable.jsx'
-import { CheckCheck, Link2, Ban, PlusCircle } from 'lucide-react'
+import { Link2, Ban, PlusCircle } from 'lucide-react'
 
 const DISCREPANCY_REASONS = ['Taxa Bancária', 'Pagamento a Menor', 'Pagamento a Maior', 'Perda Cambial', 'Arredondamento', 'Outro']
 
@@ -52,7 +52,6 @@ export default function ReconcileView({ bankId, internalEntries, externalEntries
   const [confirmModal, setConfirmModal] = useState(null) // { internalIds, externalIds, diff }
   const [reason, setReason] = useState(DISCREPANCY_REASONS[0])
   const [reasonText, setReasonText] = useState('')
-  const [autoModal, setAutoModal] = useState(null) // pairs[]
 
   const unmatchedInternal = useMemo(() => internalEntries.filter(e => e.status === 'unmatched'), [internalEntries])
   const unmatchedExternal = useMemo(() => externalEntries.filter(e => e.status === 'unmatched'), [externalEntries])
@@ -99,28 +98,6 @@ export default function ReconcileView({ bankId, internalEntries, externalEntries
     }
   }
 
-  function onAutoMatch() {
-    const pairs = findAutoMatchPairs(internalEntries, externalEntries)
-    if (!pairs.length) { alert('Nenhum par exato (mesmo valor e mesma data) encontrado.'); return }
-    setAutoModal(pairs)
-  }
-
-  async function doAutoMatch() {
-    const pairs = autoModal || []
-    setBusy(true)
-    let ok = 0, fail = 0
-    for (const p of pairs) {
-      try {
-        await reconcileEntries(bankId, [p.internal.id], [p.external.id], null)
-        ok++
-      } catch { fail++ }
-    }
-    setBusy(false)
-    setAutoModal(null)
-    await onChanged()
-    alert(`Auto-conciliação concluída: ${ok} par(es) conciliados${fail ? `, ${fail} falharam` : ''}.`)
-  }
-
   const renderRow = (e, selected, setFn, stateMap, isExternal) => {
     const credit = e.amount_cents > 0
     const checked = selected.has(e.id)
@@ -153,13 +130,8 @@ export default function ReconcileView({ bankId, internalEntries, externalEntries
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-neutral-600">
-          Selecione lançamentos dos dois lados e clique em <b>Conciliar</b>. Suporta 1:1, 1:N e N:1.
-        </div>
-        <button onClick={onAutoMatch} disabled={busy} className="inline-flex items-center gap-2 rounded-xl border border-emerald-300 text-emerald-700 px-3 py-2 text-sm hover:bg-emerald-50">
-          <CheckCheck className="size-4" /> Auto-conciliar exatos
-        </button>
+      <div className="text-sm text-neutral-600">
+        Selecione lançamentos dos dois lados e clique em <b>Conciliar</b>. Suporta 1:1, 1:N e N:1.
       </div>
 
       <div className="grid lg:grid-cols-2 gap-4">
@@ -233,31 +205,6 @@ export default function ReconcileView({ bankId, internalEntries, externalEntries
         </div>
       )}
 
-      {autoModal && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4">
-          <div className="glass w-full max-w-lg rounded-2xl p-6 space-y-3">
-            <h3 className="text-lg font-semibold">Auto-conciliação</h3>
-            <p className="text-sm text-neutral-600">
-              {autoModal.length} par(es) exato(s) encontrados (mesmo valor e mesma data). Cada par será conciliado em uma transação atômica.
-            </p>
-            <div className="max-h-64 overflow-y-auto space-y-1 text-xs">
-              {autoModal.slice(0, 50).map((p, i) => (
-                <div key={i} className="flex justify-between rounded-lg border border-neutral-200 px-2 py-1.5">
-                  <span className="truncate">{p.internal.description} ↔ {p.external.counterpart || p.external.tipo}</span>
-                  <span className="font-semibold tabular-nums ml-2">{centsToBRL(p.external.amount_cents)}</span>
-                </div>
-              ))}
-              {autoModal.length > 50 && <div className="text-neutral-500">... e mais {autoModal.length - 50}</div>}
-            </div>
-            <div className="flex justify-end gap-2 pt-1">
-              <button onClick={() => setAutoModal(null)} className="px-3 py-2 rounded-xl border border-neutral-200">Cancelar</button>
-              <button onClick={doAutoMatch} disabled={busy} className="px-3 py-2 rounded-xl bg-emerald-600 text-white disabled:opacity-40">
-                {busy ? 'Conciliando...' : `Conciliar ${autoModal.length} par(es)`}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

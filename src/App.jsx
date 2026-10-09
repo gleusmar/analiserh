@@ -26,6 +26,7 @@ import IncomeReports from './pages/IncomeReports.jsx'
 import Sulamerica from './pages/Sulamerica.jsx'
 import SulamericaGuias from './pages/SulamericaGuias.jsx'
 import BankConsolidation from './pages/BankConsolidation.jsx'
+import BankWorkspace from './pages/BankWorkspace.jsx'
 
 const isSulamericaHost = typeof window !== 'undefined' && window.location.hostname === 'sulamerica.analiselabclinico.com.br'
 
@@ -69,6 +70,19 @@ function App() {
             <RoleRoute allow={["admin", "super", "gestor-plantoes", "user"]}>
               <DashboardLayout>
                 <BankConsolidation />
+              </DashboardLayout>
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/financeiro/consolidacao-bancaria/:bankId"
+        element={
+          <ProtectedRoute>
+            <RoleRoute allow={["admin", "super", "gestor-plantoes", "user"]}>
+              <DashboardLayout>
+                <BankWorkspace />
               </DashboardLayout>
             </RoleRoute>
           </ProtectedRoute>
