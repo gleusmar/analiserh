@@ -108,7 +108,7 @@ export default function BankWorkspace() {
     setImportResult(null)
     try {
       const buf = await file.arrayBuffer()
-      const { entries: parsed, errors, totalRows } = parseStatementFile(buf, scheme.config, Number(bankId))
+      const { entries: parsed, errors, totalRows } = await parseStatementFile(buf, scheme.config, Number(bankId))
       if (!parsed.length) {
         setImportResult({ error: 'Nenhum lançamento válido encontrado na planilha.', errors: errors.slice(0, 5) })
         return
