@@ -147,7 +147,7 @@ export default function BankConsolidation() {
 
   useEffect(() => {
     if (!loading && profile?.can_access_financeiro) load()
-  }, [loading, profile])
+  }, [loading, profile?.can_access_financeiro])
 
   async function onSaveBank(form) {
     setSaving(true)

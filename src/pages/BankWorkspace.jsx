@@ -64,6 +64,7 @@ export default function BankWorkspace() {
       setEntries(ext)
       setInternal(int_)
       setLogs(lg)
+      if (!b) setError('Banco não encontrado. Volte e cadastre o banco na página de Consolidação Bancária.')
       if (!schemeId) {
         const stone = sc.find(s => s.name === 'Padrão Stone')
         const specific = sc.find(s => String(s.bank_id) === String(bankId))
@@ -78,7 +79,7 @@ export default function BankWorkspace() {
 
   useEffect(() => {
     if (!loading && profile?.can_access_financeiro && bankId) load()
-  }, [loading, profile, bankId])
+  }, [loading, profile?.can_access_financeiro, bankId])
 
   const matchStates = useMemo(() => classifyMatchStates(internal, entries), [internal, entries])
 
@@ -169,7 +170,7 @@ export default function BankWorkspace() {
             {schemes.length === 0 && <option value="">Sem esquema</option>}
           </select>
           <input ref={fileRef} type="file" accept=".xls,.xlsx" className="hidden" onChange={onPickFile} />
-          <button onClick={() => fileRef.current?.click()} disabled={importing || !schemeId} className="inline-flex items-center gap-2 rounded-xl bg-neutral-900 text-white px-3 py-2 text-sm disabled:opacity-40">
+          <button onClick={() => fileRef.current?.click()} disabled={importing || !schemeId || !bank} className="inline-flex items-center gap-2 rounded-xl bg-neutral-900 text-white px-3 py-2 text-sm disabled:opacity-40">
             <Upload className="size-4" /> {importing ? 'Importando...' : 'Importar planilha'}
           </button>
         </div>
@@ -216,7 +217,7 @@ export default function BankWorkspace() {
         <div className="text-red-600 bg-red-50 rounded-xl px-3 py-2 text-sm">{error}</div>
       ) : (
         <>
-          {tab === 'reconcile' && (
+          <div hidden={tab !== 'reconcile'}>
             <ReconcileView
               bankId={Number(bankId)}
               internalEntries={internal}
@@ -225,16 +226,16 @@ export default function BankWorkspace() {
               onAddInternal={onAddInternal}
               onIgnoreExternal={onIgnoreExternal}
             />
-          )}
-          {tab === 'statement' && (
+          </div>
+          <div hidden={tab !== 'statement'}>
             <StatementTable
               entries={entries}
               matchStates={matchStates.external}
               onIgnore={onIgnoreExternal}
               onAddInternal={onAddInternal}
             />
-          )}
-          {tab === 'internal' && (
+          </div>
+          <div hidden={tab !== 'internal'}>
             <InternalPanel
               bankId={Number(bankId)}
               entries={internal}
@@ -243,10 +244,10 @@ export default function BankWorkspace() {
               prefill={internalPrefill}
               onClearPrefill={() => setInternalPrefill(null)}
             />
-          )}
-          {tab === 'audit' && (
+          </div>
+          <div hidden={tab !== 'audit'}>
             <AuditPanel logs={logs} onChanged={load} />
-          )}
+          </div>
         </>
       )}
     </div>

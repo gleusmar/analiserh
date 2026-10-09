@@ -23,7 +23,7 @@ export function AuthProvider({ children }) {
     init()
     const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
-      setUser(session?.user ?? null)
+      setUser((prev) => (prev?.id === (session?.user?.id ?? null) ? prev : (session?.user ?? null)))
     })
     return () => {
       subscription.subscription.unsubscribe()
